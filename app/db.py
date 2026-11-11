@@ -5,13 +5,16 @@ Tables:
                  `brand` is the supplier's own spelling.
   events         what changed between runs (new, restock, sold out, price change).
                  notified_at is set once the notifier has handled the event.
-  brands         one row per real brand, with your decision about it:
-                 follow | browse | ignore | new (not triaged yet).
-                 announced_at is set once a new brand has been offered for triage on Telegram.
+  brands         one row per real brand, with your decision about it: follow | ignore |
+                 default (app/brands.py). announced_at is set once a new brand has been
+                 offered in the digest.
   brand_aliases  every supplier spelling of a brand ("YSL", "YVES SAINT LAURENT"), so
                  products from all suppliers land on the same brand.
-  fragrances     your decisions about single fragrances: want | own | ignore (app/fragrances.py).
-                 brand_id NULL means any brand; concentration NULL means any concentration.
+  fragrances     your decisions about single fragrances: follow | ignore | default, and
+                 whether it's in your collection (owned). brand_id NULL means any brand;
+                 concentration NULL means any concentration (app/fragrances.py).
+  fragrance_aliases  names you merged into another fragrance of the same brand: listings read
+                 as `name` count as `into_name` (same juice, different spelling or EAN).
 
 View:
   catalog        products joined with their brand: adds brand_id, brand_name, status.
@@ -53,7 +56,7 @@ CREATE INDEX IF NOT EXISTS events_pending ON events (notified_at) WHERE notified
 CREATE TABLE IF NOT EXISTS brands (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,  -- ids never reused: old Telegram buttons stay safe
     name         TEXT NOT NULL,
-    status       TEXT NOT NULL DEFAULT 'new',  -- follow | browse | ignore | new
+    status       TEXT NOT NULL DEFAULT 'default',  -- follow | ignore | default
     created_at   TEXT NOT NULL,
     announced_at TEXT
 );
@@ -68,9 +71,19 @@ CREATE TABLE IF NOT EXISTS fragrances (
     brand_id      INTEGER REFERENCES brands (id),
     name          TEXT NOT NULL,      -- as read from supplier names, e.g. "BEACH HUT MAN"
     concentration TEXT,               -- EDP | EDT | EDC | Parfum | Extrait | Cologne
-    status        TEXT NOT NULL,      -- want | own | ignore
+    status        TEXT NOT NULL,      -- follow | ignore | default
+    owned         INTEGER NOT NULL DEFAULT 0,  -- in your collection
     note          TEXT,
     created_at    TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fragrance_aliases (
+    brand_id           INTEGER NOT NULL REFERENCES brands (id),
+    name               TEXT NOT NULL,     -- as read from listings, e.g. "AVENTUS EAU DE PARFUM"
+    concentration      TEXT NOT NULL,     -- '' when none
+    into_name          TEXT NOT NULL,     -- the fragrance it's the same juice as
+    into_concentration TEXT NOT NULL,
+    PRIMARY KEY (brand_id, name, concentration)
 );
 
 CREATE VIEW IF NOT EXISTS catalog AS
@@ -96,14 +109,13 @@ def connect() -> sqlite3.Connection:
 
 
 def add_brand(conn, spelling: str, announced: bool) -> int:
-    """Create a brand from a supplier spelling, status 'new'. Returns its id.
+    """Create a brand from a supplier spelling, on default. Returns its id.
 
-    announced=True skips the Telegram triage offer, for bulk arrivals (a supplier's first
-    run) that are better triaged in the backoffice.
+    announced=True leaves it out of the digest, for bulk arrivals (a supplier's first run).
     """
     stamp = now()
     brand_id = conn.execute(
-        "INSERT INTO brands (name, created_at, announced_at) VALUES (?, ?, ?)",
+        "INSERT INTO brands (name, status, created_at, announced_at) VALUES (?, 'default', ?, ?)",
         (spelling, stamp, stamp if announced else None),
     ).lastrowid
     conn.execute("INSERT INTO brand_aliases (alias, brand_id) VALUES (?, ?)", (spelling, brand_id))
@@ -122,19 +134,25 @@ def unknown_spellings(conn) -> list[str]:
 def upgrade(conn) -> None:
     """Brings an older database up to date. Safe to run any number of times.
 
-    - Every brand already in stock becomes a brand to triage, without Telegram offers.
+    - Every brand already in stock is added on default, without a digest mention.
+    - Browse and triage statuses became default; fragrance want -> follow, own -> owned.
     - The old rules table is converted, then dropped:
-        brand watch -> brand Follow, brand mute -> brand Browse,
-        EAN or keyword watch -> fragrance Want; supplier and other mute rules are dropped.
+        brand watch -> brand Follow, brand mute -> default,
+        EAN or keyword watch -> fragrance Follow; supplier and other mute rules are dropped.
     """
     from app.fragrances import identify, save  # here, not at the top: fragrances builds on this module
 
     with conn:
         for spelling in unknown_spellings(conn):
             add_brand(conn, spelling, announced=True)
+        if "owned" not in [c["name"] for c in conn.execute("PRAGMA table_info(fragrances)")]:
+            conn.execute("ALTER TABLE fragrances ADD COLUMN owned INTEGER NOT NULL DEFAULT 0")
+        conn.execute("UPDATE brands SET status = 'default' WHERE status IN ('browse', 'new')")
+        conn.execute("UPDATE fragrances SET owned = 1, status = 'default' WHERE status = 'own'")
+        conn.execute("UPDATE fragrances SET status = 'follow' WHERE status = 'want'")
         if not conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'rules'").fetchone():
             return
-        for action, status in (("watch", "follow"), ("mute", "browse")):
+        for action, status in (("watch", "follow"), ("mute", "default")):
             conn.execute(
                 """UPDATE brands SET status = ? WHERE id IN (
                      SELECT a.brand_id FROM brand_aliases a JOIN rules r ON a.alias = r.value
@@ -143,10 +161,10 @@ def upgrade(conn) -> None:
             )
         for rule in conn.execute("SELECT * FROM rules WHERE action = 'watch' AND field IN ('ean', 'keyword')").fetchall():
             if rule["field"] == "keyword":
-                save(conn, None, rule["value"], None, "want", rule["note"])
+                save(conn, None, rule["value"], None, "follow", note=rule["note"])
                 continue
             listing = conn.execute("SELECT * FROM catalog WHERE ? IN (ean, ean2, ean3)", (rule["value"],)).fetchone()
             if listing:
                 name, concentration = identify(listing["name"], listing["brand"])
-                save(conn, listing["brand_id"], name, concentration, "want", rule["note"])
+                save(conn, listing["brand_id"], name, concentration, "follow", note=rule["note"])
         conn.execute("DROP TABLE rules")

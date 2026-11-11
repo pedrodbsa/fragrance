@@ -1,34 +1,71 @@
 {% extends "base.html" %}
+{% from "_macros.html" import follow_switch, owned_switch, badges %}
 {% block title %}{{ product.name|pretty('') }}{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
-{% set tabs = {"want": "Wishlist", "own": "Collection", "ignore": "Not interested"} %}
+{% set fields = {"brand_id": product.brand_id, "name": product.name, "concentration": product.concentration} %}
 <div class="page-head">
   <div>
-    <p class="subtitle">{% if product.status %}<a href="/products?status={{ product.status }}">← {{ tabs[product.status] }}</a>{% else %}<a href="/brands/{{ product.brand_id }}">← {{ product.brand_name }}</a>{% endif %}</p>
+    <p class="subtitle">{% if product.brand_id %}<a href="/brands/{{ product.brand_id }}">← {{ product.brand_name }}</a>{% else %}<a href="/products">← Products</a>{% endif %}</p>
     <h1>{{ product.name|pretty('') }}{% if product.concentration %} <span class="muted">{{ product.concentration }}</span>{% endif %}</h1>
-    <p class="subtitle">{% if product.brand_id %}<a href="/brands/{{ product.brand_id }}">{{ product.brand_name }}</a>{% else %}Any brand{% endif %}{% if product.note %} · {{ product.note }}{% endif %}</p>
+    <p class="subtitle">{{ badges(product) }}{% if product.status == "default" %} No decision: the brand's status applies ({{ "following" if brand_status == "follow" else "ignored" if brand_status == "ignore" else "no alerts" }}).{% endif %}</p>
+    {% if product.note %}<p class="subtitle">{{ product.note }}</p>{% endif %}
   </div>
   <div class="toolbar">
-    {% if product.id %}
-    <form method="post" action="/products/{{ product.id }}/status" class="choice">
-      <input type="hidden" name="back" value="{{ back }}">
-      {% for k, label in tabs.items() %}<button class="{{ 'on' if product.status == k }}" name="status" value="{{ k }}">{{ label }}</button>{% endfor %}
-    </form>
-    <form method="post" action="/products/{{ product.id }}/delete"><input type="hidden" name="back" value="/products?status={{ product.status }}"><button class="btn sm ghost danger">Remove</button></form>
-    {% else %}
-    <span class="muted small">No decision yet: the brand's status applies.</span>
-    <form method="post" action="/products" class="choice">
-      <input type="hidden" name="back" value="{{ back }}"><input type="hidden" name="brand_id" value="{{ product.brand_id }}">
-      <input type="hidden" name="name" value="{{ product.name }}"><input type="hidden" name="concentration" value="{{ product.concentration or '' }}">
-      {% for k, label in tabs.items() %}<button name="status" value="{{ k }}">{{ label }}</button>{% endfor %}
-    </form>
-    {% endif %}
+    {{ follow_switch("/products", product.status, back, fields) }}
+    {{ owned_switch(product.owned, back, fields) }}
   </div>
 </div>
 
+{% if history %}
+<div class="panel" style="margin-bottom: 20px">
+  <div class="panel-head">
+    <h2>Price history</h2>
+    <span class="panel-note">Lowest seen: €{{ "%.2f"|format(history|map(attribute="low")|min) }}</span>
+  </div>
+  <div class="chart" id="price-chart"></div>
+  <script type="application/json" id="price-data">{{ history|tojson }}</script>
+  <script src="/static/chart.js"></script>
+</div>
+{% endif %}
+
 <div class="panel">
   <div class="panel-head"><h2>Stock</h2><span class="panel-note">Every size and tester of this fragrance, in stock first</span></div>
-  {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists it right now. You'll get an alert when one does{% if product.status != "want" %} if it's on your wishlist{% endif %}.</div>{% endif %}
+  {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists it right now. {% if product.status == "follow" %}You'll get an alert when one does.{% else %}Follow it to get an alert when one does.{% endif %}</div>{% endif %}
 </div>
+
+{% if product.brand_id %}
+<div class="panel" style="margin-top: 20px">
+  <div class="panel-head"><h2>Same juice, other listings</h2><span class="panel-note">Merge names or EANs that are this same fragrance; split them off again any time</span></div>
+  <div class="pad">
+    {% for a in merged %}
+    <form method="post" action="/fragrances/split" class="merge-row">
+      <input type="hidden" name="back" value="{{ back }}"><input type="hidden" name="brand_id" value="{{ product.brand_id }}">
+      <input type="hidden" name="name" value="{{ a.name }}"><input type="hidden" name="concentration" value="{{ a.concentration }}">
+      <span>Also listed as <b>{{ a.name|pretty('') }}</b>{% if a.concentration %} {{ a.concentration }}{% endif %}</span>
+      <button class="btn sm ghost danger" title="Not the same juice after all">Split off</button>
+    </form>
+    {% endfor %}
+    {% for g in shared %}
+    <form method="post" action="/fragrances/merge" class="merge-row">
+      <input type="hidden" name="back" value="{{ back }}"><input type="hidden" name="brand_id" value="{{ product.brand_id }}">
+      <input type="hidden" name="name" value="{{ g.fragrance }}"><input type="hidden" name="concentration" value="{{ g.concentration or '' }}">
+      <input type="hidden" name="into_name" value="{{ product.name }}"><input type="hidden" name="into_concentration" value="{{ product.concentration or '' }}">
+      <span>Shares an EAN with <a href="{{ g.page }}">{{ g.fragrance|pretty('') }}{% if g.concentration %} {{ g.concentration }}{% endif %}</a> <span class="muted small">(suppliers sometimes reuse EANs, so check)</span></span>
+      <button class="btn sm">Merge here</button>
+    </form>
+    {% endfor %}
+    <form method="post" action="/fragrances/merge" class="toolbar" onsubmit="const [n, c] = this.elements.pick.value.split('|'); this.elements.namedItem('name').value = n; this.elements.concentration.value = c;">
+      <input type="hidden" name="back" value="{{ back }}"><input type="hidden" name="brand_id" value="{{ product.brand_id }}">
+      <input type="hidden" name="name"><input type="hidden" name="concentration">
+      <input type="hidden" name="into_name" value="{{ product.name }}"><input type="hidden" name="into_concentration" value="{{ product.concentration or '' }}">
+      <select name="pick" required>
+        <option value="">Another {{ product.brand_name }} fragrance that is this same juice…</option>
+        {% for g in others %}<option value="{{ g.fragrance }}|{{ g.concentration or '' }}">{{ g.fragrance|pretty('') }}{% if g.concentration %} {{ g.concentration }}{% endif %} · {{ g.listings|length }} listing{{ "s" if g.listings|length != 1 }}</option>{% endfor %}
+      </select>
+      <button class="btn">Merge here</button>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

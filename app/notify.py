@@ -2,13 +2,14 @@
 
 Sections:
   ⚠️ suppliers whose collection failed this window
-  ⭐ Followed: fragrances on your wishlist (new, back in stock, or cheaper), plus new
-     products and restocks from brands you follow (except fragrances you own or ignored)
-  🆕 New brands to triage: each one follows as its own message with Follow / Browse /
-     Ignore buttons (and "Same as …" when it looks like a brand you have). When many arrive
-     at once, the digest links to the Triage page instead.
-Ignored brands and fragrances never appear. Everything else (Browse brands, sold out, price
-up) is recorded for the backoffice but not sent.
+  ⭐ Followed: fragrances you follow (new, back in stock, or cheaper), plus new products and
+     restocks from brands you follow (except fragrances you ignored)
+  🆕 New brands: each one follows as its own message with Follow / Ignore buttons (and
+     "Same as …" when it looks like a brand you have). Not tapping leaves it on default:
+     shown in Stock, no alerts. When many arrive at once, the digest links to the New
+     brands page instead.
+Ignored brands and fragrances never appear. Everything else (default brands, sold out,
+price up) is recorded for the backoffice but not sent.
 """
 
 import os
@@ -17,12 +18,12 @@ from html import escape
 from app import telegram
 from app.brands import suggestions
 from app.db import connect, now
-from app.fragrances import matcher
+from app.fragrances import alerting, decided, matcher
 
-WANTED_KINDS = ("new", "restock", "price_drop")
-FOLLOWED_KINDS = ("new", "restock")
+FOLLOWED_FRAGRANCE_KINDS = ("new", "restock", "price_drop")
+FOLLOWED_BRAND_KINDS = ("new", "restock")
 DIGEST_MAX = 60  # beyond this the message lists a count; the backoffice has the full list
-OFFER_MAX = 8    # more new brands than this go to the Triage page instead of one message each
+OFFER_MAX = 8    # more new brands than this go to the New brands page instead of one message each
 
 PENDING = """
 SELECT e.id, e.kind, e.old_value, e.new_value, c.*
@@ -37,7 +38,7 @@ def notify(failed: list[str]) -> None:
     match = matcher(conn)
     followed = [e for e in pending if alerts(e, match(e))]
     new_brands = conn.execute(
-        "SELECT * FROM brands WHERE status = 'new' AND announced_at IS NULL ORDER BY name").fetchall()
+        "SELECT * FROM brands WHERE status = 'default' AND announced_at IS NULL ORDER BY name").fetchall()
 
     digest = compose(failed, followed, new_brands)
     if digest:
@@ -56,10 +57,9 @@ def notify(failed: list[str]) -> None:
 
 
 def alerts(event, decision) -> bool:
-    """A decision about the fragrance wins over the brand's status."""
-    if decision is not None:
-        return decision["status"] == "want" and event["kind"] in WANTED_KINDS
-    return event["status"] == "follow" and event["kind"] in FOLLOWED_KINDS
+    """A followed fragrance also alerts on price drops; a followed brand on new and restock."""
+    kinds = FOLLOWED_FRAGRANCE_KINDS if decided(decision) else FOLLOWED_BRAND_KINDS
+    return alerting(event, decision) and event["kind"] in kinds
 
 
 def compose(failed, followed, new_brands) -> str:
@@ -70,9 +70,9 @@ def compose(failed, followed, new_brands) -> str:
         more = [f"…and {len(followed) - DIGEST_MAX} more in the backoffice"] if len(followed) > DIGEST_MAX else []
         sections.append([f"<b>⭐ Followed ({len(followed)})</b>"] + [describe(e) for e in followed[:DIGEST_MAX]] + more)
     if len(new_brands) > OFFER_MAX:
-        sections.append([f"<b>🆕 New brands to triage ({len(new_brands)})</b>", f"Decide on them at {link('/triage')}"])
+        sections.append([f"<b>🆕 New brands ({len(new_brands)})</b>", f"Follow or ignore them at {link('/new')}"])
     elif new_brands:
-        sections.append([f"<b>🆕 New brands to triage ({len(new_brands)})</b> below"])
+        sections.append([f"<b>🆕 New brands ({len(new_brands)})</b> below"])
     return "\n\n".join("\n".join(section) for section in sections)
 
 
@@ -87,7 +87,7 @@ def describe(e) -> str:
 
 
 def offer(conn, brand, hints) -> tuple[str, list[list[dict]]]:
-    """One new brand as a message with triage buttons."""
+    """One new brand as a message with Follow / Ignore buttons."""
     products = conn.execute(
         "SELECT name, supplier FROM catalog WHERE brand_id = ? AND qty > 0 ORDER BY name", (brand["id"],)).fetchall()
     suppliers = sorted({p["supplier"] for p in products})
@@ -95,7 +95,7 @@ def offer(conn, brand, hints) -> tuple[str, list[list[dict]]]:
     lines += [f"   {escape(p['name'])}" for p in products[:3]]
     lines += [f"   Looks like <b>{escape(name)}</b> ({reason})" for _, name, reason in hints[:2]]
     buttons = [[{"text": label, "callback_data": f"brand:{brand['id']}:{status}"}
-                for label, status in (("⭐ Follow", "follow"), ("👀 Browse", "browse"), ("🚫 Ignore", "ignore"))]]
+                for label, status in (("⭐ Follow", "follow"), ("🚫 Ignore", "ignore"))]]
     buttons += [[{"text": f"Same as {name}", "callback_data": f"merge:{brand['id']}:{other}"}] for other, name, _ in hints[:2]]
     return "\n".join(lines), buttons
 

@@ -1,43 +1,17 @@
-{# Stock table, shared by Stock, a brand page and a product page. Needs: rows, back. #}
-{% set badge = {"want": ("Want", "new"), "own": ("Owned", "restock"), "ignore": ("Not interested", "")} %}
+{# Every listing of one fragrance, by size. Used on the product page. Needs: rows. #}
   <div class="scroll">
   <table>
-    <thead><tr><th>Product</th><th class="hide-sm">EAN</th><th class="num">Price</th><th class="num">Qty</th><th class="hide-sm">Supplier</th><th class="hide-sm">First seen</th><th class="hide-sm"></th></tr></thead>
+    <thead><tr><th>Size</th><th>As listed</th><th class="hide-sm">EAN</th><th class="num">Price</th><th class="num">Qty</th><th class="hide-sm">Supplier</th><th class="hide-sm">First seen</th></tr></thead>
     <tbody>
     {% for r in rows %}
-    {% set d = r.decision %}
-    {% set alerting = (d.status == "want") if d else (r.status == "follow") %}
-    <tr class="{{ 'faded' if (d and d.status == 'ignore') or (not d and r.status in ('ignore', 'new')) }}">
-      <td>
-        <div class="product-name">{% if alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<a class="quiet" title="{{ r.name }}" href="{{ r.page }}">{{ r.name|pretty(r.brand) }}</a>
-          {% if d %}<a href="/products/{{ d.id }}" class="pill {{ badge[d.status][1] }}" title="Open this product">{{ badge[d.status][0] }}</a>{% endif %}
-          {% if r.flagged_new %}<span class="pill" title="Marked new by the supplier">Supplier: new</span>{% endif %}</div>
-        <div class="product-brand"><a class="quiet" href="/brands/{{ r.brand_id }}">{{ r.brand_name }}</a></div>
-      </td>
-      <td class="mono hide-sm">{{ r.ean or "—" }}{% if r.ean2 %}<div class="small muted">{{ r.ean2 }}</div>{% endif %}{% if r.ean3 %}<div class="small muted">{{ r.ean3 }}</div>{% endif %}</td>
+    <tr class="{{ 'faded' if r.qty == 0 }}">
+      <td class="nowrap product-name">{{ r.size_label }}{% if r.concentration %} <span class="muted">{{ r.concentration }}</span>{% endif %}</td>
+      <td><span title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</span>{% if r.flagged_new %} <span class="pill" title="Marked new by the supplier">Supplier: new</span>{% endif %}</td>
+      <td class="mono hide-sm">{{ r.ean or "—" }}</td>
       <td class="num">{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}<span class="muted">—</span>{% endif %}</td>
       <td class="num">{% if r.qty == 0 %}<span class="pill">Sold out</span>{% else %}{{ r.qty }}{% endif %}</td>
       <td class="muted hide-sm">{{ r.supplier }}</td>
       <td class="nowrap muted hide-sm">{{ r.first_seen|local }}</td>
-      <td class="hide-sm">
-        <div class="row-actions">
-          {% if d %}
-          <form method="post" action="/products/{{ d.id }}/delete"><input type="hidden" name="back" value="{{ back }}"><button class="btn sm ghost" title="Forget this decision; the brand's status applies again">Undo {{ badge[d.status][0]|lower }}</button></form>
-          {% else %}
-          <form method="post" action="/products" title="{{ r.fragrance|pretty('') }}{{ ' ' ~ r.concentration if r.concentration }}, every size">
-            <input type="hidden" name="back" value="{{ back }}"><input type="hidden" name="brand_id" value="{{ r.brand_id }}">
-            <input type="hidden" name="name" value="{{ r.fragrance }}"><input type="hidden" name="concentration" value="{{ r.concentration or '' }}">
-            <button class="btn sm ghost" name="status" value="want" title="Wishlist: alert me about {{ r.fragrance|pretty('') }} whatever the brand">Want</button>
-            <button class="btn sm ghost" name="status" value="own" title="I have it: no alerts">Own</button>
-            <button class="btn sm ghost danger" name="status" value="ignore" title="Not interested: hide it">Not interested</button>
-          </form>
-          {% endif %}
-          <form method="post" action="/brands/{{ r.brand_id }}/status"><input type="hidden" name="back" value="{{ back }}">
-            {% if r.status == "follow" %}<button class="btn sm ghost" name="status" value="browse" title="Stop alerts for {{ r.brand_name }}, keep it in Stock">Unfollow brand</button>
-            {% else %}<button class="btn sm ghost" name="status" value="follow" title="Alert me about new products and restocks from {{ r.brand_name }}">Follow brand</button>{% endif %}
-          </form>
-        </div>
-      </td>
     </tr>
     {% endfor %}
     </tbody>

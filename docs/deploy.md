@@ -26,7 +26,7 @@ are in the schedule's log.
 ## Telegram buttons
 
 Set `BACKOFFICE_URL=https://grasse.xdecade.com` in the Environment tab. On start, the
-backoffice registers `/telegram` with Telegram so taps on the digest's triage buttons reach
+backoffice registers `/telegram` with Telegram so taps on the digest's Follow / Ignore buttons reach
 it (the deploy log shows `telegram: webhook registered`).
 
 ## Backups and recovery

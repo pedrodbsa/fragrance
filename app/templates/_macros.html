@@ -1,0 +1,27 @@
+{# Follow / Ignore switch. The current choice is highlighted; clicking it again goes back to
+   default (shown, no alerts). `fields` are extra hidden inputs the form needs. #}
+{% macro follow_switch(action, current, back, fields={}, small=False) %}
+<form method="post" action="{{ action }}" class="choice{{ ' sm' if small }}">
+  <input type="hidden" name="back" value="{{ back }}">
+  {% for k, v in fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v if v is not none else '' }}">{% endfor %}
+  <button class="{{ 'on' if current == 'follow' }}" name="status" value="{{ 'default' if current == 'follow' else 'follow' }}"
+          title="{{ 'Following: click to stop' if current == 'follow' else 'Alert me' }}">⭐ {{ "Following" if current == "follow" else "Follow" }}</button>
+  <button class="{{ 'on' if current == 'ignore' }}" name="status" value="{{ 'default' if current == 'ignore' else 'ignore' }}"
+          title="{{ 'Ignored: click to show again' if current == 'ignore' else 'Hide it everywhere' }}">🚫 {{ "Ignored" if current == "ignore" else "Ignore" }}</button>
+</form>
+{% endmacro %}
+
+{# Collection switch for a fragrance. #}
+{% macro owned_switch(owned, back, fields) %}
+<form method="post" action="/products" class="choice">
+  <input type="hidden" name="back" value="{{ back }}">
+  {% for k, v in fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v if v is not none else '' }}">{% endfor %}
+  <button class="{{ 'on' if owned }}" name="owned" value="{{ '0' if owned else '1' }}" title="{{ 'In your collection: click to remove' if owned else 'Add to your collection' }}">{{ "✓ In collection" if owned else "+ Collection" }}</button>
+</form>
+{% endmacro %}
+
+{# Badges for a fragrance decision: Following / Ignored, and In collection. #}
+{% macro badges(d) %}
+{%- if d and d.status == "follow" %} <span class="pill new">Following</span>{% elif d and d.status == "ignore" %} <span class="pill">Ignored</span>{% endif -%}
+{%- if d and d.owned %} <span class="pill restock">In collection</span>{% endif -%}
+{% endmacro %}

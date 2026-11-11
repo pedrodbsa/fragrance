@@ -7,7 +7,7 @@
     <h1>Changes</h1>
     <p class="subtitle">What moved in your suppliers' stock, newest first. Ignored brands are left out.</p>
   </div>
-  {% if to_triage %}<a class="btn" href="/triage">{{ to_triage }} brand{{ "s" if to_triage != 1 }} to triage →</a>{% endif %}
+  {% if new_brands %}<a class="btn" href="/new">{{ new_brands }} new brand{{ "s" if new_brands != 1 }} this week →</a>{% endif %}
 </div>
 
 <div class="stats">

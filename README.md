@@ -1,30 +1,29 @@
 # Fragrance tracker
 
 Watches B2B suppliers' perfume stock and sends you a Telegram digest when brands you follow
-get new products or restocks, wishlist fragrances appear or get cheaper, or a new brand
-needs triage. The full plan is in docs/spec.md.
+get new products or restocks, fragrances you follow appear or get cheaper, or new brands
+show up. The full plan is in docs/spec.md.
 
 ## How it works
 
 ```
 Dokploy schedule ─▶ fragrance run ─▶ collect each supplier ─▶ SQLite (products, events, brands)
-                                 └─▶ one digest ─▶ Telegram ─▶ triage buttons ─▶ backoffice /telegram
-backoffice (https://…) ◀─ you: triage brands, browse stock and changes, wishlist / collection
+                                 └─▶ one digest ─▶ Telegram ─▶ Follow / Ignore buttons ─▶ backoffice /telegram
+backoffice (https://…) ◀─ you: follow / ignore brands and fragrances, stock, collection
 Litestream ─▶ R2 (continuous backup; restored automatically on a fresh server)
 ```
 
 - **collect** fetches a supplier's full in-stock list, compares it with what's stored, and
   records events: `new`, `restock`, `price_drop`, `price_up`, `soldout`. A supplier's first
   run only stores the starting point. Quantity changes are stored but aren't events.
-- **Brands** each have a status: *follow* (shown, alerts), *browse* (shown, no alerts),
-  *ignore* (hidden everywhere) or *new* (waiting for triage). Supplier spellings of the same
-  brand are merged through aliases, with suggestions on the Triage page.
+- **Brands and fragrances** are *followed* (alerts), *ignored* (hidden) or left on
+  *default* (shown, no alerts). A fragrance's choice wins over its brand's. Supplier
+  spellings of a brand are merged through aliases, with suggestions on the New brands page.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
-  suppliers, followed brands' new products and restocks, wishlist fragrances (new, back in
-  stock, cheaper), and new brands with Follow / Browse / Ignore buttons.
-- **Products** are your decisions about single fragrances: *want* (wishlist, alerts),
-  *own* (collection, no alerts) or *not interested* (hidden). They win over the brand's
-  status. Listings are matched by the fragrance name read from the supplier's product name.
+  suppliers, followed brands' new products and restocks, followed fragrances (new, back in
+  stock, cheaper), and new brands with Follow / Ignore buttons.
+- **Products** lists followed and ignored fragrances and your collection (owned, which
+  doesn't change alerts). Listings are matched by the fragrance name read from the supplier's product name.
 
 ## Code map
 
@@ -46,7 +45,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
    come from env vars.
 2. Register it in `app/suppliers/__init__.py`.
 3. Add its env vars in Dokploy. The `fragrance run` schedule picks it up automatically; its
-   first run records a baseline and puts its new brands on the Triage page.
+   first run records a baseline and lists its brands on the New brands page.
 
 ## Suppliers
 

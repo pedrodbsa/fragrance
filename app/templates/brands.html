@@ -1,12 +1,13 @@
 {% extends "base.html" %}
+{% from "_macros.html" import follow_switch %}
 {% block title %}Brands{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
-{% set labels = {"follow": "Following", "browse": "Browsing", "ignore": "Ignored", "new": "To triage"} %}
+{% set labels = {"follow": "Following", "ignore": "Ignored", "default": "Not decided"} %}
 <div class="page-head">
   <div>
     <h1>Brands</h1>
-    <p class="subtitle">Every brand and what you decided. Open one to rename it, merge it or manage its spellings.</p>
+    <p class="subtitle">Follow a brand to hear about its new products and restocks, ignore it to hide it. Not deciding keeps it in Stock without alerts.</p>
   </div>
 </div>
 
@@ -37,12 +38,7 @@
       <td class="num">{{ b.in_stock }}</td>
       <td class="muted hide-sm">{{ (b.suppliers or "").replace(",", ", ") }}</td>
       <td class="nowrap">
-        <form method="post" action="/brands/{{ b.id }}/status" class="choice">
-          <input type="hidden" name="back" value="{{ back }}">
-          {% for s, icon in (("follow", "⭐ Follow"), ("browse", "👀 Browse"), ("ignore", "🚫 Ignore")) %}
-          <button class="{{ 'on' if b.status == s }}" name="status" value="{{ s }}">{{ icon }}</button>
-          {% endfor %}
-        </form>
+        {{ follow_switch("/brands/" ~ b.id ~ "/status", b.status, back) }}
       </td>
     </tr>
     {% endfor %}

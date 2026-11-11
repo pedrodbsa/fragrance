@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import follow_switch, badges %}
 {% block title %}{{ brand.name }}{% endblock %}
 {% block content %}
 {% set back = request.url.path %}
@@ -8,12 +9,7 @@
     <h1>{{ brand.name }}</h1>
     <p class="subtitle">{{ brand.in_stock }} in stock{% if brand.suppliers %} at {{ brand.suppliers.replace(",", ", ") }}{% endif %} · <a href="/stock?brand={{ brand.id }}">see stock</a></p>
   </div>
-  <form method="post" action="/brands/{{ brand.id }}/status" class="choice">
-    <input type="hidden" name="back" value="/brands/{{ brand.id }}">
-    {% for s, icon in (("follow", "⭐ Follow"), ("browse", "👀 Browse"), ("ignore", "🚫 Ignore")) %}
-    <button class="{{ 'on' if brand.status == s }}" name="status" value="{{ s }}">{{ icon }}</button>
-    {% endfor %}
-  </form>
+  {{ follow_switch("/brands/" ~ brand.id ~ "/status", brand.status, back) }}
 </div>
 
 <div class="grid-2">
@@ -46,26 +42,26 @@
       </select>
       <button class="btn">Merge</button>
     </form>
-    <p class="help pad">Merging moves these spellings to the other brand, which keeps its own status.</p>
+    <p class="help pad">Merging moves these spellings and fragrance decisions to the other brand, which keeps its own status.</p>
   </div>
 
   <div class="panel">
-    <div class="panel-head"><h2>Products you decided on</h2><span class="panel-note">These win over the brand's status</span></div>
+    <div class="panel-head"><h2>Fragrances you decided on</h2><span class="panel-note">Follow and Ignore here win over the brand</span></div>
     {% if decided %}
     <table><tbody>
       {% for f in decided %}
       <tr><td class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}</td>
-          <td class="num"><span class="pill {{ {'want': 'new', 'own': 'restock'}.get(f.status, '') }}">{{ {"want": "Want", "own": "Owned", "ignore": "Not interested"}[f.status] }}</span></td></tr>
+          <td class="num">{{ badges(f) }}</td></tr>
       {% endfor %}
     </tbody></table>
     {% else %}
-    <div class="empty">None yet. Use Want / Own / Not interested on the <a href="/stock?brand={{ brand.id }}">Stock</a> page.</div>
+    <div class="empty">None yet. Follow, ignore or collect a fragrance from the stock list below.</div>
     {% endif %}
   </div>
 </div>
 
 <div class="panel" style="margin-top: 20px">
-  <div class="panel-head"><h2>Stock</h2><span class="panel-note">Every listing of this brand, in stock first</span></div>
-  {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists this brand right now.</div>{% endif %}
+  <div class="panel-head"><h2>Stock</h2><span class="panel-note">Every fragrance of this brand, sizes grouped</span></div>
+  {% if groups %}{% include "_fragrances.html" %}{% else %}<div class="empty">No supplier lists this brand right now.</div>{% endif %}
 </div>
 {% endblock %}
