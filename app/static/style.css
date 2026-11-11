@@ -183,6 +183,10 @@ input:focus, select:focus, button:focus-visible { outline: none; box-shadow: 0 0
 .btn.ghost { border-color: transparent; background: transparent; box-shadow: none; color: var(--muted); }
 .btn.ghost:hover { background: var(--accent-soft); color: var(--accent); }
 .btn.danger:hover { color: #df1b41; background: rgba(223, 27, 65, 0.08); }
+.btn.icon { width: 28px; padding: 0; justify-content: center; font-size: 15px; font-weight: 600; } /* a one-character button: + or ✕ */
+.btn.icon.danger { color: #df1b41; border-color: rgba(223, 27, 65, 0.35); }
+.btn.icon.add { color: var(--accent); border-color: var(--accent); }
+.btn.icon.add:hover { background: var(--accent); color: #fff; }
 
 td form { display: inline; margin: 0; }
 .row-actions { display: flex; white-space: nowrap; gap: 2px; justify-content: flex-end; opacity: 0; transition: opacity 0.1s; }
@@ -301,4 +305,5 @@ table.lines { table-layout: fixed; min-width: 600px; } /* narrower screens scrol
 table.lines .c-size { width: 130px; }
 table.lines .c-price { width: 190px; }
 table.lines .c-qty { width: 90px; }
-table.lines .c-act { width: 80px; }
+table.lines .c-act { width: 48px; }
+table.lines .c-list { width: 36px; text-align: center; padding-left: 0; padding-right: 0; }
