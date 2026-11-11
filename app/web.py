@@ -215,13 +215,13 @@ def testers_only(rows: list[dict]) -> list[dict]:
     return [r for r in rows if r["condition"] == "Tester"]
 
 
-DEAL = 0.20  # a deal: at least this much below what the other suppliers ask on average
+DEAL = 0.20  # a deal: at least this much below the next cheapest supplier
 
 
 def mark_deals(conn, rows: list[dict]) -> list[dict]:
     """The rows, those that are a deal with their "discount" (0.32 for 32% off) and the
-    "average" it's measured from: in stock and priced at least DEAL below the average of the
-    other suppliers' in-stock prices for the same fragrance and size."""
+    "rival" price it's measured from: in stock and priced at least DEAL below the lowest
+    in-stock price another supplier asks for the same fragrance and size."""
     prices = {}  # (fragrance id, size) -> [(supplier, price)] of everything in stock
     for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
         prices.setdefault((r["fragrance_id"], r["size_label"]), []).append((r["supplier"], r["price"]))
@@ -229,9 +229,9 @@ def mark_deals(conn, rows: list[dict]) -> list[dict]:
     for r in rows:
         others = [price for supplier, price in prices.get((r["fragrance_id"], r["size_label"]), [])
                   if supplier != r["supplier"]]
-        average = sum(others) / len(others) if others else None
-        if r["qty"] > 0 and r["price"] is not None and average and r["price"] <= average * (1 - DEAL):
-            r = {**r, "discount": 1 - r["price"] / average, "average": average}
+        rival = min(others, default=None)
+        if r["qty"] > 0 and r["price"] is not None and rival and r["price"] <= rival * (1 - DEAL):
+            r = {**r, "discount": 1 - r["price"] / rival, "rival": rival}
         marked.append(r)
     return marked
 
@@ -287,7 +287,7 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     'default' (followed and Browse; nothing you ignored), 'all' (ignored ones too).
     'followed' narrows to what alerts you. 'cheapest' keeps only the sizes no other supplier
     sells for less, 'testers' only testers, 'deals' only sizes well below the other suppliers'
-    average price (biggest discount first, unless you sort by a column)."""
+    next cheapest supplier's price (biggest discount first, unless you sort by a column)."""
     conn = connect()
     words = searchable(q)
     found = conn.execute(
