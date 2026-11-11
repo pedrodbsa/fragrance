@@ -22,8 +22,9 @@
     {% set page = "/products/" ~ g.fragrance_id %}
     <tr class="{{ 'faded' if g.hidden or g.qty == 0 }}">
       <td data-sort="{{ g.fragrance }}">
-        <div class="product-name">{% if g.sizes|selectattr("discount", "defined")|list %}<span title="One of its sizes is a deal: 20% or more below the next best price per ml">🔥</span> {% endif %}{% if g.alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<a class="quiet" href="{{ page }}">{{ g.fragrance|pretty('') }}</a>{% if g.concentration %} <span class="muted">{{ g.concentration }}</span>{% endif %}
-          {{ badges(g.fragrance_status, g.owned, g.audience) }}</div>
+        <div class="product-name">{% if g.sizes|selectattr("discount", "defined")|list %}<span title="One of its sizes is a deal: 20% or more below the next best price per ml">🔥</span> {% endif %}{% if g.alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<a class="quiet {{ g.fragrance_status }}" href="{{ page }}"{% if g.fragrance_status in ("wishlist", "filler") %} title="{{ "On your wishlist" if g.fragrance_status == "wishlist" else "A filler" }}"{% endif %}>{{ g.fragrance|pretty('') }}</a>{% if g.concentration %} <span class="muted">{{ g.concentration }}</span>{% endif %}
+          {# the name's colour says wishlist (gold) or filler (purple); only Ignored gets a pill #}
+          {{ badges("ignore" if g.fragrance_status == "ignore", g.owned, g.audience) }}</div>
         <div class="product-brand"><a class="quiet" href="/brands/{{ g.brand_id }}">{{ g.brand_name }}</a></div>
       </td>
       <td>
