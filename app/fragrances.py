@@ -1,4 +1,5 @@
-"""Your decisions about single fragrances, and how supplier listings are matched to them.
+"""The fragrance catalogue: every fragrance suppliers list, how a listing is matched to one,
+and your decisions about each.
 
 A fragrance goes on one of your lists, or on none ('default'). Its list wins over its brand's
 status: leave Memo on default but wishlist Ithaque, or follow Amouage but ignore Outlands.
@@ -8,14 +9,16 @@ status: leave Memo on default but wishlist Ithaque, or follow Amouage but ignore
   default   the brand's status applies (brands are follow | ignore | default)
 Separately, `owned` puts a fragrance in your collection. It doesn't change alerts.
 
-Listings are matched by reading the fragrance name out of the supplier's product name:
-"AMOUAGE BEACH HUT MAN EDP 100 ML VAPO" -> "BEACH HUT MAN", EDP. The name ends where the
-concentration or the size starts. Step 2 of docs/spec.md replaces this with Claude parsing.
+A listing is matched once, when it first appears, by reading the fragrance name out of the
+supplier's product name: "AMOUAGE BEACH HUT MAN EDP 100 ML VAPO" -> "BEACH HUT MAN", EDP. The
+name ends where the concentration or the size starts. That reading is looked up in
+fragrance_names, so a name you merged into another fragrance lands there. Step 2 of
+docs/spec.md replaces the reading with Claude parsing.
 """
 
 import re
-from collections import defaultdict
-from datetime import datetime, timezone
+
+from app.db import now
 
 STATUSES = ("wishlist", "filler", "ignore", "default")
 CONCENTRATIONS = ("EDP", "EDT", "EDC", "Parfum", "Extrait", "Cologne")
@@ -71,107 +74,79 @@ def variant(name: str) -> tuple[float, str]:
     return float(number.replace(",", ".")), f"{number} {unit.lower()}{kind}"
 
 
-def resolver(conn):
-    """Returns juice(listing) -> (fragrance name, concentration), after your merges: a listing
-    read as a name you merged into another fragrance counts as that fragrance."""
-    aliases = {(a["brand_id"], key(a["name"]), a["concentration"]): (a["into_name"], a["into_concentration"])
-               for a in conn.execute("SELECT * FROM fragrance_aliases")}
-
-    def juice(listing):
-        name, concentration = identify(listing["name"], listing["brand"])
-        for _ in range(10):  # follow merges of merges; the cap guards against a loop
-            target = aliases.get((listing["brand_id"], key(name), concentration or ""))
-            if target is None:
-                break
-            name, concentration = target[0], target[1] or None
-        return name, concentration
-
-    return juice
+def find_or_create(conn, brand_id: int, name: str, concentration: str | None) -> int:
+    """The fragrance a name reads as (after your merges), created if it's new. Returns its id."""
+    found = conn.execute(
+        "SELECT fragrance_id FROM fragrance_names WHERE brand_id = ? AND name = ? AND concentration = ?",
+        (brand_id, key(name), concentration or "")).fetchone()
+    if found:
+        return found["fragrance_id"]
+    fragrance_id = conn.execute(
+        "INSERT INTO fragrances (brand_id, name, concentration, created_at) VALUES (?, ?, ?, ?)",
+        (brand_id, " ".join(name.upper().split()), concentration, now())).lastrowid
+    conn.execute("INSERT INTO fragrance_names VALUES (?, ?, ?, ?)", (brand_id, key(name), concentration or "", fragrance_id))
+    return fragrance_id
 
 
-def merge(conn, brand_id: int, name: str, concentration: str | None, into_name: str, into_concentration: str | None) -> None:
-    """The fragrance read as name/concentration is the same juice as into_name/into_concentration.
-    Earlier merges into it, and your decision about it, move over too."""
-    source, target = (key(name), concentration or ""), (key(into_name), into_concentration or "")
-    if source == target:
-        return
-    conn.execute("UPDATE fragrance_aliases SET into_name = ?, into_concentration = ? "
-                 "WHERE brand_id = ? AND into_name = ? AND into_concentration = ?", (*target, brand_id, *source))
-    conn.execute("INSERT OR REPLACE INTO fragrance_aliases VALUES (?, ?, ?, ?, ?)", (brand_id, *source, *target))
-    conn.execute("DELETE FROM fragrance_aliases WHERE name = into_name AND concentration = into_concentration")
-    for d in conn.execute("SELECT * FROM fragrances WHERE brand_id = ? AND concentration IS ?", (brand_id, concentration)).fetchall():
-        if key(d["name"]) == source[0]:
-            taken = any(key(t["name"]) == target[0] for t in conn.execute(
-                "SELECT name FROM fragrances WHERE brand_id = ? AND concentration IS ?", (brand_id, into_concentration)))
-            if taken:
-                conn.execute("DELETE FROM fragrances WHERE id = ?", (d["id"],))
-            else:
-                conn.execute("UPDATE fragrances SET name = ?, concentration = ? WHERE id = ?", (target[0], into_concentration, d["id"]))
+def assign(conn, brand_id: int, listing_name: str, spelling: str) -> int:
+    """The fragrance a supplier listing is: read its name, then find or create it."""
+    return find_or_create(conn, brand_id, *identify(listing_name, spelling))
 
 
-def split(conn, brand_id: int, name: str, concentration: str | None) -> None:
-    """Undo a merge: listings read as name/concentration are their own fragrance again."""
-    conn.execute("DELETE FROM fragrance_aliases WHERE brand_id = ? AND name = ? AND concentration = ?",
-                 (brand_id, key(name), concentration or ""))
-
-
-def matcher(conn):
-    """Returns match(listing) -> the decision covering that catalog row, or None."""
-    decisions = defaultdict(list)
-    for d in conn.execute("SELECT * FROM fragrances"):
-        decisions[key(d["name"])].append(d)
-    juice = resolver(conn)
-
-    def match(listing):
-        name, concentration = juice(listing)
-        for d in decisions.get(key(name), []):
-            brand_ok = d["brand_id"] is None or d["brand_id"] == listing["brand_id"]
-            if brand_ok and (d["concentration"] is None or d["concentration"] == concentration):
-                return d
-        return None
-
-    return match
-
-
-def decided(decision) -> bool:
-    """Whether a fragrance decision overrides the brand's status."""
-    return decision is not None and decision["status"] != "default"
-
-
-def alerting(listing, decision) -> bool:
-    """Whether changes to this listing reach Telegram."""
-    return decision["status"] == "wishlist" if decided(decision) else listing["status"] == "follow"
-
-
-def hidden(listing, decision) -> bool:
-    """Left out of Stock, Changes and alerts."""
-    return decision["status"] == "ignore" if decided(decision) else listing["status"] == "ignore"
-
-
-def save(conn, brand_id: int | None, name: str, concentration: str | None,
-         status: str | None = None, owned: bool | None = None, note: str | None = None) -> None:
-    """Set the status and/or collection flag of a fragrance, keeping what isn't given.
-    A fragrance back on default and not owned is forgotten."""
-    if status is not None and status not in STATUSES:
+def set_status(conn, fragrance_id: int, status: str) -> None:
+    if status not in STATUSES:
         raise ValueError(f"unknown status {status!r}")
-    existing = next((d for d in conn.execute(
-        "SELECT * FROM fragrances WHERE brand_id IS ? AND concentration IS ?", (brand_id, concentration))
-        if key(d["name"]) == key(name)), None)
-    status = status or (existing["status"] if existing else "default")
-    owned = owned if owned is not None else bool(existing and existing["owned"])
-    note = note if note is not None else (existing["note"] if existing else None)
-    if existing:
-        conn.execute("DELETE FROM fragrances WHERE id = ?", (existing["id"],))
-    if status != "default" or owned:
-        conn.execute(
-            """INSERT INTO fragrances (id, brand_id, name, concentration, status, owned, note, size, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (existing["id"] if existing else None, brand_id, " ".join(name.upper().split()), concentration,
-             status, int(owned), note, existing["size"] if existing else None,
-             existing["created_at"] if existing else datetime.now(timezone.utc).isoformat(timespec="seconds")),
-        )
+    conn.execute("UPDATE fragrances SET status = ? WHERE id = ?", (status, fragrance_id))
+
+
+def set_owned(conn, fragrance_id: int, owned: bool) -> None:
+    conn.execute("UPDATE fragrances SET owned = ? WHERE id = ?", (int(owned), fragrance_id))
 
 
 def set_size(conn, fragrance_id: int, size: str | None) -> None:
     """The size you'd buy ("100 ml", "100 ml tester"); None buys the cheapest."""
     conn.execute("UPDATE fragrances SET size = ? WHERE id = ?", (size, fragrance_id))
+
+
+def set_note(conn, fragrance_id: int, note: str | None) -> None:
+    conn.execute("UPDATE fragrances SET note = ? WHERE id = ?", (note, fragrance_id))
+
+
+def merge(conn, fragrance_id: int, into_id: int) -> None:
+    """fragrance_id is the same juice as into_id: its names and listings move over, and so do
+    your decisions about it where into_id has none."""
+    if fragrance_id == into_id:
+        return
+    source = conn.execute("SELECT * FROM fragrances WHERE id = ?", (fragrance_id,)).fetchone()
+    conn.execute(
+        """UPDATE fragrances SET
+             status = CASE WHEN status = 'default' THEN ? ELSE status END,
+             owned = max(owned, ?), size = coalesce(size, ?), note = coalesce(note, ?)
+           WHERE id = ?""", (source["status"], source["owned"], source["size"], source["note"], into_id))
+    conn.execute("UPDATE fragrance_names SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))
+    conn.execute("UPDATE listings SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))
+    conn.execute("DELETE FROM fragrances WHERE id = ?", (fragrance_id,))
+
+
+def split(conn, fragrance_id: int, name: str, concentration: str) -> int:
+    """Undo a merge: listings read as name/concentration become a fragrance of their own again.
+    Returns its id."""
+    target = conn.execute("SELECT * FROM fragrances WHERE id = ?", (fragrance_id,)).fetchone()
+    conn.execute("DELETE FROM fragrance_names WHERE brand_id = ? AND name = ? AND concentration = ?",
+                 (target["brand_id"], name, concentration))
+    new_id = find_or_create(conn, target["brand_id"], name, concentration or None)
+    for listing in conn.execute("SELECT * FROM listings WHERE fragrance_id = ?", (fragrance_id,)).fetchall():
+        reading, read_concentration = identify(listing["name"], listing["brand"])
+        if (key(reading), read_concentration or "") == (name, concentration):
+            conn.execute("UPDATE listings SET fragrance_id = ? WHERE supplier = ? AND sku = ?",
+                         (new_id, listing["supplier"], listing["sku"]))
+    return new_id
+
+
+def prune(conn) -> None:
+    """Forget fragrances nothing lists and you made no decision about (left over after a brand
+    split or merge)."""
+    unused = """SELECT id FROM fragrances f WHERE status = 'default' AND owned = 0 AND note IS NULL
+                AND NOT EXISTS (SELECT 1 FROM listings l WHERE l.fragrance_id = f.id)"""
+    conn.execute(f"DELETE FROM fragrance_names WHERE fragrance_id IN ({unused})")
+    conn.execute(f"DELETE FROM fragrances WHERE id IN ({unused})")

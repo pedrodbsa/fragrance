@@ -15,10 +15,10 @@
     <h2>Add a fragrance</h2>
     <form method="post" action="/products" class="toolbar">
       <input type="hidden" name="back" value="{{ back }}">
-      <select name="brand_id"><option value="">Any brand</option>{% for b in brands %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
+      <select name="brand_id" required><option value="">Brand…</option>{% for b in brands %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
       <input type="text" name="name" placeholder="Fragrance, e.g. Ithaque" required>
-      <select name="concentration" title="Leave on 'Any' to cover every concentration"><option value="">Any concentration</option>{% for c in concentrations %}<option>{{ c }}</option>{% endfor %}</select>
-      <select name="status"><option value="wishlist">⭐ Wishlist</option><option value="filler">➕ Filler</option><option value="ignore">🚫 Ignore</option><option value="">No list</option></select>
+      <select name="concentration"><option value="">No concentration</option>{% for c in concentrations %}<option>{{ c }}</option>{% endfor %}</select>
+      <select name="status"><option value="wishlist">⭐ Wishlist</option><option value="filler">➕ Filler</option><option value="ignore">🚫 Ignore</option><option value="default">No list</option></select>
       <label class="check"><input type="checkbox" name="owned" value="1" {% if tab == "owned" %}checked{% endif %}> In my collection</label>
       <input type="text" name="note" placeholder="Note (optional)">
       <button class="btn primary">Add</button>
@@ -41,11 +41,10 @@
     <thead><tr><th>Fragrance</th><th>Available now</th><th class="hide-sm">Note</th><th></th></tr></thead>
     <tbody>
     {% for r in rows %}
-    {% set fields = {"brand_id": r.brand_id, "name": r.name, "concentration": r.concentration} %}
     <tr>
       <td>
-        <div class="product-name"><a class="quiet" href="/products/{{ r.id }}">{{ r.name|pretty('') }}</a>{% if r.concentration %} <span class="muted">{{ r.concentration }}</span>{% endif %}{{ badges(r) }}</div>
-        <div class="product-brand">{% if r.brand_id %}<a class="quiet" href="/brands/{{ r.brand_id }}">{{ r.brand_name }}</a>{% else %}Any brand{% endif %}</div>
+        <div class="product-name"><a class="quiet" href="/products/{{ r.id }}">{{ r.name|pretty('') }}</a>{% if r.concentration %} <span class="muted">{{ r.concentration }}</span>{% endif %}{{ badges(r.status, r.owned) }}</div>
+        <div class="product-brand"><a class="quiet" href="/brands/{{ r.brand_id }}">{{ r.brand_name }}</a></div>
       </td>
       <td>
         {% for o in r.offers[:3] %}
@@ -55,8 +54,8 @@
       </td>
       <td class="muted small hide-sm">{{ r.note or "" }}</td>
       <td class="num nowrap">
-        {{ fragrance_switch(r.status, back, fields) }}
-        {{ owned_switch(r.owned, back, fields) }}
+        {{ fragrance_switch(r.id, r.status, back) }}
+        {{ owned_switch(r.id, r.owned, back) }}
       </td>
     </tr>
     {% endfor %}

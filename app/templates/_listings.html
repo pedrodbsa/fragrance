@@ -5,7 +5,7 @@
     <tbody>
     {% for r in rows %}
     <tr class="{{ 'faded' if r.qty == 0 }}">
-      <td class="nowrap product-name">{{ r.size_label }}{% if r.concentration %} <span class="muted">{{ r.concentration }}</span>{% endif %}</td>
+      <td class="nowrap product-name">{{ r.size_label }}</td>
       <td><span title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</span>{% if r.flagged_new %} <span class="pill" title="Marked new by the supplier">Supplier: new</span>{% endif %}</td>
       <td class="mono hide-sm">{{ r.ean or "—" }}</td>
       <td class="num">{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}<span class="muted">—</span>{% endif %}</td>

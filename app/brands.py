@@ -5,13 +5,14 @@ Each brand has one status:
   ignore   hidden everywhere, never alerts
   default  shown in Stock, no alerts. Every brand starts here; new ones are offered in the
            digest with Follow / Ignore buttons.
-Fragrances you follow or ignore win over their brand's status (app/fragrances.py).
+A fragrance on one of your lists decides for itself (app/fragrances.py).
 """
 
 import re
 import unicodedata
 from collections import defaultdict
 
+from app import fragrances
 from app.db import add_brand
 
 STATUSES = ("follow", "ignore", "default")
@@ -28,20 +29,34 @@ def rename(conn, brand_id: int, name: str) -> None:
 
 
 def merge(conn, brand_id: int, into_id: int) -> None:
-    """brand_id becomes part of into_id: its spellings, fragrance decisions and fragrance
-    merges move over, and into_id's status stays."""
+    """brand_id becomes part of into_id: its spellings and fragrances move over, and into_id's
+    status stays. A fragrance both brands have (same name and concentration) becomes one."""
     if brand_id == into_id:
         return
-    conn.execute("UPDATE brand_aliases SET brand_id = ? WHERE brand_id = ?", (into_id, brand_id))
+    for name in conn.execute("SELECT * FROM fragrance_names WHERE brand_id = ?", (brand_id,)).fetchall():
+        same = conn.execute(
+            "SELECT fragrance_id FROM fragrance_names WHERE brand_id = ? AND name = ? AND concentration = ?",
+            (into_id, name["name"], name["concentration"])).fetchone()
+        if same:
+            fragrances.merge(conn, name["fragrance_id"], same["fragrance_id"])
+    conn.execute("UPDATE OR IGNORE fragrance_names SET brand_id = ? WHERE brand_id = ?", (into_id, brand_id))
+    conn.execute("DELETE FROM fragrance_names WHERE brand_id = ?", (brand_id,))  # names into_id already had
     conn.execute("UPDATE fragrances SET brand_id = ? WHERE brand_id = ?", (into_id, brand_id))
-    conn.execute("UPDATE OR REPLACE fragrance_aliases SET brand_id = ? WHERE brand_id = ?", (into_id, brand_id))
+    conn.execute("UPDATE brand_aliases SET brand_id = ? WHERE brand_id = ?", (into_id, brand_id))
     conn.execute("DELETE FROM brands WHERE id = ?", (brand_id,))
 
 
 def split(conn, alias: str) -> int:
-    """Take one spelling out of its brand and make it a brand of its own, on default."""
+    """Take one spelling out of its brand and make it a brand of its own, on default. Its
+    listings move to fragrances of the new brand. Returns the new brand's id."""
     conn.execute("DELETE FROM brand_aliases WHERE alias = ?", (alias,))
-    return add_brand(conn, alias, announced=True)
+    brand_id = add_brand(conn, alias, announced=True)
+    for listing in conn.execute("SELECT * FROM listings WHERE brand = ? COLLATE NOCASE", (alias,)).fetchall():
+        conn.execute("UPDATE listings SET fragrance_id = ? WHERE supplier = ? AND sku = ?",
+                     (fragrances.assign(conn, brand_id, listing["name"], listing["brand"]),
+                      listing["supplier"], listing["sku"]))
+    fragrances.prune(conn)
+    return brand_id
 
 
 # --- Merge suggestions -------------------------------------------------------------------

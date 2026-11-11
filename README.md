@@ -7,7 +7,7 @@ show up. The full plan is in docs/spec.md.
 ## How it works
 
 ```
-Dokploy schedule ─▶ fragrance run ─▶ collect each supplier ─▶ SQLite (products, events, brands)
+Dokploy schedule ─▶ fragrance run ─▶ collect each supplier ─▶ SQLite (listings, fragrances, brands, events)
                                  └─▶ one digest ─▶ Telegram ─▶ Follow / Ignore buttons ─▶ backoffice /telegram
 backoffice (https://…) ◀─ you: follow / ignore brands and fragrances, stock, collection
 Litestream ─▶ R2 (continuous backup; restored automatically on a fresh server)
@@ -26,7 +26,10 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   stock, cheaper), and new brands with Follow / Ignore buttons. Order suggestions stay on the
   Orders page.
 - **Products** lists the wishlist, fillers, ignored fragrances and your collection (owned, which
-  doesn't change alerts). Listings are matched by the fragrance name read from the supplier's product name.
+  doesn't change alerts).
+- **Catalogue**: every listing points to a fragrance (brand + name + concentration), worked
+  out once when the listing first appears, from the name read out of the supplier's product
+  name. Every fragrance has its own page, on a list or not.
 
 ## Code map
 
@@ -37,10 +40,11 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 | `app/notify.py` | Builds and sends the digest |
 | `app/orders.py` | Order suggestions: wishlist plus fillers up to each supplier's minimum |
 | `app/brands.py` | Brand statuses, merging, merge suggestions |
-| `app/fragrances.py` | Fragrance decisions and matching listings to them |
+| `app/fragrances.py` | The fragrance catalogue: matching listings, lists, merges |
 | `app/telegram.py` | Telegram messages, buttons and webhook |
 | `app/web.py`, `app/templates/` | Backoffice |
-| `app/db.py` | Schema |
+| `app/db.py` | Schema (tables described at the top) |
+| `app/upgrades.py`, `app/brand_cleanup.py` | One-time changes to an existing database, run on start |
 | `docker/` | Entrypoint, Litestream config |
 
 ## Adding a supplier

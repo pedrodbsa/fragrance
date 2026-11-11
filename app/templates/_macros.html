@@ -13,10 +13,9 @@
 
 {# A fragrance's list: Wishlist / Filler / Ignore. The current one is highlighted; clicking
    it again takes the fragrance off it (back to the brand's status). #}
-{% macro fragrance_switch(current, back, fields, small=False) %}
-<form method="post" action="/products" class="choice{{ ' sm' if small }}">
+{% macro fragrance_switch(fragrance_id, current, back, small=False) %}
+<form method="post" action="/products/{{ fragrance_id }}/status" class="choice{{ ' sm' if small }}">
   <input type="hidden" name="back" value="{{ back }}">
-  {% for k, v in fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v if v is not none else '' }}">{% endfor %}
   {% for value, icon, label, tip in [("wishlist", "⭐", "Wishlist", "I want to buy it: alert me"),
                                      ("filler", "➕", "Filler", "I wouldn't mind owning it, e.g. to reach a minimum order. No alerts"),
                                      ("ignore", "🚫", "Ignore", "Hide it everywhere")] %}
@@ -27,16 +26,15 @@
 {% endmacro %}
 
 {# Collection switch for a fragrance. #}
-{% macro owned_switch(owned, back, fields) %}
-<form method="post" action="/products" class="choice">
+{% macro owned_switch(fragrance_id, owned, back) %}
+<form method="post" action="/products/{{ fragrance_id }}/owned" class="choice">
   <input type="hidden" name="back" value="{{ back }}">
-  {% for k, v in fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v if v is not none else '' }}">{% endfor %}
   <button class="{{ 'on' if owned }}" name="owned" value="{{ '0' if owned else '1' }}" title="{{ 'In your collection: click to remove' if owned else 'Add to your collection' }}">{{ "✓ In collection" if owned else "+ Collection" }}</button>
 </form>
 {% endmacro %}
 
-{# Badges for a fragrance decision: its list, and In collection. #}
-{% macro badges(d) %}
-{%- if d and d.status == "wishlist" %} <span class="pill new">Wishlist</span>{% elif d and d.status == "filler" %} <span class="pill">Filler</span>{% elif d and d.status == "ignore" %} <span class="pill">Ignored</span>{% endif -%}
-{%- if d and d.owned %} <span class="pill restock">In collection</span>{% endif -%}
+{# Badges for a fragrance: its list, and In collection. #}
+{% macro badges(status, owned) %}
+{%- if status == "wishlist" %} <span class="pill new">Wishlist</span>{% elif status == "filler" %} <span class="pill">Filler</span>{% elif status == "ignore" %} <span class="pill">Ignored</span>{% endif -%}
+{%- if owned %} <span class="pill restock">In collection</span>{% endif -%}
 {% endmacro %}

@@ -10,12 +10,11 @@ With BACKOFFICE_URL set, the app registers that webhook with Telegram when it st
 import os
 import re
 import secrets
-from collections import Counter, defaultdict
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
-from urllib.parse import urlencode
 
 from fastapi import APIRouter, Body, Depends, FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -24,10 +23,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app import brands, orders, telegram
-from app.db import connect, upgrade
+from app.db import connect
+from app.upgrades import upgrade
 from app import fragrances
-from app.fragrances import CONCENTRATIONS, alerting, hidden, key, matcher, resolver, variant
-from app.fragrances import save as fragrance_save
+from app.fragrances import CONCENTRATIONS, key, variant
 from app.suppliers import SUPPLIERS
 
 security = HTTPBasic()
@@ -103,56 +102,44 @@ def back_to(back: str, fallback: str) -> RedirectResponse:
 @office.get("/")
 def events(request: Request, kind: str = ""):
     conn = connect()
-    match = matcher(conn)
     recent = conn.execute(
-        """SELECT e.*, c.name, c.brand, c.brand_id, c.brand_name, c.status, c.ean, c.price, c.qty
+        """SELECT e.*, c.name, c.brand, c.brand_name, c.fragrance_id, c.ean, c.price, c.qty
            FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
-           WHERE (? = '' OR e.kind = ?) ORDER BY e.id DESC LIMIT ?""",
-        (kind, kind, PAGE * 3),
+           WHERE NOT c.hidden AND (? = '' OR e.kind = ?) ORDER BY e.id DESC LIMIT ?""",
+        (kind, kind, PAGE),
     ).fetchall()
-    rows = [r for r in annotate(conn, recent) if not r["hidden"]][:PAGE]
     since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds")
-    day = conn.execute(
-        """SELECT e.kind, c.name, c.brand, c.brand_id, c.status FROM events e
-           JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku WHERE e.created_at >= ?""", (since,)).fetchall()
-    last_day = Counter(r["kind"] for r in day if not hidden(r, match(r)))
-    in_stock = conn.execute("SELECT * FROM catalog WHERE qty > 0").fetchall()
-    shown = [r for r in in_stock if not hidden(r, match(r))]
+    last_day = dict(conn.execute(
+        """SELECT e.kind, count(*) FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
+           WHERE e.created_at >= ? AND NOT c.hidden GROUP BY e.kind""", (since,)).fetchall())
+    in_stock, suppliers = conn.execute(
+        "SELECT count(*), count(DISTINCT supplier) FROM catalog WHERE qty > 0 AND NOT hidden").fetchone()
     week = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat(timespec="seconds")
     new_brands = conn.execute(  # brands from a supplier's first run have announced_at = created_at
         """SELECT count(*) FROM brands WHERE status = 'default' AND created_at >= ?
            AND (announced_at IS NULL OR announced_at != created_at)""",
         (week,)).fetchone()[0]
     return templates.TemplateResponse(request, "events.html", {
-        "rows": rows, "kind": kind, "last_day": last_day, "in_stock": len(shown),
-        "suppliers": len({r["supplier"] for r in shown}), "new_brands": new_brands,
+        "rows": recent, "kind": kind, "last_day": last_day, "in_stock": in_stock,
+        "suppliers": suppliers, "new_brands": new_brands,
     })
 
 
-def annotate(conn, listings) -> list[dict]:
-    """Catalog rows plus what the stock tables need: the fragrance (juice) each listing is,
-    after your merges, the decision covering it, and its product page."""
-    match, juice = matcher(conn), resolver(conn)
+def annotate(listings) -> list[dict]:
+    """Catalog rows plus each one's size, as the stock tables show it."""
     rows = []
     for r in listings:
-        name, concentration = juice(r)
-        decision = match(r)
-        page = (f"/products/{decision['id']}" if decision else
-                "/fragrance?" + urlencode({"brand": r["brand_id"], "name": name, "concentration": concentration or ""}))
         size, size_label = variant(r["name"])
-        rows.append({**dict(r), "decision": decision, "fragrance": name, "concentration": concentration,
-                     "page": page, "size": size, "size_label": size_label,
-                     "alerting": alerting(r, decision), "hidden": hidden(r, decision)})
+        rows.append({**dict(r), "size": size, "size_label": size_label})
     return rows
 
 
 def group(rows: list[dict]) -> list[dict]:
-    """One entry per fragrance (brand + name + concentration), its sizes and testers under it.
-    For each size, the cheapest in-stock listing is shown."""
+    """One entry per fragrance, its sizes and testers under it. For each size, the cheapest
+    in-stock listing is shown."""
     groups = {}
     for r in rows:
-        g = groups.setdefault((r["brand_id"], key(r["fragrance"]), r["concentration"]), {
-            **r, "listings": [], "qty": 0, "suppliers": set(), "best": None})
+        g = groups.setdefault(r["fragrance_id"], {**r, "listings": [], "qty": 0, "suppliers": set(), "best": None})
         g["listings"].append(r)
         g["qty"] += r["qty"]
         g["suppliers"].add(r["supplier"])
@@ -179,7 +166,7 @@ def price_history(conn, rows: list[dict]) -> list[dict]:
                AND kind IN ('price_drop', 'price_up') ORDER BY id""", (r["supplier"], r["sku"])).fetchall()
         start = changes[0]["old_value"] if changes else r["price"]
         points = [(r["first_seen"], start)] + [(c["created_at"], c["new_value"]) for c in changes] + [(today, r["price"])]
-        series.append({"label": f"{r['size_label']} {r['concentration'] or ''} · {r['supplier']}".replace("  ", " "), "points": points,
+        series.append({"label": f"{r['size_label']} · {r['supplier']}", "points": points,
                        "low": min(p for _, p in points)})
     return series
 
@@ -197,16 +184,13 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
         """SELECT * FROM catalog
            WHERE (? = '' OR name LIKE '%' || ? || '%' OR ean = ? OR ean2 = ? OR ean3 = ? OR sku = ?)
              AND (? = '' OR brand_id = ?) AND (? = '' OR supplier = ?) AND (NOT ? OR qty > 0)
-           ORDER BY brand_name, name""",
-        (q, q, q, q, q, q, brand, brand, supplier, supplier, in_stock),
+             AND (? OR NOT hidden) AND (NOT ? OR alerting)
+           ORDER BY brand_name, fragrance, concentration""",
+        (q, q, q, q, q, q, brand, brand, supplier, supplier, in_stock, everything, followed),
     ).fetchall()
-    rows = []
-    for r in annotate(conn, found):
-        if (everything or not r["hidden"]) and (r["alerting"] or not followed):
-            rows.append(r)
     brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'ignore' ORDER BY name").fetchall()
-    suppliers = [r[0] for r in conn.execute("SELECT DISTINCT supplier FROM products ORDER BY supplier")]
-    groups = group(rows)
+    suppliers = [r[0] for r in conn.execute("SELECT name FROM suppliers ORDER BY name")]
+    groups = group(annotate(found))
     return templates.TemplateResponse(request, "stock.html", {
         "groups": groups[:PAGE], "total": len(groups), "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
@@ -217,12 +201,21 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
 # --- Brands ----------------------------------------------------------------------------------
 
 BRAND_ROWS = """
-SELECT b.*,
-       (SELECT count(*) FROM catalog c WHERE c.brand_id = b.id AND c.qty > 0) AS in_stock,
-       (SELECT group_concat(DISTINCT c.supplier) FROM catalog c WHERE c.brand_id = b.id) AS suppliers,
-       (SELECT c.name FROM catalog c WHERE c.brand_id = b.id AND c.qty > 0 ORDER BY c.price DESC LIMIT 1) AS example,
-       (SELECT count(*) FROM brand_aliases a WHERE a.brand_id = b.id) AS spellings
+WITH stock AS (  -- per brand, worked out in one pass over the listings
+    SELECT brand_id, sum(qty > 0) AS in_stock, group_concat(DISTINCT supplier) AS suppliers
+    FROM catalog GROUP BY brand_id
+), examples AS (  -- each brand's most expensive product in stock
+    SELECT brand_id, name AS example FROM (
+        SELECT brand_id, name, row_number() OVER (PARTITION BY brand_id ORDER BY price DESC) AS n
+        FROM catalog WHERE qty > 0) WHERE n = 1
+), spellings AS (
+    SELECT brand_id, count(*) AS spellings FROM brand_aliases GROUP BY brand_id
+)
+SELECT b.*, coalesce(s.in_stock, 0) AS in_stock, s.suppliers, e.example, coalesce(n.spellings, 0) AS spellings
 FROM brands b
+LEFT JOIN stock s ON s.brand_id = b.id
+LEFT JOIN examples e ON e.brand_id = b.id
+LEFT JOIN spellings n ON n.brand_id = b.id
 """
 
 
@@ -274,14 +267,16 @@ def brand_detail(request: Request, brand_id: int):
     if brand is None:
         raise HTTPException(404, "brand not found")
     aliases = conn.execute(
-        """SELECT a.alias, (SELECT count(*) FROM products p WHERE p.brand = a.alias COLLATE NOCASE) AS products
+        """SELECT a.alias, (SELECT count(*) FROM listings l WHERE l.brand = a.alias COLLATE NOCASE) AS products
            FROM brand_aliases a WHERE a.brand_id = ? ORDER BY a.alias""", (brand_id,)).fetchall()
     others = conn.execute("SELECT id, name FROM brands WHERE id != ? ORDER BY name", (brand_id,)).fetchall()
-    decided = conn.execute("SELECT * FROM fragrances WHERE brand_id = ? ORDER BY status, name", (brand_id,)).fetchall()
+    decided = conn.execute(
+        "SELECT * FROM fragrances WHERE brand_id = ? AND (status != 'default' OR owned) ORDER BY status, name",
+        (brand_id,)).fetchall()
     listings = conn.execute(f"SELECT * FROM catalog WHERE brand_id = ? {IN_STOCK_FIRST}", (brand_id,)).fetchall()
     return templates.TemplateResponse(request, "brand.html", {
         "brand": brand, "aliases": aliases, "others": others, "decided": decided,
-        "groups": group(annotate(conn, listings)),
+        "groups": group(annotate(listings)),
     })
 
 
@@ -317,127 +312,98 @@ def alias_split(alias: str = Form(...)):
     return RedirectResponse(f"/brands/{new_id}", status_code=303)
 
 
-# --- Products: your decisions about single fragrances ----------------------------------------
+# --- Products: the fragrance catalogue and your lists ----------------------------------------
 
 TABS = {"wishlist": "Wishlist", "filler": "Fillers", "owned": "Collection", "ignore": "Ignored"}
+PRODUCT = "SELECT f.*, b.name AS brand_name, b.status AS brand_status FROM fragrances f JOIN brands b ON b.id = f.brand_id"
 
 
 @office.get("/products")
 def products(request: Request, tab: str = "wishlist"):
     conn = connect()
-    match = matcher(conn)
-    offers = defaultdict(list)  # decision id -> listings it covers
-    for r in conn.execute("SELECT * FROM catalog WHERE qty > 0"):
-        decision = match(r)
-        if decision:
-            offers[decision["id"]].append(r)
     where = "f.owned = 1" if tab == "owned" else "f.status = ?"
-    rows = conn.execute(
-        f"""SELECT f.*, b.name AS brand_name FROM fragrances f LEFT JOIN brands b ON b.id = f.brand_id
-            WHERE {where} ORDER BY b.name, f.name""", () if tab == "owned" else (tab,)).fetchall()
+    rows = conn.execute(f"{PRODUCT} WHERE {where} ORDER BY b.name, f.name", () if tab == "owned" else (tab,)).fetchall()
+    offers = defaultdict(list)  # fragrance id -> its listings in stock, cheapest first
+    for r in conn.execute(
+            f"""SELECT * FROM catalog WHERE qty > 0 AND fragrance_id IN ({",".join("?" * len(rows))})
+                ORDER BY price""", [r["id"] for r in rows]):
+        offers[r["fragrance_id"]].append(r)
     counts = dict(conn.execute("SELECT status, count(*) FROM fragrances GROUP BY status").fetchall())
     counts["owned"] = conn.execute("SELECT count(*) FROM fragrances WHERE owned = 1").fetchone()[0]
     brand_list = conn.execute("SELECT id, name FROM brands ORDER BY name").fetchall()
     return templates.TemplateResponse(request, "products.html", {
-        "rows": [{**dict(r), "offers": sorted(offers[r["id"]], key=lambda o: o["price"] or 0)} for r in rows],
+        "rows": [{**dict(r), "offers": offers[r["id"]]} for r in rows],
         "tab": tab, "tabs": TABS, "counts": counts, "brands": brand_list, "concentrations": CONCENTRATIONS,
     })
 
 
+@office.post("/products")
+def product_add(brand_id: int = Form(...), name: str = Form(...), concentration: str = Form(""),
+                status: str = Form("default"), owned: str = Form(""), note: str = Form(""), back: str = Form("/products")):
+    """Add a fragrance by hand, even one no supplier lists yet, straight onto a list. If it
+    exists already, it's that one: listings found later land on it."""
+    if not name.strip():
+        raise HTTPException(400, "a fragrance needs a name")
+    conn = connect()
+    with conn:
+        fragrance_id = fragrances.find_or_create(conn, brand_id, name, concentration or None)
+        fragrances.set_status(conn, fragrance_id, status)
+        if owned:
+            fragrances.set_owned(conn, fragrance_id, True)
+        if note.strip():
+            fragrances.set_note(conn, fragrance_id, note.strip())
+    return back_to(back, "/products")
+
+
 @office.get("/products/{fragrance_id}")
 def product_detail(request: Request, fragrance_id: int):
+    """Any fragrance: every listing of it by size, its price history, and merging."""
     conn = connect()
-    product = conn.execute(
-        "SELECT f.*, b.name AS brand_name FROM fragrances f LEFT JOIN brands b ON b.id = f.brand_id WHERE f.id = ?",
-        (fragrance_id,)).fetchone()
+    product = conn.execute(f"{PRODUCT} WHERE f.id = ?", (fragrance_id,)).fetchone()
     if product is None:
         raise HTTPException(404, "product not found")
-    candidates = conn.execute(
-        f"SELECT * FROM catalog WHERE ? IS NULL OR brand_id = ? {IN_STOCK_FIRST}",
-        (product["brand_id"], product["brand_id"])).fetchall()
-    rows = [r for r in annotate(conn, candidates) if r["decision"] and r["decision"]["id"] == fragrance_id]
-    return product_page(request, conn, product, rows)
-
-
-def product_page(request, conn, product, rows):
-    rows = sorted(rows, key=lambda r: (r["concentration"] or "", r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
-    brand = conn.execute("SELECT status FROM brands WHERE id = ?", (product["brand_id"],)).fetchone()
+    listings = conn.execute("SELECT * FROM catalog WHERE fragrance_id = ?", (fragrance_id,)).fetchall()
+    rows = sorted(annotate(listings), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
     return templates.TemplateResponse(request, "product.html", {
         "product": product, "rows": rows, "history": price_history(conn, rows),
-        "brand_status": brand["status"] if brand else "default",
-        **(merge_options(conn, product, rows) if product["brand_id"] else {}),
+        **merge_options(conn, product, rows),
     })
 
 
 def merge_options(conn, product, rows) -> dict:
-    """For the product page's "same juice" panel: names already merged into this fragrance,
+    """For the product page's "same juice" panel: other names merged into this fragrance,
     the brand's other fragrances to merge in, and those sharing an EAN with it (a hint only:
     suppliers sometimes reuse an EAN for a different fragrance)."""
-    here = (key(product["name"]), product["concentration"] or "")
     merged = conn.execute(
-        "SELECT * FROM fragrance_aliases WHERE brand_id = ? AND into_name = ? AND into_concentration = ? ORDER BY name",
-        (product["brand_id"], *here)).fetchall()
-    listings = conn.execute("SELECT * FROM catalog WHERE brand_id = ?", (product["brand_id"],)).fetchall()
-    others = [g for g in group(annotate(conn, listings)) if (key(g["fragrance"]), g["concentration"] or "") != here]
+        "SELECT * FROM fragrance_names WHERE fragrance_id = ? AND NOT (name = ? AND concentration = ?) ORDER BY name",
+        (product["id"], key(product["name"]), product["concentration"] or "")).fetchall()
+    others = conn.execute(
+        """SELECT f.*, count(l.sku) AS listings FROM fragrances f JOIN listings l ON l.fragrance_id = f.id
+           WHERE f.brand_id = ? AND f.id != ? GROUP BY f.id ORDER BY f.name, f.concentration""",
+        (product["brand_id"], product["id"])).fetchall()
     eans = {e for r in rows for e in (r["ean"], r["ean2"], r["ean3"]) if e}
-    shared = [g for g in others if eans & {e for r in g["listings"] for e in (r["ean"], r["ean2"], r["ean3"]) if e}]
-    return {"merged": merged, "others": sorted(others, key=lambda g: g["fragrance"]), "shared": shared}
+    sharing = {l["fragrance_id"] for l in conn.execute(
+        "SELECT fragrance_id, ean, ean2, ean3 FROM catalog WHERE brand_id = ? AND fragrance_id != ?",
+        (product["brand_id"], product["id"])) if eans & {l["ean"], l["ean2"], l["ean3"]}}
+    shared = [o for o in others if o["id"] in sharing]
+    return {"merged": merged, "others": others, "shared": shared}
 
 
-@office.post("/fragrances/merge")
-def fragrance_merge(brand_id: int = Form(...), name: str = Form(...), concentration: str = Form(""),
-                    into_name: str = Form(...), into_concentration: str = Form(""), back: str = Form(...)):
-    """name/concentration is the same juice as into_name/into_concentration."""
+@office.post("/products/{fragrance_id}/status")
+def product_status(fragrance_id: int, status: str = Form(...), back: str = Form("/products")):
+    """Put a fragrance on the wishlist, fillers or ignored, or off them ('default')."""
     conn = connect()
     with conn:
-        fragrances.merge(conn, brand_id, name, concentration or None, into_name, into_concentration or None)
+        fragrances.set_status(conn, fragrance_id, status)
     return back_to(back, "/products")
 
 
-@office.post("/fragrances/split")
-def fragrance_split(brand_id: int = Form(...), name: str = Form(...), concentration: str = Form(""), back: str = Form(...)):
+@office.post("/products/{fragrance_id}/owned")
+def product_owned(fragrance_id: int, owned: str = Form(...), back: str = Form("/products")):
+    """Put a fragrance in your collection (1) or take it out (0)."""
     conn = connect()
     with conn:
-        fragrances.split(conn, brand_id, name, concentration or None)
-    return back_to(back, "/products")
-
-
-@office.get("/fragrance")
-def fragrance_page(request: Request, brand: int, name: str, concentration: str = ""):
-    """Page for any fragrance seen in stock, decided on or not. Once there's a decision
-    covering it, its product page takes over."""
-    conn = connect()
-    listings = conn.execute(f"SELECT * FROM catalog WHERE brand_id = ? {IN_STOCK_FIRST}", (brand,)).fetchall()
-    rows = [r for r in annotate(conn, listings)
-            if key(r["fragrance"]) == key(name) and (r["concentration"] or "") == concentration]
-    decided = next((r["decision"] for r in rows if r["decision"]), None)
-    if decided:
-        return RedirectResponse(f"/products/{decided['id']}", status_code=303)
-    brand_row = conn.execute("SELECT name FROM brands WHERE id = ?", (brand,)).fetchone()
-    if brand_row is None:
-        raise HTTPException(404, "brand not found")
-    product = {"id": None, "brand_id": brand, "brand_name": brand_row["name"], "name": name,
-               "concentration": concentration or None, "status": "default", "owned": 0, "note": None}
-    return product_page(request, conn, product, rows)
-
-
-@office.post("/products")
-def product_save(name: str = Form(...), brand_id: str = Form(""), concentration: str = Form(""),
-                 status: str = Form(""), owned: str = Form(""), note: str = Form(""), back: str = Form("/products")):
-    """Put a fragrance on the wishlist, fillers or ignored, or off them (status), or put it in or out of your collection
-    (owned = 1 / 0). Fields left empty keep their current value."""
-    if not name.strip():
-        raise HTTPException(400, "a product needs a name")
-    conn = connect()
-    with conn:
-        fragrance_save(conn, int(brand_id) if brand_id else None, name, concentration or None,
-                       status=status or None, owned=(owned == "1") if owned else None, note=note.strip() or None)
-    # Back on default and out of the collection, a fragrance's own page is gone: show it
-    # as any other fragrance from stock instead.
-    page = re.fullmatch(r"/products/(\d+)", back)
-    if page and not conn.execute("SELECT 1 FROM fragrances WHERE id = ?", (int(page[1]),)).fetchone():
-        back = ("/fragrance?" + urlencode({"brand": brand_id, "name": name, "concentration": concentration})
-                if brand_id else "/products")
+        fragrances.set_owned(conn, fragrance_id, owned == "1")
     return back_to(back, "/products")
 
 
@@ -448,6 +414,24 @@ def product_size(fragrance_id: int, size: str = Form(""), back: str = Form(...))
     with conn:
         fragrances.set_size(conn, fragrance_id, size or None)
     return back_to(back, f"/products/{fragrance_id}")
+
+
+@office.post("/products/{fragrance_id}/merge")
+def product_merge(fragrance_id: int, other: int = Form(...)):
+    """`other` is the same juice as this fragrance: it merges into this one."""
+    conn = connect()
+    with conn:
+        fragrances.merge(conn, other, fragrance_id)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+
+
+@office.post("/products/{fragrance_id}/split")
+def product_split(fragrance_id: int, name: str = Form(...), concentration: str = Form("")):
+    """Listings read as name/concentration aren't this fragrance after all."""
+    conn = connect()
+    with conn:
+        fragrances.split(conn, fragrance_id, name, concentration)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
 
 
 # --- Suppliers and orders --------------------------------------------------------------------
@@ -461,7 +445,7 @@ def suppliers(request: Request):
     conn = connect()
     saved = {s["name"]: s for s in conn.execute("SELECT * FROM suppliers")}
     stock = {r["supplier"]: r for r in conn.execute(
-        "SELECT supplier, sum(qty > 0) AS in_stock, max(last_seen) AS last_seen FROM products GROUP BY supplier")}
+        "SELECT supplier, sum(qty > 0) AS in_stock, max(last_seen) AS last_seen FROM listings GROUP BY supplier")}
     rows = []
     for name in sorted(SUPPLIERS):
         s, p = saved.get(name), stock.get(name)

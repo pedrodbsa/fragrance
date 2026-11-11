@@ -36,7 +36,7 @@
         {% if b.spellings > 1 %}<div class="small muted">{{ b.spellings }} spellings</div>{% endif %}
       </td>
       <td class="num">{{ b.in_stock }}</td>
-      <td class="muted hide-sm">{{ (b.suppliers or "").replace(",", ", ") }}</td>
+      <td class="muted hide-sm">{{ (b.suppliers or "").split(",")|sort|join(", ") }}</td>
       <td class="nowrap">
         {{ follow_switch("/brands/" ~ b.id ~ "/status", b.status, back) }}
       </td>

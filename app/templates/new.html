@@ -34,7 +34,7 @@
         {% if b.example %}<div class="small muted">{{ b.example|pretty(b.name) }}</div>{% endif %}
       </td>
       <td class="num">{{ b.in_stock }}</td>
-      <td class="muted hide-sm">{{ (b.suppliers or "").replace(",", ", ") }}</td>
+      <td class="muted hide-sm">{{ (b.suppliers or "").split(",")|sort|join(", ") }}</td>
       <td class="nowrap muted hide-sm">{{ b.created_at|local }}</td>
       <td class="hide-sm">
         {% for other, name, reason in hints.get(b.id, [])[:2] %}

@@ -18,7 +18,6 @@ from html import escape
 from app import telegram
 from app.brands import suggestions
 from app.db import connect, now
-from app.fragrances import alerting, decided, matcher
 
 FOLLOWED_FRAGRANCE_KINDS = ("new", "restock", "price_drop")
 FOLLOWED_BRAND_KINDS = ("new", "restock")
@@ -35,8 +34,7 @@ WHERE e.notified_at IS NULL ORDER BY c.brand_name, c.name
 def notify(failed: list[str]) -> None:
     conn = connect()
     pending = conn.execute(PENDING).fetchall()
-    match = matcher(conn)
-    followed = [e for e in pending if alerts(e, match(e))]
+    followed = [e for e in pending if alerts(e)]
     new_brands = conn.execute(
         "SELECT * FROM brands WHERE status = 'default' AND announced_at IS NULL ORDER BY name").fetchall()
 
@@ -56,10 +54,10 @@ def notify(failed: list[str]) -> None:
           f"{len(failed)} failed{'' if digest else '; nothing to send'}")
 
 
-def alerts(event, decision) -> bool:
+def alerts(event) -> bool:
     """A wishlist fragrance also alerts on price drops; a followed brand on new and restock."""
-    kinds = FOLLOWED_FRAGRANCE_KINDS if decided(decision) else FOLLOWED_BRAND_KINDS
-    return alerting(event, decision) and event["kind"] in kinds
+    kinds = FOLLOWED_BRAND_KINDS if event["fragrance_status"] == "default" else FOLLOWED_FRAGRANCE_KINDS
+    return event["alerting"] and event["kind"] in kinds
 
 
 def compose(failed, followed, new_brands) -> str:

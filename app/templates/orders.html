@@ -28,10 +28,10 @@
     <tr class="{{ '' if on else 'off' }}">
       <td><input type="checkbox" data-price="{{ i.price }}" {{ 'checked' if on }}></td>
       <td>
-        <div class="product-name">{{ "⭐" if kind == "wishlist" else "➕" }} <a class="quiet" href="/products/{{ i.decision.id }}">{{ i.decision.name|pretty('') }}</a>{% if i.decision.concentration %} <span class="muted">{{ i.decision.concentration }}</span>{% endif %}</div>
+        <div class="product-name">{{ "⭐" if kind == "wishlist" else "➕" }} <a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}</div>
         <div class="product-brand">{{ i.brand_name }}</div>
       </td>
-      <td class="nowrap">{{ i.size_label }}{% if not i.decision.size %} <span class="muted small" title="No size picked: the cheapest is used">cheapest</span>{% endif %}</td>
+      <td class="nowrap">{{ i.size_label }}{% if not i.buy_size %} <span class="muted small" title="No size picked: the cheapest is used">cheapest</span>{% endif %}</td>
       <td class="num">€{{ "%.2f"|format(i.price) }}</td>
       <td class="num hide-sm">{{ i.qty }}</td>
       <td class="mono hide-sm">{{ i.ean or "—" }}</td>

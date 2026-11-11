@@ -8,35 +8,30 @@ For each supplier that has at least one wishlist fragrance in stock:
      money spent over it. If all its fillers together don't reach it, the order is short.
 """
 
-from app.fragrances import matcher, variant
-
-LISTS = ("wishlist", "filler")
+from app.fragrances import variant
 
 
 def plan(conn) -> list[dict]:
     """One suggestion per supplier with wishlist fragrances in stock."""
-    match = matcher(conn)
     movs = {s["name"]: s["mov"] for s in conn.execute("SELECT name, mov FROM suppliers")}
     offers = {}  # (supplier, fragrance id) -> the listing to buy
-    for listing in conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL"):
-        decision = match(listing)
-        if decision is None or decision["status"] not in LISTS:
-            continue
+    for listing in conn.execute("""SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL
+                                   AND fragrance_status IN ('wishlist', 'filler')"""):
         size = variant(listing["name"])[1]
-        if decision["size"] and size != decision["size"]:
+        if listing["buy_size"] and size != listing["buy_size"]:
             continue
-        line = {**dict(listing), "decision": decision, "size_label": size}
-        best = offers.get((listing["supplier"], decision["id"]))
+        line = {**dict(listing), "size_label": size}
+        best = offers.get((listing["supplier"], listing["fragrance_id"]))
         if best is None or line["price"] < best["price"]:
-            offers[(listing["supplier"], decision["id"])] = line
+            offers[(listing["supplier"], listing["fragrance_id"])] = line
 
     suggestions = []
     for supplier in sorted({s for s, _ in offers}):
         lines = sorted((o for (s, _), o in offers.items() if s == supplier), key=lambda o: o["price"])
-        wanted = [o for o in lines if o["decision"]["status"] == "wishlist"]
+        wanted = [o for o in lines if o["fragrance_status"] == "wishlist"]
         if not wanted:
             continue
-        fillers = [o for o in lines if o["decision"]["status"] == "filler"]
+        fillers = [o for o in lines if o["fragrance_status"] == "filler"]
         mov = movs.get(supplier)
         gap = (mov or 0) - sum(o["price"] for o in wanted)
         chosen = top_up(gap, fillers)

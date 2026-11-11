@@ -1,24 +1,26 @@
 """Collect one supplier: fetch its current stock and record what changed since the last run.
 
 The first run for a supplier only records the baseline, so it doesn't report its whole
-catalogue as new, and the brands it brings aren't announced in the digest. Quantity changes update the product but aren't events: they happen
-constantly and would drown the ones that matter.
+catalogue as new, and the brands it brings aren't announced in the digest. Quantity changes
+update the listing but aren't events: they happen constantly and would drown the ones that
+matter.
 """
 
 from collections import Counter
 from datetime import datetime, timezone
 
-from app.db import add_brand, collected, connect, unknown_spellings
+from app.db import brand_for, collected, connect
+from app.fragrances import assign
 from app.item import Item
 from app.suppliers import SUPPLIERS
 
 UPSERT = """
-INSERT INTO products (supplier, sku, name, brand, ean, ean2, ean3, qty, price, flagged_new, first_seen, last_seen)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO listings (supplier, sku, name, brand, ean, ean2, ean3, qty, price, flagged_new, first_seen, last_seen, fragrance_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (supplier, sku) DO UPDATE SET
   name = excluded.name, brand = excluded.brand, ean = excluded.ean, ean2 = excluded.ean2,
   ean3 = excluded.ean3, qty = excluded.qty, price = excluded.price,
-  flagged_new = excluded.flagged_new, last_seen = excluded.last_seen
+  flagged_new = excluded.flagged_new, last_seen = excluded.last_seen, fragrance_id = excluded.fragrance_id
 """
 
 
@@ -35,7 +37,7 @@ def collect(supplier: str) -> None:
 
 def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
     """Write the new stock and its events; return the events as (sku, kind, old, new)."""
-    known = {row["sku"]: row for row in conn.execute("SELECT * FROM products WHERE supplier = ?", (supplier,))}
+    known = {row["sku"]: row for row in conn.execute("SELECT * FROM listings WHERE supplier = ?", (supplier,))}
     baseline = not known
     events = []
 
@@ -45,18 +47,19 @@ def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
             events.append((item.sku, "new", None, item.price))
         if old is not None:
             events += [(item.sku, *change) for change in changes(old, item)]
+        # Which fragrance it is gets worked out once, and again only if the supplier renames it.
+        if old is not None and (old["name"], old["brand"]) == (item.name, item.brand):
+            fragrance_id = old["fragrance_id"]
+        else:  # brands seen for the first time start on default (shown, no alerts)
+            fragrance_id = assign(conn, brand_for(conn, item.brand, announced=baseline), item.name, item.brand)
         conn.execute(UPSERT, (supplier, item.sku, item.name, item.brand, item.ean, item.ean2, item.ean3,
-                              item.qty, item.price, item.flagged_new, now, now))
+                              item.qty, item.price, item.flagged_new, now, now, fragrance_id))
 
     # Whatever we knew about but the supplier no longer lists has sold out.
     for sku, old in known.items():
         if old["qty"] > 0:
-            conn.execute("UPDATE products SET qty = 0 WHERE supplier = ? AND sku = ?", (supplier, sku))
+            conn.execute("UPDATE listings SET qty = 0 WHERE supplier = ? AND sku = ?", (supplier, sku))
             events.append((sku, "soldout", old["qty"], 0))
-
-    # Brands seen for the first time start on default (shown, no alerts).
-    for spelling in unknown_spellings(conn):
-        add_brand(conn, spelling, announced=baseline)
 
     conn.executemany(
         "INSERT INTO events (supplier, sku, kind, old_value, new_value, created_at) VALUES (?, ?, ?, ?, ?, ?)",

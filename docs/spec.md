@@ -104,9 +104,10 @@ a "shares an EAN" hint. Merges are remembered for every supplier and can be spli
 EANs never merge anything on their own: Nunu reuses some EANs for different fragrances
 (Carios and Delina share one).
 
-For now, listings are matched to fragrances by reading the name out of the supplier's product
-name ("AMOUAGE BEACH HUT MAN EDP 100 ML" → Beach Hut Man, EDP). Step 2 replaces this with
-Claude parsing.
+Every listing points to a fragrance in the catalogue. It's worked out once, when the listing
+first appears, by reading the name out of the supplier's product name ("AMOUAGE BEACH HUT MAN
+EDP 100 ML" → Beach Hut Man, EDP). Every fragrance has its own page, on a list or not. Step 2
+replaces the reading with Claude parsing, which then only has to fill in that one link.
 
 ## Fragrance catalogue (step 2)
 

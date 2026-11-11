@@ -9,7 +9,8 @@ import sys
 import traceback
 
 from app.collect import collect
-from app.db import collection_failed, connect, upgrade
+from app.db import collection_failed, connect
+from app.upgrades import upgrade
 from app.notify import notify
 from app.suppliers import SUPPLIERS
 

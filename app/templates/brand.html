@@ -7,7 +7,7 @@
   <div>
     <p class="subtitle"><a href="/brands">← Brands</a></p>
     <h1>{{ brand.name }}</h1>
-    <p class="subtitle">{{ brand.in_stock }} in stock{% if brand.suppliers %} at {{ brand.suppliers.replace(",", ", ") }}{% endif %} · <a href="/stock?brand={{ brand.id }}">see stock</a></p>
+    <p class="subtitle">{{ brand.in_stock }} in stock{% if brand.suppliers %} at {{ brand.suppliers.split(",")|sort|join(", ") }}{% endif %} · <a href="/stock?brand={{ brand.id }}">see stock</a></p>
   </div>
   {{ follow_switch("/brands/" ~ brand.id ~ "/status", brand.status, back) }}
 </div>
@@ -46,16 +46,16 @@
   </div>
 
   <div class="panel">
-    <div class="panel-head"><h2>Fragrances you decided on</h2><span class="panel-note">Follow and Ignore here win over the brand</span></div>
+    <div class="panel-head"><h2>Fragrances you decided on</h2><span class="panel-note">A fragrance's list wins over the brand</span></div>
     {% if decided %}
     <table><tbody>
       {% for f in decided %}
       <tr><td class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}</td>
-          <td class="num">{{ badges(f) }}</td></tr>
+          <td class="num">{{ badges(f.status, f.owned) }}</td></tr>
       {% endfor %}
     </tbody></table>
     {% else %}
-    <div class="empty">None yet. Follow, ignore or collect a fragrance from the stock list below.</div>
+    <div class="empty">None yet. Put a fragrance on a list or in your collection from the stock list below.</div>
     {% endif %}
   </div>
 </div>
