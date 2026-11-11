@@ -814,13 +814,11 @@ def orders_page(request: Request):
     and fillers."""
     conn = connect()
     open_baskets, plan = baskets.contents(conn), orders.plan(conn)
-    in_baskets = [i["fragrance_id"] for b in open_baskets for i in b["items"]]
-    suggested = [o["fragrance_id"] for s in plan for o in s["wanted"] + s["fillers"] + s["spare"]]
+    shown = [i["fragrance_id"] for b in open_baskets for i in b["items"]]
+    shown += [o["fragrance_id"] for s in plan for o in s["wanted"] + s["fillers"] + s["spare"]]
     return templates.TemplateResponse(request, "orders.html", {
         "baskets": open_baskets, "orders": plan, "in_basket": baskets.keys(conn),
-        # In a basket, the lowest price counts as cheapest even when no other supplier has the size.
-        "basket_cheapest": fragrances.lowest(fragrances.offers(conn, in_baskets)),
-        "cheapest": fragrances.cheapest(conn, suggested),
+        "cheapest": fragrances.cheapest(conn, shown),
     })
 
 
