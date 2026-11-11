@@ -370,7 +370,8 @@ def brand_detail(request: Request, brand_id: int):
     listings = conn.execute(f"SELECT * FROM catalog WHERE brand_id = ? {IN_STOCK_FIRST}", (brand_id,)).fetchall()
     return templates.TemplateResponse(request, "brand.html", {
         "brand": brand, "aliases": aliases, "others": others, "decided": decided,
-        "groups": group(annotate(listings)),
+        # By name, A to Z, sold-out ones included in their place (a column header re-sorts).
+        "groups": sorted(group(annotate(listings)), key=lambda g: (fold(g["fragrance"]), g["concentration"] or "")),
     })
 
 
