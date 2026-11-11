@@ -18,7 +18,7 @@ Add one schedule per supplier against the `fragrance` service:
 
 | Command | Cron |
 | --- | --- |
-| `run-supplier nunu` | `0 * * * *` (hourly) |
+| `run-supplier nunu` | `0 9,12,21 * * *`, timezone Europe/Madrid (store hours) |
 
 A failed collection sends a ⚠️ message to Telegram; details are in the schedule's log.
 

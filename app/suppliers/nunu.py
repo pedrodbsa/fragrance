@@ -4,12 +4,17 @@ The "download stock" button on /stock-offer/ builds its Excel in the browser fro
 GraphQL API. We call that API directly: read the API token embedded in the page, log in as
 the B2B customer (prices are null otherwise), then page through the perfume category.
 Env: NUNU_EMAIL, NUNU_PASSWORD.
+
+Requests go through the curl command, not Python's HTTP client: the shop's Cloudflare blocks
+Python clients from server IPs but lets curl through (found 2026-11-11). Stopgap until Nunu
+allowlists the server's IP; then this can go back to httpx.
 """
 
+import json
 import os
 import re
-
-import httpx
+import subprocess
+import tempfile
 
 from app.item import Item
 
@@ -41,13 +46,29 @@ query($after: String, $category: Int!, $first: Int!) {
 
 
 def fetch() -> list[Item]:
-    with httpx.Client(base_url=BASE, timeout=60, headers={"User-Agent": "Mozilla/5.0"}) as http:
-        page = http.get("/stock-offer/").raise_for_status().text
+    with tempfile.NamedTemporaryFile() as cookies:  # holds the login session between requests
+        def curl(path, *args, body=None):
+            # The body goes in on stdin, so the password never appears in the process list.
+            done = subprocess.run(
+                ["curl", "-sS", "--fail-with-body", "--compressed", "--max-time", "60",
+                 "-b", cookies.name, "-c", cookies.name, *args, BASE + path],
+                input=body, capture_output=True, text=True,
+            )
+            if done.returncode != 0:
+                raise RuntimeError(f"Nunu request {path} failed: {done.stderr.strip()} {done.stdout[:300]}")
+            return done.stdout
+
+        page = curl("/stock-offer/")
         token = re.search(r"storefrontApiToken = '([^']+)'", page).group(1)
-        http.headers.update({"Authorization": f"Bearer {token}", "Origin": BASE})
 
         def gql(query, variables):
-            body = http.post("/graphql", json={"query": query, "variables": variables}).raise_for_status().json()
+            body = json.loads(curl(
+                "/graphql", "--data-binary", "@-",
+                "-H", "Content-Type: application/json",
+                "-H", f"Authorization: Bearer {token}",
+                "-H", f"Origin: {BASE}",
+                body=json.dumps({"query": query, "variables": variables}),
+            ))
             if body.get("errors"):
                 raise RuntimeError(f"Nunu GraphQL error: {body['errors']}")
             return body["data"]
