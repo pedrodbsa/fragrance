@@ -321,6 +321,18 @@ def rename(conn, fragrance_id: int, name: str, concentration: str | None) -> int
     return fragrance_id
 
 
+def name_from_listing(conn, fragrance_id: int, supplier: str, sku: str) -> int:
+    """Name the fragrance the way this listing reads: its name and concentration, and who it's
+    for if the listing says. Like a rename, it merges into the fragrance that already has that
+    name, if there is one. Returns the fragrance's id."""
+    listing = conn.execute("SELECT name, brand FROM listings WHERE supplier = ? AND sku = ?", (supplier, sku)).fetchone()
+    fragrance_id = rename(conn, fragrance_id, *identify(listing["name"], listing["brand"]))
+    audience = read_audience(listing["name"])
+    if audience:
+        set_audience(conn, fragrance_id, audience)
+    return fragrance_id
+
+
 def move_to_brand(conn, fragrance_id: int, brand_id: int) -> int:
     """A supplier put this fragrance under the wrong brand: it moves to brand_id, merging into
     that brand's fragrance of the same name if there is one. Returns the fragrance's id.

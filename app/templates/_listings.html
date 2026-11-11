@@ -23,6 +23,10 @@
       <td class="muted hide-sm">{{ r.supplier }}</td>
       <td class="nowrap muted hide-sm" data-sort="{{ r.first_seen }}">{{ r.first_seen|local }}</td>
       <td class="num nowrap">
+        {% if r.reads_as != (product.name, product.concentration) %}
+        <form method="post" action="/products/{{ product.id }}/name-from" style="display: inline"><input type="hidden" name="supplier" value="{{ r.supplier }}"><input type="hidden" name="sku" value="{{ r.sku }}">
+          <button class="btn sm" title="Name this fragrance {{ r.reads_as[0]|pretty('') }}{% if r.reads_as[1] %} {{ r.reads_as[1] }}{% endif %}, as this listing reads (merges into that fragrance if it exists)">Use this name</button></form>
+        {% endif %}
         {% if (r.supplier, r.sku) in in_basket %}<a class="btn sm ghost" href="/orders" title="In your {{ r.supplier }} basket">🧺 In basket</a>
         {% else %}<form method="post" action="/basket/add"><input type="hidden" name="supplier" value="{{ r.supplier }}"><input type="hidden" name="sku" value="{{ r.sku }}"><input type="hidden" name="back" value="{{ back }}">
           <button class="btn sm" title="Add to your {{ r.supplier }} basket">+ Basket</button></form>{% endif %}

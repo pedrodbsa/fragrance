@@ -524,6 +524,9 @@ def product_detail(request: Request, fragrance_id: int):
         raise HTTPException(404, "product not found")
     listings = conn.execute("SELECT * FROM catalog WHERE fragrance_id = ?", (fragrance_id,)).fetchall()
     rows = sorted(annotate(listings), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
+    for r in rows:  # how each listing's name reads, for "Use this name"
+        name, concentration = fragrances.identify(r["name"], r["brand"])
+        r["reads_as"] = (" ".join(name.upper().split()), concentration)
     return templates.TemplateResponse(request, "product.html", {
         "product": product, "rows": rows, "history": price_history(conn, rows), "concentrations": CONCENTRATIONS,
         "eans": ean_list(conn, fragrance_id, rows), "in_basket": baskets.keys(conn),
@@ -615,6 +618,15 @@ def product_merge(fragrance_id: int, other: int = Form(...)):
     with conn:
         fragrances.merge(conn, fragrance_id, other)
     return RedirectResponse(f"/products/{other}", status_code=303)
+
+
+@office.post("/products/{fragrance_id}/name-from")
+def product_name_from(fragrance_id: int, supplier: str = Form(...), sku: str = Form(...)):
+    """Name the fragrance after one of its listings."""
+    conn = connect()
+    with conn:
+        fragrance_id = fragrances.name_from_listing(conn, fragrance_id, supplier, sku)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/rename")
