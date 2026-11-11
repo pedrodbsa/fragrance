@@ -7,7 +7,7 @@
     <tbody>
     {% for r in rows %}
     <tr class="{{ 'faded' if r.qty == 0 }}">
-      <td class="nowrap product-name" data-sort="{{ r.size }}">{{ r.size_label }}</td>
+      <td class="nowrap product-name" data-sort="{{ r.size }}">{{ r.size_label }}<div class="small muted">{{ r|per_ml }}</div></td>
       <td class="nowrap">{% if r.condition == "Tester" %}<span class="pill" title="A tester or an unboxed bottle">Tester</span>{% else %}<span class="muted">New</span>{% endif %}</td>
       <td><span title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</span>{% if r.flagged_new %} <span class="pill" title="Marked new by the supplier">Supplier: new</span>{% endif %}
         <details>

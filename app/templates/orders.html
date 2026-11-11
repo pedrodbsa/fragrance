@@ -42,7 +42,7 @@
           {% if not i.available %}<span class="pill warn">Sold out</span>{% elif i.qty < i.quantity %}<span class="pill price_drop">Only {{ i.qty }} left</span>{% endif %}</div>
         <div class="product-brand">{{ i.brand_name }}{% if i.ean %} · <span class="ean">{{ i.ean }}</span><button type="button" class="copy" data-copy="{{ i.ean }}" title="Copy the EAN" aria-label="Copy the EAN"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="8" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 10.5V3.5A1.5 1.5 0 0 1 4.5 2h5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>{% endif %}</div>
       </td>
-      <td class="nowrap">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}</td>
+      <td class="nowrap">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}<div class="small muted">{{ i|per_ml }}</div></td>
       <td class="num hide-sm">{{ i.qty }}</td>
       <td class="num nowrap" data-sort="{{ i.price if i.price is not none }}">{% if i.price is not none %}€{{ "%.2f"|format(i.price) }}{% else %}—{% endif %}{{ standing(compared.get((i.supplier, i.sku))) }}
         {% if i.added_price is not none and i.price is not none and (i.price - i.added_price)|abs >= 0.01 %}<div class="small was {{ 'up' if i.price > i.added_price else 'down' }}">was €{{ "%.2f"|format(i.added_price) }}</div>{% endif %}</td>
@@ -74,7 +74,7 @@
             {% if reaches %}<span class="pill new" title="With the basket and your wishlist, these fillers reach the minimum with the least overspend">Reaches the minimum</span>{% endif %}</div>
           <div class="product-brand">{{ i.brand_name }}{% if i.ean %} · <span class="ean">{{ i.ean }}</span><button type="button" class="copy" data-copy="{{ i.ean }}" title="Copy the EAN" aria-label="Copy the EAN"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="8" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 10.5V3.5A1.5 1.5 0 0 1 4.5 2h5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>{% endif %}</div>
         </td>
-        <td class="nowrap" data-sort="{{ i.size_label }}">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}{% if i.buy_size %} <span class="muted small" title="The size you'd buy, picked on its page">📌</span>{% endif %}</td>
+        <td class="nowrap" data-sort="{{ i.size_label }}">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}{% if i.buy_size %} <span class="muted small" title="The size you'd buy, picked on its page">📌</span>{% endif %}<div class="small muted">{{ i|per_ml }}</div></td>
         <td class="num hide-sm">{{ i.qty }}</td>
         <td class="num nowrap">€{{ "%.2f"|format(i.price) }}{{ standing(compared.get((i.supplier, i.sku))) }}</td>
       </tr>

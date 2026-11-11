@@ -108,6 +108,17 @@ def variant(name: str) -> tuple[float, str]:
     return float(number.replace(",", ".")), f"{number} {unit.lower()}{kind}"
 
 
+def millilitres(name: str) -> float | None:
+    """How much perfume a listing holds, to compare prices per ml: "... 100 ML" -> 100.0,
+    "... 3.4 OZ" -> 100.5. None for gift sets (several bottles) and sizes in grams."""
+    text = name.upper()
+    found = AMOUNT.search(text)
+    if not found or GIFT_SET.search(text) or found.group(2) not in ("ML", "OZ"):
+        return None
+    amount = float(found.group(1).replace(",", "."))
+    return amount * 29.5735 if found.group(2) == "OZ" else amount
+
+
 def condition(name: str) -> str:
     """ "Tester" for a tester or an unboxed bottle (suppliers name both "... Tester"), else "New"."""
     return "Tester" if TESTER.search(name.upper()) else "New"

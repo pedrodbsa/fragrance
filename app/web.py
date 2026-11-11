@@ -92,6 +92,18 @@ templates.env.filters["local"] = local_time
 templates.env.filters["pretty"] = pretty_name
 
 
+def per_ml(listing) -> str:
+    """A listing's price per ml, "€0.55/ml", or ""
+    when it can't be told (no price, a gift set, a size in grams)."""
+    ml = fragrances.millilitres(listing["name"])
+    if not ml or listing["price"] is None:
+        return ""
+    return f"€{listing['price'] / ml:.2f}/ml"
+
+
+templates.env.filters["per_ml"] = per_ml
+
+
 def back_to(back: str, fallback: str) -> RedirectResponse:
     """Return to the page a form was posted from (only paths on this site)."""
     safe = back.startswith("/") and not back.startswith("//")
