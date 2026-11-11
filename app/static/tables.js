@@ -63,3 +63,16 @@ document.addEventListener("click", event => {
   box.checked = !box.checked;
   box.dispatchEvent(new Event("change", {bubbles: true}));  // e.g. the Orders page totals
 });
+
+// A search box with data-filter="#some-id" hides the rows of the table inside #some-id whose
+// first cell doesn't contain every word typed. Accents, capitals and punctuation don't count,
+// so "lancome" finds Lancôme. It all happens in the page: nothing is reloaded.
+const fold = text => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+document.querySelectorAll("input[data-filter]").forEach(input => {
+  const rows = [...document.querySelectorAll(`${input.dataset.filter} tbody tr`)];
+  const names = rows.map(row => fold(row.cells[0]?.textContent ?? ""));
+  input.addEventListener("input", () => {
+    const words = input.value.split(/\s+/).map(fold).filter(Boolean);
+    rows.forEach((row, i) => row.hidden = !words.every(word => names[i].includes(word)));
+  });
+});
