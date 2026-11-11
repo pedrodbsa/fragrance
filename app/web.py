@@ -192,6 +192,24 @@ def cheapest_only(conn, rows: list[dict]) -> list[dict]:
             and r["price"] <= lowest[(r["fragrance_id"], r["size_label"])]]
 
 
+def add_elsewhere(conn, groups: list[dict], supplier: str) -> list[dict]:
+    """With one supplier picked, add to each fragrance the sizes it doesn't have but other
+    suppliers do, the cheapest of each marked "elsewhere", so you can compare sizes before
+    picking (a smaller bottle only a few euros cheaper than a bigger one)."""
+    ids = [g["fragrance_id"] for g in groups]
+    offers = {}  # (fragrance id, size) -> the cheapest in-stock listing at another supplier
+    if ids:
+        found = conn.execute(f"""SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL AND supplier != ?
+                                 AND fragrance_id IN ({",".join("?" * len(ids))})""", (supplier, *ids))
+        for r in sorted(annotate(found), key=lambda r: r["price"]):
+            offers.setdefault((r["fragrance_id"], r["size_label"]), {**r, "elsewhere": True})
+    for g in groups:
+        own = {r["size_label"] for r in g["sizes"]}
+        extra = [o for (fid, size), o in offers.items() if fid == g["fragrance_id"] and size not in own]
+        g["sizes"] = sorted(g["sizes"] + extra, key=lambda r: (r["size"], r["size_label"]))
+    return groups
+
+
 def testers_only(rows: list[dict]) -> list[dict]:
     """Keep testers (and unboxed bottles, which are sold like them)."""
     return [r for r in rows if r["condition"] == "Tester"]
@@ -295,8 +313,9 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     pages = max(1, -(-len(groups) // PAGE))
     page = min(max(page, 1), pages)
     page_link = lambda n: "/stock?" + urlencode({**query, "page": n})
+    shown = groups[(page - 1) * PAGE:page * PAGE]
     return templates.TemplateResponse(request, "stock.html", {
-        "groups": groups[(page - 1) * PAGE:page * PAGE], "total": len(groups),
+        "groups": add_elsewhere(conn, shown, supplier) if supplier else shown, "total": len(groups),
         "page": page, "pages": pages, "page_link": page_link, "first": (page - 1) * PAGE + 1, "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
         "brands_shown": brands, "sort": sort, "sort_links": sort_links, "audience": audience,

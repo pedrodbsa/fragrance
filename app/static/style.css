@@ -229,6 +229,7 @@ tr.faded .product-name, tr.faded .num { color: var(--muted); }
 .size:hover { border-color: var(--accent); text-decoration: none; }
 .size.out { opacity: 0.55; }
 .size.cheap { background: var(--green-bg); border-color: transparent; } /* Stock with a supplier picked */
+.size.elsewhere { opacity: 0.45; border-style: dashed; } /* …and the sizes only other suppliers have */
 tr.faded .sizes { opacity: 0.7; }
 
 /* Price chart (categorical slots from the dataviz reference palette, light and dark) */
