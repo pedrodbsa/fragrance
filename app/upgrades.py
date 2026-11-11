@@ -19,6 +19,7 @@
                   Fragrances only it listed go too, unless you put them on a list or own them.
   recorded-price  listings remember the price their last recorded price change was at, so
                   price changes count from there (today's price to start with).
+  small-price-changes  price changes of €5 or less recorded before that rule are deleted.
 """
 
 import sqlite3
@@ -40,6 +41,11 @@ def upgrade(conn) -> None:
     once(conn, "same-name-brands", same_name_brands)
     once(conn, "forget-wholesale-fragrances", forget_wholesale_fragrances)
     once(conn, "recorded-price", recorded_price)
+    once(conn, "small-price-changes", small_price_changes)
+
+
+def small_price_changes(conn) -> None:
+    conn.execute("DELETE FROM events WHERE kind IN ('price_drop', 'price_up') AND abs(new_value - old_value) <= 5")
 
 
 def recorded_price(conn) -> None:
