@@ -19,7 +19,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY app ./app
 RUN uv sync --frozen --no-dev
 ENV PATH="/app/.venv/bin:${PATH}" \
-    FRAGRANCE_DB=/data/fragrance.db
+    DATABASE_PATH=/data/fragrance.db
 
 COPY docker/litestream.yml /etc/litestream.yml
 COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh

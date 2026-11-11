@@ -1,4 +1,4 @@
-"""Talk to your Telegram chat. Env: FRAGRANCE_TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.
+"""Talk to your Telegram chat. Env: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.
 
 Buttons under a message (Follow / Ignore) come back as taps on the backoffice's
 /telegram webhook, which Telegram signs with secret().
@@ -14,7 +14,7 @@ LIMIT = 3800
 
 
 def call(method: str, **params) -> dict:
-    url = f"https://api.telegram.org/bot{os.environ['FRAGRANCE_TELEGRAM_BOT_TOKEN']}/{method}"
+    url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/{method}"
     response = httpx.post(url, timeout=30, json=params)
     response.raise_for_status()
     return response.json()["result"]
@@ -41,7 +41,7 @@ def answer(callback_id: str, text: str) -> None:
 
 def secret() -> str:
     """Webhook secret, derived from the bot token so there's nothing extra to configure."""
-    return hashlib.sha256(os.environ["FRAGRANCE_TELEGRAM_BOT_TOKEN"].encode()).hexdigest()[:48]
+    return hashlib.sha256(os.environ["TELEGRAM_BOT_TOKEN"].encode()).hexdigest()[:48]
 
 
 def register_webhook(base_url: str) -> None:

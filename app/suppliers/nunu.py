@@ -3,7 +3,7 @@
 The "download stock" button on /stock-offer/ builds its Excel in the browser from the shop's
 GraphQL API. We call that API directly: read the API token embedded in the page, log in as
 the B2B customer (prices are null otherwise), then page through the perfume category.
-Env: NUNU_EMAIL, NUNU_PASSWORD.
+Env: SUPPLIER_NUNU_EMAIL, SUPPLIER_NUNU_PASSWORD.
 
 Requests go through the curl command, not Python's HTTP client: the shop's Cloudflare blocks
 Python clients from server IPs but lets curl through (found 2026-11-11). Stopgap until Nunu
@@ -73,7 +73,7 @@ def fetch() -> list[Item]:
                 raise RuntimeError(f"Nunu GraphQL error: {body['errors']}")
             return body["data"]
 
-        login = gql(LOGIN, {"email": os.environ["NUNU_EMAIL"], "password": os.environ["NUNU_PASSWORD"]})
+        login = gql(LOGIN, {"email": os.environ["SUPPLIER_NUNU_EMAIL"], "password": os.environ["SUPPLIER_NUNU_PASSWORD"]})
         if login["login"]["result"] != "success":
             raise RuntimeError(f"Nunu login failed: {login}")
 

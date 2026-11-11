@@ -1,4 +1,4 @@
-"""The SQLite database: one file, path from FRAGRANCE_DB.
+"""The SQLite database: one file, path from DATABASE_PATH.
 
 Tables:
   products       current stock, one row per supplier + SKU. Sold-out items stay with qty 0.
@@ -112,7 +112,7 @@ def now() -> str:
 
 
 def connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(os.environ.get("FRAGRANCE_DB", "fragrance.db"))
+    conn = sqlite3.connect(os.environ.get("DATABASE_PATH", "fragrance.db"))
     conn.row_factory = sqlite3.Row
     # WAL lets the backoffice read while a collector writes, and Litestream requires it.
     conn.execute("PRAGMA journal_mode=WAL")
