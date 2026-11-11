@@ -1,0 +1,24 @@
+services:
+  fragrance:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      TZ: ${TZ:-Europe/Lisbon}
+    volumes:
+      - ../files/data:/data
+    expose:
+      - "8000"
+    networks:
+      - dokploy-network
+    init: true
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+networks:
+  dokploy-network:
+    external: true

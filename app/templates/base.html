@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fragrance tracker</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
+  <style>
+    body > main, body > header { max-width: 1400px; }
+    table { font-size: 0.85rem; }
+    td form { display: inline; margin: 0; }
+    td button { padding: 0.15rem 0.5rem; font-size: 0.75rem; margin: 0 0.2rem 0 0; width: auto; }
+    .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .filters > * { width: auto; margin: 0; }
+    .tag { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 0.3rem; background: var(--pico-secondary-background); color: var(--pico-secondary-inverse); }
+    .new { background: #2e7d32; } .restock { background: #1565c0; } .price_drop { background: #ef6c00; }
+    .soldout { background: #616161; } .price_up { background: #8e24aa; }
+  </style>
+</head>
+<body>
+  <header class="container">
+    <nav>
+      <ul><li><strong>🧴 Fragrance tracker</strong></li></ul>
+      <ul>
+        <li><a href="/">Changes</a></li>
+        <li><a href="/products">Stock</a></li>
+        <li><a href="/rules">Rules</a></li>
+      </ul>
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

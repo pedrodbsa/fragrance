@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Stock</h2>
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Name, EAN or SKU">
+  <select name="brand">
+    <option value="">All brands</option>
+    {% for b in brands %}<option {% if b == brand %}selected{% endif %}>{{ b }}</option>{% endfor %}
+  </select>
+  <select name="supplier">
+    <option value="">All suppliers</option>
+    {% for s in suppliers %}<option {% if s == supplier %}selected{% endif %}>{{ s }}</option>{% endfor %}
+  </select>
+  <!-- hidden first: when the box is ticked, its later "true" wins -->
+  <input type="hidden" name="in_stock" value="false">
+  <label><input type="checkbox" name="in_stock" value="true" {% if in_stock %}checked{% endif %}> In stock only</label>
+  <button type="submit">Filter</button>
+</form>
+<p><small>Showing up to {{ page }} products. Watch alerts you on Telegram when it's new, back in stock or cheaper; mute hides it from the new-products digest.</small></p>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Brand</th><th>Product</th><th>EAN</th><th>Price</th><th>Qty</th><th>Supplier</th><th>First seen</th><th></th></tr></thead>
+  <tbody>
+  {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
+  {% for r in rows %}
+  <tr>
+    <td>
+      {{ r.brand }}<br>
+      <form method="post" action="/rules"><input type="hidden" name="back" value="{{ back }}"><input type="hidden" name="field" value="brand"><input type="hidden" name="value" value="{{ r.brand }}"><button name="action" value="watch" class="outline">watch</button><button name="action" value="mute" class="outline secondary">mute</button></form>
+    </td>
+    <td>{{ r.name }}{% if r.flagged_new %} <span class="tag new">supplier: new</span>{% endif %}</td>
+    <td>{{ r.ean or "" }}{% if r.ean2 %}<br><small>{{ r.ean2 }}</small>{% endif %}{% if r.ean3 %}<br><small>{{ r.ean3 }}</small>{% endif %}</td>
+    <td>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% endif %}</td>
+    <td>{{ r.qty }}</td>
+    <td>{{ r.supplier }}</td>
+    <td>{{ r.first_seen[:10] }}</td>
+    <td>
+      {% if r.ean %}<form method="post" action="/rules"><input type="hidden" name="back" value="{{ back }}"><input type="hidden" name="field" value="ean"><input type="hidden" name="value" value="{{ r.ean }}"><input type="hidden" name="note" value="{{ r.name }}"><button name="action" value="watch" class="outline">watch EAN</button></form>{% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="8">Nothing matches.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

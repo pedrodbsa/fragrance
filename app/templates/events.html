@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Changes</h2>
+<form class="filters" method="get">
+  <select name="kind" onchange="this.form.submit()">
+    {% for k, label in [("", "All changes"), ("new", "New"), ("restock", "Back in stock"), ("price_drop", "Price drop"), ("price_up", "Price up"), ("soldout", "Sold out")] %}
+    <option value="{{ k }}" {% if k == kind %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+</form>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>When (UTC)</th><th>Change</th><th>Brand</th><th>Product</th><th>EAN</th><th>Price</th><th>Qty</th><th>Supplier</th><th>Sent</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td>{{ r.created_at[:16].replace("T", " ") }}</td>
+    <td><span class="tag {{ r.kind }}">{{ r.kind.replace("_", " ") }}</span>
+      {% if r.kind in ("price_drop", "price_up") %}€{{ "%.2f"|format(r.old_value) }} → €{{ "%.2f"|format(r.new_value) }}{% endif %}</td>
+    <td>{{ r.brand }}</td>
+    <td>{{ r.name }}</td>
+    <td>{{ r.ean or "" }}</td>
+    <td>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% endif %}</td>
+    <td>{{ r.qty }}</td>
+    <td>{{ r.supplier }}</td>
+    <td>{{ "✓" if r.notified_at else "" }}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="9">No changes yet. The first run of each supplier records its stock as the starting point.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

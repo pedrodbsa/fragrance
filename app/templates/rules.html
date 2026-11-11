@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Rules</h2>
+<p><small>
+  <b>Watch</b>: alert me when a matching product is new, back in stock or cheaper.
+  <b>Mute</b>: leave matching products out of the new-products digest. Watch wins over mute.<br>
+  <b>brand</b> exact name · <b>ean</b> any of the product's EANs · <b>keyword</b> text in the name · <b>supplier</b> e.g. nunu
+</small></p>
+<form method="post" action="/rules" class="filters">
+  <select name="action"><option>watch</option><option>mute</option></select>
+  <select name="field">{% for f in fields %}<option>{{ f }}</option>{% endfor %}</select>
+  <input name="value" placeholder="Value" required>
+  <input name="note" placeholder="Note (optional)">
+  <button type="submit">Add rule</button>
+</form>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>Action</th><th>Field</th><th>Value</th><th>Note</th><th>Added</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td>{{ r.action }}</td><td>{{ r.field }}</td><td>{{ r.value }}</td><td>{{ r.note or "" }}</td><td>{{ r.created_at[:10] }}</td>
+    <td><form method="post" action="/rules/{{ r.id }}/delete"><button class="outline secondary">delete</button></form></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6">No rules yet. Every new product will appear in the digest.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}
