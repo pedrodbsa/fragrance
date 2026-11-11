@@ -183,13 +183,19 @@ def price_history(conn, rows: list[dict]) -> list[dict]:
 def cheapest_only(conn, rows: list[dict]) -> list[dict]:
     """Keep the rows that are the lowest in-stock price for their fragrance and size across
     every supplier (a tie counts as cheapest). With a supplier filter, that's where that
-    supplier is the cheapest."""
+    supplier is the cheapest. A tester also has to beat the boxed bottle of its size: a tester
+    dearer than someone's boxed one isn't a bargain."""
     lowest = {}  # (fragrance id, size) -> lowest in-stock price at any supplier
     for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
         size = (r["fragrance_id"], r["size_label"])
         lowest[size] = min(lowest.get(size, r["price"]), r["price"])
-    return [r for r in rows if r["qty"] > 0 and r["price"] is not None
-            and r["price"] <= lowest[(r["fragrance_id"], r["size_label"])]]
+
+    def is_cheapest(r) -> bool:
+        boxed = r["size_label"].removesuffix(" tester")  # "100 ml tester" -> "100 ml"
+        return r["price"] <= min(lowest[(r["fragrance_id"], r["size_label"])],
+                                 lowest.get((r["fragrance_id"], boxed), r["price"]))
+
+    return [r for r in rows if r["qty"] > 0 and r["price"] is not None and is_cheapest(r)]
 
 
 IN_STOCK_FIRST = "ORDER BY qty = 0, name"
