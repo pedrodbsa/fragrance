@@ -9,7 +9,7 @@ import sys
 import traceback
 
 from app.collect import collect
-from app.db import connect, upgrade
+from app.db import collection_failed, connect, upgrade
 from app.notify import notify
 from app.suppliers import SUPPLIERS
 
@@ -17,16 +17,23 @@ from app.suppliers import SUPPLIERS
 def run() -> None:
     """A supplier that fails doesn't stop the others; the digest names it and the exit code
     marks the schedule run as failed in Dokploy."""
-    failed = []
-    for supplier in SUPPLIERS:
-        try:
-            collect(supplier)
-        except Exception:
-            traceback.print_exc()
-            failed.append(supplier)
+    failed = [supplier for supplier in SUPPLIERS if not attempt(supplier)]
     notify(failed)
     if failed:
         sys.exit(1)
+
+
+def attempt(supplier: str) -> bool:
+    """Collect one supplier. A failure is printed and shown on the Suppliers page."""
+    try:
+        collect(supplier)
+        return True
+    except Exception as error:
+        traceback.print_exc()
+        conn = connect()
+        with conn:
+            collection_failed(conn, supplier, f"{type(error).__name__}: {error}"[:500])
+        return False
 
 
 def main() -> None:
@@ -35,7 +42,7 @@ def main() -> None:
         case ["run"]:
             run()
         case ["collect", supplier] if supplier in SUPPLIERS:
-            collect(supplier)
+            sys.exit(0 if attempt(supplier) else 1)
         case ["notify"]:
             notify([])
         case _:

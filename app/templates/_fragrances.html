@@ -1,6 +1,6 @@
 {# Stock grouped by fragrance, sizes and testers under it. Shared by Stock and brand pages.
    Needs: groups, back. #}
-{% from "_macros.html" import follow_switch, owned_switch, badges %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges %}
   <div class="scroll">
   <table>
     <thead><tr><th>Fragrance</th><th>Sizes · cheapest each</th><th class="num">From</th><th class="num hide-sm">Qty</th><th class="hide-sm">Suppliers</th><th class="hide-sm"></th></tr></thead>
@@ -26,7 +26,7 @@
       <td class="muted hide-sm">{{ g.suppliers|sort|join(", ") }}</td>
       <td class="hide-sm">
         <div class="row-actions">
-          {{ follow_switch("/products", d.status if d else "default", back, fields, small=True) }}
+          {{ fragrance_switch(d.status if d else "default", back, fields, small=True) }}
           {{ owned_switch(d and d.owned, back, fields) }}
           <form method="post" action="/brands/{{ g.brand_id }}/status"><input type="hidden" name="back" value="{{ back }}">
             {% if g.status == "follow" %}<button class="btn sm ghost" name="status" value="default" title="Stop alerts for {{ g.brand_name }}">Unfollow brand</button>

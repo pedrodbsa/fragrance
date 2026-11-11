@@ -2,13 +2,13 @@
 
 Sections:
   ⚠️ suppliers whose collection failed this window
-  ⭐ Followed: fragrances you follow (new, back in stock, or cheaper), plus new products and
-     restocks from brands you follow (except fragrances you ignored)
+  ⭐ Followed: wishlist fragrances (new, back in stock, or cheaper), plus new products and
+     restocks from brands you follow (except fragrances you ignored or marked as filler)
   🆕 New brands: each one follows as its own message with Follow / Ignore buttons (and
      "Same as …" when it looks like a brand you have). Not tapping leaves it on default:
      shown in Stock, no alerts. When many arrive at once, the digest links to the New
      brands page instead.
-Ignored brands and fragrances never appear. Everything else (default brands, sold out,
+Ignored brands and fragrances, and fillers, never appear. Everything else (default brands, sold out,
 price up) is recorded for the backoffice but not sent.
 """
 
@@ -57,7 +57,7 @@ def notify(failed: list[str]) -> None:
 
 
 def alerts(event, decision) -> bool:
-    """A followed fragrance also alerts on price drops; a followed brand on new and restock."""
+    """A wishlist fragrance also alerts on price drops; a followed brand on new and restock."""
     kinds = FOLLOWED_FRAGRANCE_KINDS if decided(decision) else FOLLOWED_BRAND_KINDS
     return alerting(event, decision) and event["kind"] in kinds
 

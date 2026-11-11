@@ -21,23 +21,50 @@ purchases (personal use, no resale).
 You make decisions about brands and fragrances. Variants and listings are filled in
 automatically from supplier data.
 
-## Follow, Ignore, or nothing
-
-Brands and single fragrances share one rule. Doing nothing is the default.
+## Brands: Follow, Ignore, or nothing
 
 | Choice | Shown in Stock | Alerts |
 |---|---|---|
 | **Follow** a brand | Yes | New products and restocks of every fragrance of the brand |
-| **Follow** a fragrance | Yes | New listings, back in stock, cheaper, whatever the brand's status |
-| **Ignore** (brand or fragrance) | No (only with "Show hidden") | Never |
+| **Ignore** a brand | No (only with "Show hidden") | Never |
 | Nothing (default) | Yes | Never |
 
-- A fragrance's Follow or Ignore wins over its brand: leave Memo alone but follow Ithaque;
-  follow Amouage but ignore Outlands.
-- Following a fragrance works before any supplier lists it: the first listing alerts you.
+## Fragrances: your lists
+
+Buying from the wishlist is the main goal. Suppliers have a minimum order value, so an order
+is often topped up with fragrances you don't mind owning: those are the fillers.
+
+| List | Shown in Stock | Alerts |
+|---|---|---|
+| **Wishlist** | Yes | New listings, back in stock, cheaper, whatever the brand's status |
+| **Filler** | Yes | Never, even if the brand is followed |
+| **Ignore** | No (only with "Show hidden") | Never |
+| No list | Yes | The brand's status applies |
+
+- A fragrance's list wins over its brand: leave Memo alone but wishlist Ithaque; follow
+  Amouage but ignore Outlands or mark Mandarino di Sicilia as a filler.
+- The wishlist works before any supplier lists a fragrance: the first listing alerts you.
 - Separately, **In collection** marks fragrances you own. It doesn't change alerts: own Beach
-  Hut and also ignore it, or own it and keep following it to catch a deal.
-- Clicking the highlighted Follow or Ignore again goes back to default.
+  Hut and also ignore it, or own it and keep it on the wishlist to catch a deal.
+- Clicking the highlighted choice again takes the fragrance off that list.
+
+## Orders and suppliers
+
+**Suppliers page**: each supplier with whether collecting it works (working, failing with the
+error, or no update in 24 hours), when it last worked, how much it has in stock, and its
+minimum order value (MOV), entered on the same basis as its prices.
+
+**Orders page**: for each supplier with wishlist fragrances in stock, an order you could place:
+
+1. every wishlist fragrance it has, one bottle each, in the size you picked on the fragrance's
+   page ("Size I'd buy"), or the cheapest size if you didn't pick one;
+2. if that's under the MOV, the fillers it has in stock that reach the MOV with the least
+   money spent over it. If all its fillers together don't reach it, the page says how short.
+
+Ticking and unticking lines recomputes the total, to try other baskets.
+
+Orders aren't sent to Telegram: the digest is only for what needs your attention (the
+wishlist, followed brands, new brands).
 
 ## New brands
 
@@ -65,7 +92,7 @@ The Brands page manages aliases by hand too: merging two brands, splitting one a
 
 ## Products page
 
-Your fragrance decisions in three tabs: **Following**, **Collection**, **Ignored**. Each entry
+Your fragrance lists in four tabs: **Wishlist**, **Fillers**, **Collection**, **Ignored**. Each entry
 shows where it's in stock now and the best price, and opens its product page (every size,
 supplier and price history). Add a fragrance by hand there, or use the switches on any Stock
 row or product page.
@@ -84,16 +111,16 @@ Claude parsing.
 ## Fragrance catalogue (step 2)
 
 Each supplier listing is split into **brand, fragrance name, concentration, size, and whether
-it's a tester**, then attached to a fragrance and variant. This is what lets "follow Aventus"
+it's a tester**, then attached to a fragrance and variant. This is what lets "Aventus on the wishlist"
 cover 50 ml, 100 ml and testers, including EANs that appear later.
 
-**Following a fragrance:**
+**A wishlist fragrance:**
 
 - These always alert: a new variant or listing appears; a sold-out listing comes back.
 - Options you switch on per fragrance:
   - **Price drop**: alerts on any decrease.
   - **Low stock**: alerts when the quantity falls below a number you set.
-- You can optionally narrow a follow to a single size.
+- You can optionally narrow it to a single size.
 
 Followed brands alert on new products and restocks for all their fragrances. Price-drop and
 low-stock alerts are only set per fragrance.
@@ -140,14 +167,15 @@ Listings with the same EAN are grouped into one Stock row:
 Sections, in this order:
 
 1. **⭐ Followed**: new listings, restocks, price drops and low stock for followed brands and
-   fragrances, with the best-price and lowest-ever notes.
+   wishlist fragrances, with the best-price and lowest-ever notes.
 2. **🆕 New brands**: each brand with Follow / Ignore buttons and any merge suggestion.
 
-Brands and fragrances on default never appear in the digest. You see them in the backoffice.
+Brands on default, fillers and fragrances on no list never appear in the digest. You see them in the backoffice.
 
 ## Backoffice pages
 
-- **Changes**: what moved, without hidden brands and fragrances.
+- **Changes**: what moved, without hidden brands and fragrances (wishlist fragrances of
+  ignored brands are shown).
 - **Stock**: one row per fragrance (brand + name + concentration) with its sizes and testers
   and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, in stock, alerting only, show hidden. Grouping uses the
   fragrance name read from listings, not EANs, so different EANs per size don't matter.
@@ -156,14 +184,16 @@ Brands and fragrances on default never appear in the digest. You see them in the
 - **New brands**: recent brands you haven't decided on, with merge suggestions and bulk actions.
 - **Brands**: every brand with its status. A brand's page: rename, merge, spellings, and the
   fragrance decisions made for it.
-- **Products**: your fragrance decisions: Following, Collection, Ignored.
+- **Products**: your fragrance lists: Wishlist, Fillers, Collection, Ignored.
+- **Orders**: the order you could place at each supplier.
+- **Suppliers**: collection health and minimum order values.
 
-The old Rules page is gone: brand watch rules became Follow, EAN and keyword watches became
-followed fragrances; mute and supplier rules were dropped (default covers them).
+The old Rules page is gone: brand watch rules became Follow, EAN and keyword watches went on
+the wishlist; mute and supplier rules were dropped (default covers them).
 
 ## Later: your collection
 
-Following and Collection exist already (see Products). Still to come:
+The wishlist, fillers and collection exist already (see Products). Still to come:
 
 - **Purchases**: what you bought, where, when and for how much, shown next to current prices.
 - Collection details: bottle size, fill level, where it came from.

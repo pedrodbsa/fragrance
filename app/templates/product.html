@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import follow_switch, owned_switch, badges %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges %}
 {% block title %}{{ product.name|pretty('') }}{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
@@ -8,11 +8,11 @@
   <div>
     <p class="subtitle">{% if product.brand_id %}<a href="/brands/{{ product.brand_id }}">← {{ product.brand_name }}</a>{% else %}<a href="/products">← Products</a>{% endif %}</p>
     <h1>{{ product.name|pretty('') }}{% if product.concentration %} <span class="muted">{{ product.concentration }}</span>{% endif %}</h1>
-    <p class="subtitle">{{ badges(product) }}{% if product.status == "default" %} No decision: the brand's status applies ({{ "following" if brand_status == "follow" else "ignored" if brand_status == "ignore" else "no alerts" }}).{% endif %}</p>
+    <p class="subtitle">{{ badges(product) }}{% if product.status == "default" %} On no list: the brand's status applies ({{ "following" if brand_status == "follow" else "ignored" if brand_status == "ignore" else "no alerts" }}).{% endif %}</p>
     {% if product.note %}<p class="subtitle">{{ product.note }}</p>{% endif %}
   </div>
   <div class="toolbar">
-    {{ follow_switch("/products", product.status, back, fields) }}
+    {{ fragrance_switch(product.status, back, fields) }}
     {{ owned_switch(product.owned, back, fields) }}
   </div>
 </div>
@@ -30,8 +30,20 @@
 {% endif %}
 
 <div class="panel">
-  <div class="panel-head"><h2>Stock</h2><span class="panel-note">Every size and tester of this fragrance, in stock first</span></div>
-  {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists it right now. {% if product.status == "follow" %}You'll get an alert when one does.{% else %}Follow it to get an alert when one does.{% endif %}</div>{% endif %}
+  <div class="panel-head"><h2>Stock</h2>
+    {% if product.id and product.status in ("wishlist", "filler") %}
+    {% set sizes = (rows|map(attribute="size_label")|list + ([product.size] if product.size else []))|unique|list %}
+    <form method="post" action="/products/{{ product.id }}/size" class="toolbar" title="Order suggestions buy this size">
+      <input type="hidden" name="back" value="{{ back }}">
+      <label class="small muted" for="size">Size I'd buy</label>
+      <select id="size" name="size" onchange="this.form.submit()">
+        <option value="">Cheapest available</option>
+        {% for z in sizes %}<option {{ 'selected' if z == product.size }}>{{ z }}</option>{% endfor %}
+      </select>
+    </form>
+    {% else %}<span class="panel-note">Every size and tester of this fragrance, in stock first</span>{% endif %}
+  </div>
+  {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists it right now. {% if product.status == "wishlist" %}You'll get an alert when one does.{% else %}Put it on your wishlist to get an alert when one does.{% endif %}</div>{% endif %}
 </div>
 
 {% if product.brand_id %}

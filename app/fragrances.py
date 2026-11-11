@@ -1,11 +1,11 @@
 """Your decisions about single fragrances, and how supplier listings are matched to them.
 
-Brands and fragrances share one rule: Follow alerts you, Ignore hides, and anything you
-haven't decided on ('default') is shown without alerts. A fragrance's own decision wins over
-its brand's: leave Memo on default but follow Ithaque, or follow Amouage but ignore Outlands.
-  follow   alerts when it's new, back in stock or cheaper, whatever the brand's status
-  ignore   hidden everywhere, never alerts
-  default  the brand's status applies
+A fragrance goes on one of your lists, or on none ('default'). Its list wins over its brand's
+status: leave Memo on default but wishlist Ithaque, or follow Amouage but ignore Outlands.
+  wishlist  what you want to buy: alerts when it's new, back in stock or cheaper
+  filler    you wouldn't mind owning it, e.g. to reach a supplier's minimum order; never alerts
+  ignore    hidden everywhere, never alerts
+  default   the brand's status applies (brands are follow | ignore | default)
 Separately, `owned` puts a fragrance in your collection. It doesn't change alerts.
 
 Listings are matched by reading the fragrance name out of the supplier's product name:
@@ -17,7 +17,7 @@ import re
 from collections import defaultdict
 from datetime import datetime, timezone
 
-STATUSES = ("follow", "ignore", "default")
+STATUSES = ("wishlist", "filler", "ignore", "default")
 CONCENTRATIONS = ("EDP", "EDT", "EDC", "Parfum", "Extrait", "Cologne")
 
 # Where a supplier name stops naming the fragrance, strongest signal first.
@@ -140,7 +140,7 @@ def decided(decision) -> bool:
 
 def alerting(listing, decision) -> bool:
     """Whether changes to this listing reach Telegram."""
-    return decision["status"] == "follow" if decided(decision) else listing["status"] == "follow"
+    return decision["status"] == "wishlist" if decided(decision) else listing["status"] == "follow"
 
 
 def hidden(listing, decision) -> bool:
@@ -164,9 +164,14 @@ def save(conn, brand_id: int | None, name: str, concentration: str | None,
         conn.execute("DELETE FROM fragrances WHERE id = ?", (existing["id"],))
     if status != "default" or owned:
         conn.execute(
-            """INSERT INTO fragrances (id, brand_id, name, concentration, status, owned, note, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO fragrances (id, brand_id, name, concentration, status, owned, note, size, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (existing["id"] if existing else None, brand_id, " ".join(name.upper().split()), concentration,
-             status, int(owned), note, existing["created_at"] if existing else
-             datetime.now(timezone.utc).isoformat(timespec="seconds")),
+             status, int(owned), note, existing["size"] if existing else None,
+             existing["created_at"] if existing else datetime.now(timezone.utc).isoformat(timespec="seconds")),
         )
+
+
+def set_size(conn, fragrance_id: int, size: str | None) -> None:
+    """The size you'd buy ("100 ml", "100 ml tester"); None buys the cheapest."""
+    conn.execute("UPDATE fragrances SET size = ? WHERE id = ?", (size, fragrance_id))

@@ -16,13 +16,16 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 - **collect** fetches a supplier's full in-stock list, compares it with what's stored, and
   records events: `new`, `restock`, `price_drop`, `price_up`, `soldout`. A supplier's first
   run only stores the starting point. Quantity changes are stored but aren't events.
-- **Brands and fragrances** are *followed* (alerts), *ignored* (hidden) or left on
-  *default* (shown, no alerts). A fragrance's choice wins over its brand's. Supplier
+- **Brands** are *followed* (alerts), *ignored* (hidden) or left on *default* (shown, no
+  alerts). **Fragrances** go on the *wishlist* (alerts), the *fillers* (fine to own, e.g. to
+  reach a minimum order; no alerts), *ignored*, or on no list, where the brand's status
+  applies. A fragrance's list wins over its brand's. Supplier
   spellings of a brand are merged through aliases, with suggestions on the New brands page.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
-  suppliers, followed brands' new products and restocks, followed fragrances (new, back in
-  stock, cheaper), and new brands with Follow / Ignore buttons.
-- **Products** lists followed and ignored fragrances and your collection (owned, which
+  suppliers, followed brands' new products and restocks, wishlist fragrances (new, back in
+  stock, cheaper), and new brands with Follow / Ignore buttons. Order suggestions stay on the
+  Orders page.
+- **Products** lists the wishlist, fillers, ignored fragrances and your collection (owned, which
   doesn't change alerts). Listings are matched by the fragrance name read from the supplier's product name.
 
 ## Code map
@@ -32,6 +35,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 | `app/suppliers/<name>.py` | One per supplier: `fetch()` returns its in-stock items |
 | `app/collect.py` | Compares a fetch with the database, records events |
 | `app/notify.py` | Builds and sends the digest |
+| `app/orders.py` | Order suggestions: wishlist plus fillers up to each supplier's minimum |
 | `app/brands.py` | Brand statuses, merging, merge suggestions |
 | `app/fragrances.py` | Fragrance decisions and matching listings to them |
 | `app/telegram.py` | Telegram messages, buttons and webhook |

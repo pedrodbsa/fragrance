@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Suppliers{% endblock %}
+{% block content %}
+{% set health = {"ok": ("new", "Working"), "stale": ("price_drop", "No update in 24h"), "failed": ("bad", "Failing"), "never": ("", "Not collected yet")} %}
+<div class="page-head">
+  <div>
+    <h1>Suppliers</h1>
+    <p class="subtitle">Whether collecting each supplier works, and its minimum order value (MOV), used for order suggestions. Enter the MOV on the same basis as the supplier's prices (with or without VAT).</p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Supplier</th><th>Collection</th><th class="hide-sm">Last worked</th><th class="num">In stock</th><th>Minimum order</th></tr></thead>
+    <tbody>
+    {% for s in rows %}
+    {% set pill, label = health[s.health] %}
+    <tr>
+      <td class="product-name">{{ s.name }}</td>
+      <td>
+        <span class="pill {{ pill }}">{{ label }}</span>
+        {% if s.error %}<div class="small muted" title="{{ s.error }}">{{ s.last_run|local }}: {{ s.error|truncate(120) }}</div>{% endif %}
+      </td>
+      <td class="nowrap muted hide-sm">{{ s.last_ok|local if s.last_ok else "—" }}</td>
+      <td class="num">{{ "{:,}".format(s.in_stock or 0) }}</td>
+      <td>
+        <form method="post" action="/suppliers/{{ s.name }}/mov" class="toolbar">
+          <input class="mov" type="text" inputmode="decimal" name="mov" value="{{ '%.2f'|format(s.mov) if s.mov is not none else '' }}" placeholder="€ none">
+          <button class="btn sm">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

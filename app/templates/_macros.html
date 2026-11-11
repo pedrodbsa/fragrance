@@ -1,4 +1,4 @@
-{# Follow / Ignore switch. The current choice is highlighted; clicking it again goes back to
+{# Follow / Ignore switch for a brand. The current choice is highlighted; clicking it again goes back to
    default (shown, no alerts). `fields` are extra hidden inputs the form needs. #}
 {% macro follow_switch(action, current, back, fields={}, small=False) %}
 <form method="post" action="{{ action }}" class="choice{{ ' sm' if small }}">
@@ -11,6 +11,21 @@
 </form>
 {% endmacro %}
 
+{# A fragrance's list: Wishlist / Filler / Ignore. The current one is highlighted; clicking
+   it again takes the fragrance off it (back to the brand's status). #}
+{% macro fragrance_switch(current, back, fields, small=False) %}
+<form method="post" action="/products" class="choice{{ ' sm' if small }}">
+  <input type="hidden" name="back" value="{{ back }}">
+  {% for k, v in fields.items() %}<input type="hidden" name="{{ k }}" value="{{ v if v is not none else '' }}">{% endfor %}
+  {% for value, icon, label, tip in [("wishlist", "⭐", "Wishlist", "I want to buy it: alert me"),
+                                     ("filler", "➕", "Filler", "I wouldn't mind owning it, e.g. to reach a minimum order. No alerts"),
+                                     ("ignore", "🚫", "Ignore", "Hide it everywhere")] %}
+  <button class="{{ 'on' if current == value }}" name="status" value="{{ 'default' if current == value else value }}"
+          title="{{ 'Click to take it off this list' if current == value else tip }}">{{ icon }} {{ label }}</button>
+  {% endfor %}
+</form>
+{% endmacro %}
+
 {# Collection switch for a fragrance. #}
 {% macro owned_switch(owned, back, fields) %}
 <form method="post" action="/products" class="choice">
@@ -20,8 +35,8 @@
 </form>
 {% endmacro %}
 
-{# Badges for a fragrance decision: Following / Ignored, and In collection. #}
+{# Badges for a fragrance decision: its list, and In collection. #}
 {% macro badges(d) %}
-{%- if d and d.status == "follow" %} <span class="pill new">Following</span>{% elif d and d.status == "ignore" %} <span class="pill">Ignored</span>{% endif -%}
+{%- if d and d.status == "wishlist" %} <span class="pill new">Wishlist</span>{% elif d and d.status == "filler" %} <span class="pill">Filler</span>{% elif d and d.status == "ignore" %} <span class="pill">Ignored</span>{% endif -%}
 {%- if d and d.owned %} <span class="pill restock">In collection</span>{% endif -%}
 {% endmacro %}

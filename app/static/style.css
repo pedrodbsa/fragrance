@@ -183,7 +183,7 @@ input:focus, select:focus, button:focus-visible { outline: none; box-shadow: 0 0
 .btn.danger:hover { color: #df1b41; background: rgba(223, 27, 65, 0.08); }
 
 td form { display: inline; margin: 0; }
-.row-actions { display: flex; gap: 2px; justify-content: flex-end; opacity: 0; transition: opacity 0.1s; }
+.row-actions { display: flex; white-space: nowrap; gap: 2px; justify-content: flex-end; opacity: 0; transition: opacity 0.1s; }
 tr:hover .row-actions, .row-actions:focus-within { opacity: 1; }
 @media (hover: none) { .row-actions { opacity: 1; } }
 
@@ -250,3 +250,9 @@ tr.faded .sizes { opacity: 0.7; }
 .tip b { color: var(--text); font-variant-numeric: tabular-nums; }
 .choice.sm button { padding: 2px 8px; }
 .merge-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+
+/* Suppliers and orders */
+.pill.bad { background: rgba(223, 27, 65, 0.1); color: #df1b41; }
+.mov { width: 110px; }
+.order-total { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+tr.off { opacity: 0.55; }

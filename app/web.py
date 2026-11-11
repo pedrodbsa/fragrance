@@ -23,11 +23,12 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app import brands, telegram
+from app import brands, orders, telegram
 from app.db import connect, upgrade
 from app import fragrances
 from app.fragrances import CONCENTRATIONS, alerting, hidden, key, matcher, resolver, variant
 from app.fragrances import save as fragrance_save
+from app.suppliers import SUPPLIERS
 
 security = HTTPBasic()
 
@@ -106,7 +107,7 @@ def events(request: Request, kind: str = ""):
     recent = conn.execute(
         """SELECT e.*, c.name, c.brand, c.brand_id, c.brand_name, c.status, c.ean, c.price, c.qty
            FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
-           WHERE c.status != 'ignore' AND (? = '' OR e.kind = ?) ORDER BY e.id DESC LIMIT ?""",
+           WHERE (? = '' OR e.kind = ?) ORDER BY e.id DESC LIMIT ?""",
         (kind, kind, PAGE * 3),
     ).fetchall()
     rows = [r for r in annotate(conn, recent) if not r["hidden"]][:PAGE]
@@ -318,11 +319,11 @@ def alias_split(alias: str = Form(...)):
 
 # --- Products: your decisions about single fragrances ----------------------------------------
 
-TABS = {"follow": "Following", "owned": "Collection", "ignore": "Ignored"}
+TABS = {"wishlist": "Wishlist", "filler": "Fillers", "owned": "Collection", "ignore": "Ignored"}
 
 
 @office.get("/products")
-def products(request: Request, tab: str = "follow"):
+def products(request: Request, tab: str = "wishlist"):
     conn = connect()
     match = matcher(conn)
     offers = defaultdict(list)  # decision id -> listings it covers
@@ -423,7 +424,7 @@ def fragrance_page(request: Request, brand: int, name: str, concentration: str =
 @office.post("/products")
 def product_save(name: str = Form(...), brand_id: str = Form(""), concentration: str = Form(""),
                  status: str = Form(""), owned: str = Form(""), note: str = Form(""), back: str = Form("/products")):
-    """Follow / ignore / reset a fragrance (status), or put it in or out of your collection
+    """Put a fragrance on the wishlist, fillers or ignored, or off them (status), or put it in or out of your collection
     (owned = 1 / 0). Fields left empty keep their current value."""
     if not name.strip():
         raise HTTPException(400, "a product needs a name")
@@ -438,6 +439,63 @@ def product_save(name: str = Form(...), brand_id: str = Form(""), concentration:
         back = ("/fragrance?" + urlencode({"brand": brand_id, "name": name, "concentration": concentration})
                 if brand_id else "/products")
     return back_to(back, "/products")
+
+
+@office.post("/products/{fragrance_id}/size")
+def product_size(fragrance_id: int, size: str = Form(""), back: str = Form(...)):
+    """The size you'd buy; empty buys the cheapest. Order suggestions use it."""
+    conn = connect()
+    with conn:
+        fragrances.set_size(conn, fragrance_id, size or None)
+    return back_to(back, f"/products/{fragrance_id}")
+
+
+# --- Suppliers and orders --------------------------------------------------------------------
+
+STALE = timedelta(hours=24)  # the schedule runs three times a day: a day without success is wrong
+
+
+@office.get("/suppliers")
+def suppliers(request: Request):
+    """Every supplier: whether collecting works, when it last did, and its minimum order."""
+    conn = connect()
+    saved = {s["name"]: s for s in conn.execute("SELECT * FROM suppliers")}
+    stock = {r["supplier"]: r for r in conn.execute(
+        "SELECT supplier, sum(qty > 0) AS in_stock, max(last_seen) AS last_seen FROM products GROUP BY supplier")}
+    rows = []
+    for name in sorted(SUPPLIERS):
+        s, p = saved.get(name), stock.get(name)
+        last_ok = (s and s["last_ok_at"]) or (p and p["last_seen"])
+        if s and s["last_error"]:
+            health = "failed"
+        elif not last_ok:
+            health = "never"
+        elif datetime.now(timezone.utc) - datetime.fromisoformat(last_ok) > STALE:
+            health = "stale"
+        else:
+            health = "ok"
+        rows.append({"name": name, "health": health, "last_ok": last_ok, "last_run": s and s["last_run_at"],
+                     "error": s and s["last_error"], "mov": s and s["mov"], "in_stock": p["in_stock"] if p else 0})
+    return templates.TemplateResponse(request, "suppliers.html", {"rows": rows})
+
+
+@office.post("/suppliers/{name}/mov")
+def supplier_mov(name: str, mov: str = Form("")):
+    """Set a supplier's minimum order value; empty means none."""
+    if name not in SUPPLIERS:
+        raise HTTPException(404, "unknown supplier")
+    value = float(mov.replace(",", ".")) if mov.strip() else None
+    conn = connect()
+    with conn:
+        conn.execute("INSERT INTO suppliers (name, mov) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET mov = excluded.mov",
+                     (name, value))
+    return RedirectResponse("/suppliers", status_code=303)
+
+
+@office.get("/orders")
+def orders_page(request: Request):
+    """The order you could place at each supplier from your wishlist and fillers."""
+    return templates.TemplateResponse(request, "orders.html", {"orders": orders.plan(connect())})
 
 
 app.include_router(office)

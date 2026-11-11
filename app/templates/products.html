@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% from "_macros.html" import follow_switch, owned_switch, badges %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges %}
 {% block title %}Products{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
 <div class="page-head">
   <div>
     <h1>Products</h1>
-    <p class="subtitle">Single fragrances you follow, ignore or own. Follow and Ignore win over the brand: leave Memo alone but follow Ithaque, follow Amouage but ignore Outlands.</p>
+    <p class="subtitle">Your lists. Wishlist is what you want to buy and alerts you. Fillers are fragrances you wouldn't mind owning, to reach a supplier's minimum order; they never alert. Ignore hides for good. A fragrance's list wins over its brand: leave Memo alone but wishlist Ithaque, follow Amouage but ignore Outlands.</p>
   </div>
 </div>
 
@@ -18,7 +18,7 @@
       <select name="brand_id"><option value="">Any brand</option>{% for b in brands %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
       <input type="text" name="name" placeholder="Fragrance, e.g. Ithaque" required>
       <select name="concentration" title="Leave on 'Any' to cover every concentration"><option value="">Any concentration</option>{% for c in concentrations %}<option>{{ c }}</option>{% endfor %}</select>
-      <select name="status"><option value="follow">⭐ Follow</option><option value="ignore">🚫 Ignore</option><option value="">No alerts change</option></select>
+      <select name="status"><option value="wishlist">⭐ Wishlist</option><option value="filler">➕ Filler</option><option value="ignore">🚫 Ignore</option><option value="">No list</option></select>
       <label class="check"><input type="checkbox" name="owned" value="1" {% if tab == "owned" %}checked{% endif %}> In my collection</label>
       <input type="text" name="note" placeholder="Note (optional)">
       <button class="btn primary">Add</button>
@@ -33,7 +33,7 @@
       <a href="/products?tab={{ k }}" class="{{ 'active' if tab == k }}">{{ label }} <span class="muted">{{ counts.get(k, 0) }}</span></a>
       {% endfor %}
     </nav>
-    <span class="panel-note">{% if tab == "follow" %}Alerts you when new, back in stock or cheaper{% elif tab == "owned" %}Your collection; doesn't change alerts{% else %}Hidden everywhere{% endif %}</span>
+    <span class="panel-note">{% if tab == "wishlist" %}Alerts you when new, back in stock or cheaper{% elif tab == "filler" %}No alerts: candidates to reach a minimum order{% elif tab == "owned" %}Your collection; doesn't change alerts{% else %}Hidden everywhere{% endif %}</span>
   </div>
   {% if rows %}
   <div class="scroll">
@@ -55,7 +55,7 @@
       </td>
       <td class="muted small hide-sm">{{ r.note or "" }}</td>
       <td class="num nowrap">
-        {{ follow_switch("/products", r.status, back, fields) }}
+        {{ fragrance_switch(r.status, back, fields) }}
         {{ owned_switch(r.owned, back, fields) }}
       </td>
     </tr>
@@ -64,7 +64,7 @@
   </table>
   </div>
   {% else %}
-  <div class="empty">{% if tab == "follow" %}Nothing followed. Add a fragrance above, even one no supplier lists yet, or use ⭐ Follow on a Stock row.{% elif tab == "owned" %}Your collection is empty. Use "+ Collection" on a Stock row or add one above.{% else %}Nothing ignored.{% endif %}</div>
+  <div class="empty">{% if tab == "wishlist" %}Your wishlist is empty. Add a fragrance above, even one no supplier lists yet, or use ⭐ Wishlist on a Stock row.{% elif tab == "filler" %}No fillers yet. Use ➕ Filler on a Stock row.{% elif tab == "owned" %}Your collection is empty. Use "+ Collection" on a Stock row or add one above.{% else %}Nothing ignored.{% endif %}</div>
   {% endif %}
 </div>
 {% endblock %}

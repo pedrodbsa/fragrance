@@ -8,7 +8,7 @@ constantly and would drown the ones that matter.
 from collections import Counter
 from datetime import datetime, timezone
 
-from app.db import add_brand, connect, unknown_spellings
+from app.db import add_brand, collected, connect, unknown_spellings
 from app.item import Item
 from app.suppliers import SUPPLIERS
 
@@ -28,6 +28,7 @@ def collect(supplier: str) -> None:
     conn = connect()
     with conn:  # one transaction: a run is recorded completely or not at all
         events = record(conn, supplier, items, now)
+        collected(conn, supplier, len(items), now)
     counts = ", ".join(f"{n} {kind}" for kind, n in Counter(e[1] for e in events).items()) or "no changes"
     print(f"{supplier}: {len(items)} in stock; {counts}")
 
