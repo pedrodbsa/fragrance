@@ -115,7 +115,7 @@
     <form method="post" action="/products/{{ product.id }}/merge" class="merge-row">
       <input type="hidden" name="other" value="{{ o.id }}">
       <span>Shares an EAN with <a href="/products/{{ o.id }}">{{ o.name|pretty('') }}{% if o.concentration %} {{ o.concentration }}{% endif %}</a> <span class="muted small">(suppliers sometimes reuse EANs, so check)</span></span>
-      <button class="btn sm">Merge here</button>
+      <button class="btn sm" title="This fragrance moves into that one: its listings, names and EANs">Merge there</button>
     </form>
     {% endfor %}
     <form method="post" action="/products/{{ product.id }}/merge" class="toolbar">
@@ -123,7 +123,7 @@
         <option value="">Another {{ product.brand_name }} fragrance that is this same juice…</option>
         {% for o in others %}<option value="{{ o.id }}">{{ o.name|pretty('') }}{% if o.concentration %} {{ o.concentration }}{% endif %} · {{ o.listings }} listing{{ "s" if o.listings != 1 }}</option>{% endfor %}
       </select>
-      <button class="btn">Merge here</button>
+      <button class="btn" title="This fragrance moves into that one: its listings, names and EANs">Merge there</button>
     </form>
   </div>
 </div>

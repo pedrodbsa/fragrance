@@ -604,11 +604,11 @@ def product_size(fragrance_id: int, size: str = Form(""), back: str = Form(...))
 
 @office.post("/products/{fragrance_id}/merge")
 def product_merge(fragrance_id: int, other: int = Form(...)):
-    """`other` is the same juice as this fragrance: it merges into this one."""
+    """This fragrance is the same juice as `other`: it merges into that one, and you land there."""
     conn = connect()
     with conn:
-        fragrances.merge(conn, other, fragrance_id)
-    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+        fragrances.merge(conn, fragrance_id, other)
+    return RedirectResponse(f"/products/{other}", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/rename")
