@@ -8,7 +8,7 @@
   <a class="quiet sorter" href="{{ sort_links[field] }}" {% if sort.lstrip("-") == field %}data-dir="{{ 'desc' if sort.startswith('-') else 'asc' }}"{% endif %}>{{ label }}</a>
   {%- else %}{{ label }}{% endif -%}
 {%- endmacro %}
-{% from "_macros.html" import fragrance_switch, owned_switch, badges, hot %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges %}
   <div class="scroll">
   <table class="{{ '' if sort is defined else 'sortable' }}">
     <thead><tr>
@@ -29,14 +29,14 @@
       <td>
         <div class="sizes">
         {% for r in g.sizes %}
-          <a class="size {{ 'out' if r.qty == 0 }} {{ 'deal' if r.discount is defined }} {{ 'elsewhere' if r.elsewhere }}" href="{{ page }}" title="{% if r.elsewhere %}Not at {{ supplier }}: the cheapest elsewhere, {% endif %}{{ r.name }} · {{ r.condition }} · {{ r.qty }} at {{ r.supplier }}{{ ' · the cheapest of any supplier' if r.cheapest }}">
-            {#- One pill against the next cheapest supplier: red 🔥 a deal, green 👑 the cheapest, grey dearer,
-                blue when no one else has the size. #}
-            {%- if r.discount is defined %}{{ hot(r) }}
-            {%- elif r.rival and r.price is not none and r.qty > 0 %}{% set delta = r.price - r.rival %}
-            <span class="pill {{ 'cheapest' if r.cheapest else 'dearer' }}" title="The next cheapest supplier asks €{{ "%.2f"|format(r.rival) }}: €{{ "%.2f"|format(delta|abs) }} {{ 'more' if delta > 0 else 'less' }} here">{{ "👑 " if r.cheapest }}{{ "+" if delta > 0 else "−" if delta < 0 }}{{ (delta|abs / r.rival * 100)|round|int }}%</span>
-            {%- elif r.cheapest %}<span class="pill only" title="No other supplier has this size in stock: nothing to compare with">Only here</span>{% endif %}
-            {{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b></a>
+          {#- The chip's colour says how it compares with the next cheapest supplier: red 🔥 a deal,
+              green 👑 the cheapest, blue 🦄 no one else has the size; then the % difference
+              after the price, green cheaper, red dearer. Without a supplier picked, only deals. #}
+          {%- set state = "deal" if r.discount is defined else "cheapest" if r.cheapest and r.rival else "only" if r.cheapest else "" %}
+          {%- set delta = r.price - r.rival if r.rival and r.price is not none and r.qty > 0 else none %}
+          <a class="size {{ 'out' if r.qty == 0 }} {{ state }} {{ 'elsewhere' if r.elsewhere }}" href="{{ page }}" title="{% if r.elsewhere %}Not at {{ supplier }}: the cheapest elsewhere, {% endif %}{{ r.name }} · {{ r.condition }} · {{ r.qty }} at {{ r.supplier }}{% if state == 'only' %} · no other supplier has this size{% endif %}{% if delta is not none %} · the next cheapest supplier asks €{{ "%.2f"|format(r.rival) }}{% endif %}">
+            {{- {"deal": "🔥 ", "cheapest": "👑 ", "only": "🦄 "}.get(state, "") }}{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b>
+            {%- if delta is not none %} <span class="delta {{ 'up' if delta > 0 else 'down' if delta < 0 }}">{{ "+" if delta > 0 else "−" if delta < 0 else "±" }}{{ (delta|abs / r.rival * 100)|round|int }}%</span>{% endif %}</a>
         {% endfor %}
         </div>
       </td>

@@ -229,10 +229,15 @@ tr.faded .product-name, tr.faded .num { color: var(--muted); }
 .size:hover { border-color: var(--accent); text-decoration: none; }
 .size.out { opacity: 0.55; }
 .size.elsewhere { opacity: 0.45; border-style: dashed; } /* Stock with a supplier picked: sizes only other suppliers have */
-/* …and its price against the next cheapest supplier (a deal is .pill.hot) */
-.pill.cheapest { background: var(--green-bg); color: var(--green-fg); font-weight: 600; padding: 0 6px; line-height: 18px; }
-.pill.dearer { font-weight: 600; padding: 0 6px; line-height: 18px; }
-.pill.only { background: var(--blue-bg); color: var(--blue-fg); font-weight: 600; padding: 0 6px; line-height: 18px; }
+/* …and how each size compares with the next cheapest supplier (web.mark_deals, mark_rivals) */
+.size.deal { background: #df1b41; border-color: transparent; color: #fff; }
+.size.deal b, .size.deal .delta { color: #fff; }
+.size.cheapest { background: var(--green-bg); border-color: transparent; color: var(--green-fg); }
+.size.only { background: var(--blue-bg); border-color: transparent; color: var(--blue-fg); }
+.size.cheapest b, .size.only b { color: inherit; }
+.size .delta { font-size: 11px; font-weight: 600; color: var(--muted); }
+.size .delta.down { color: var(--green-fg); }
+.size .delta.up { color: #df1b41; }
 tr.faded .sizes { opacity: 0.7; }
 
 /* Price chart (categorical slots from the dataviz reference palette, light and dark) */
@@ -282,4 +287,3 @@ td:has(> .best) { background: var(--green-bg); }
 
 /* A deal: well below what the other suppliers ask (web.mark_deals) */
 .pill.hot { background: #df1b41; color: #fff; font-weight: 600; padding: 0 6px; line-height: 18px; }
-.size.deal { border-color: #df1b41; }
