@@ -3,7 +3,7 @@ with fillers to reach the supplier's minimum order value (MOV, set on the Suppli
 
 For each supplier that has a wishlist fragrance in stock, or a basket open:
   1. every wishlist fragrance it has, one bottle each, in the size you picked on the
-     fragrance's page (or the cheapest size if you didn't pick one);
+     fragrance's page (or the cheapest size if you didn't pick one), tester or not;
   2. if that and the basket are under the MOV, the fillers it has in stock that reach the
      MOV with the least money spent over it. If all its fillers together don't reach it,
      the order is short.
@@ -11,7 +11,7 @@ Fragrances already in the supplier's basket aren't suggested again, and the bask
 counts towards the MOV.
 """
 
-from app.fragrances import variant
+from app.fragrances import condition, variant
 
 
 def plan(conn, baskets: list[dict]) -> list[dict]:
@@ -28,7 +28,7 @@ def plan(conn, baskets: list[dict]) -> list[dict]:
             continue
         if (listing["supplier"], listing["fragrance_id"]) in in_basket:
             continue
-        line = {**dict(listing), "size_label": size}
+        line = {**dict(listing), "size_label": size, "condition": condition(listing["name"])}
         best = offers.get((listing["supplier"], listing["fragrance_id"]))
         if best is None or line["price"] < best["price"]:
             offers[(listing["supplier"], listing["fragrance_id"])] = line

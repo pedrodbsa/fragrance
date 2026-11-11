@@ -64,7 +64,7 @@
         {% for z in sizes %}<option {{ 'selected' if z == product.size }}>{{ z }}</option>{% endfor %}
       </select>
     </form>
-    {% else %}<span class="panel-note">Every size and tester of this fragrance, in stock first</span>{% endif %}
+    {% else %}<span class="panel-note">Every listing of this fragrance by size, testers included, in stock first</span>{% endif %}
   </div>
   {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists it right now. {% if product.status == "wishlist" %}You'll get an alert when one does.{% else %}Put it on your wishlist to get an alert when one does.{% endif %}</div>{% endif %}
 </div>

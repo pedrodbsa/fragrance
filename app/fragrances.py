@@ -96,16 +96,21 @@ AMOUNT = re.compile(r"(\d+(?:[.,]\d+)?)\s*(ML|GR|G|OZ)\b")
 
 
 def variant(name: str) -> tuple[float, str]:
-    """Size and format of a listing, for grouping sizes under one fragrance:
-    "... EDP 100 ML VAPO TESTER" -> (100.0, "100 ml tester"), "... EDP SET 100 ML + 15 ML" ->
-    (100.0, "100 ml set"). Unknown sizes sort last."""
+    """Size of a listing, for grouping sizes under one fragrance: "... EDP 100 ML VAPO TESTER"
+    -> (100.0, "100 ml"), a tester counting as the size it holds (see condition);
+    "... EDP SET 100 ML + 15 ML" -> (100.0, "100 ml set"). Unknown sizes sort last."""
     text = name.upper()
     found = AMOUNT.search(text)
-    kind = " set" if GIFT_SET.search(text) else " tester" if TESTER.search(text) else ""
+    kind = " set" if GIFT_SET.search(text) else ""
     if not found:
         return 1e9, "other" + kind
     number, unit = found.groups()
     return float(number.replace(",", ".")), f"{number} {unit.lower()}{kind}"
+
+
+def condition(name: str) -> str:
+    """ "Tester" for a tester or an unboxed bottle (suppliers name both "... Tester"), else "New"."""
+    return "Tester" if TESTER.search(name.upper()) else "New"
 
 
 def cheapest(conn, fragrance_ids) -> set[tuple[str, str]]:
@@ -233,7 +238,7 @@ def set_owned(conn, fragrance_id: int, owned: bool) -> None:
 
 
 def set_size(conn, fragrance_id: int, size: str | None) -> None:
-    """The size you'd buy ("100 ml", "100 ml tester"); None buys the cheapest."""
+    """The size you'd buy ("100 ml"), tester or not; None buys the cheapest."""
     conn.execute("UPDATE fragrances SET size = ? WHERE id = ?", (size, fragrance_id))
 
 

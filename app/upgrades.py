@@ -27,6 +27,8 @@
   learn-eans      a fragrance now learns every EAN of the listings matched to it by EAN:
                   the other EANs of those listings are matched to it too, unless already
                   matched to another fragrance.
+  size-without-tester  a tester counts as its size now ("100 ml", with Tester as its
+                  condition): a size you'd buy saved as "100 ml tester" becomes "100 ml".
 """
 
 import sqlite3
@@ -51,6 +53,7 @@ def upgrade(conn) -> None:
     once(conn, "small-price-changes", small_price_changes)
     once(conn, "reread-names", reread_names)
     once(conn, "learn-eans", learn_pinned_eans)
+    once(conn, "size-without-tester", size_without_tester)
 
 
 def learn_pinned_eans(conn) -> None:
@@ -122,6 +125,10 @@ def brand_reviewed(conn) -> None:
         conn.execute("ALTER TABLE brands ADD COLUMN reviewed_at TEXT")
     month_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(timespec="seconds")
     conn.execute("UPDATE brands SET reviewed_at = ? WHERE status != 'default' OR created_at < ?", (now(), month_ago))
+
+
+def size_without_tester(conn) -> None:
+    conn.execute("UPDATE fragrances SET size = replace(size, ' tester', '') WHERE size LIKE '% tester'")
 
 
 def once(conn, name: str, step) -> None:

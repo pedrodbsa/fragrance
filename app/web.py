@@ -27,7 +27,7 @@ from app import baskets, brands, orders, telegram
 from app.db import connect, fold
 from app.upgrades import upgrade
 from app import fragrances
-from app.fragrances import CONCENTRATIONS, key, variant
+from app.fragrances import CONCENTRATIONS, condition, key, variant
 from app.suppliers import SUPPLIERS
 
 security = HTTPBasic()
@@ -135,17 +135,17 @@ def events(request: Request, kind: str = "", brands: str = "", supplier: str = "
 
 
 def annotate(listings) -> list[dict]:
-    """Catalog rows plus each one's size, as the stock tables show it."""
+    """Catalog rows plus each one's size and condition (New or Tester), as the stock tables show them."""
     rows = []
     for r in listings:
         size, size_label = variant(r["name"])
-        rows.append({**dict(r), "size": size, "size_label": size_label})
+        rows.append({**dict(r), "size": size, "size_label": size_label, "condition": condition(r["name"])})
     return rows
 
 
 def group(rows: list[dict]) -> list[dict]:
-    """One entry per fragrance, its sizes and testers under it. For each size, the cheapest
-    in-stock listing is shown."""
+    """One entry per fragrance, its sizes under it. For each size, the cheapest in-stock
+    listing is shown, tester or not."""
     groups = {}
     for r in rows:
         g = groups.setdefault(r["fragrance_id"], {**r, "listings": [], "qty": 0, "suppliers": set(), "best": None})
@@ -182,25 +182,19 @@ def price_history(conn, rows: list[dict]) -> list[dict]:
 
 def cheapest_only(conn, rows: list[dict]) -> list[dict]:
     """Keep the rows that are the lowest in-stock price for their fragrance and size across
-    every supplier (a tie counts as cheapest). With a supplier filter, that's where that
-    supplier is the cheapest. A tester also has to beat the boxed bottle of its size: a tester
-    dearer than someone's boxed one isn't a bargain."""
+    every supplier, tester or not (a tie counts as cheapest). With a supplier filter, that's
+    where that supplier is the cheapest."""
     lowest = {}  # (fragrance id, size) -> lowest in-stock price at any supplier
     for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
         size = (r["fragrance_id"], r["size_label"])
         lowest[size] = min(lowest.get(size, r["price"]), r["price"])
-
-    def is_cheapest(r) -> bool:
-        boxed = r["size_label"].removesuffix(" tester")  # "100 ml tester" -> "100 ml"
-        return r["price"] <= min(lowest[(r["fragrance_id"], r["size_label"])],
-                                 lowest.get((r["fragrance_id"], boxed), r["price"]))
-
-    return [r for r in rows if r["qty"] > 0 and r["price"] is not None and is_cheapest(r)]
+    return [r for r in rows if r["qty"] > 0 and r["price"] is not None
+            and r["price"] <= lowest[(r["fragrance_id"], r["size_label"])]]
 
 
 def testers_only(rows: list[dict]) -> list[dict]:
-    """Keep testers (and unboxed bottles, which are sold like them): the "… tester" sizes."""
-    return [r for r in rows if r["size_label"].endswith(" tester")]
+    """Keep testers (and unboxed bottles, which are sold like them)."""
+    return [r for r in rows if r["condition"] == "Tester"]
 
 
 DEAL = 0.20  # a deal: at least this much below what the other suppliers ask on average
@@ -538,7 +532,7 @@ def product_detail(request: Request, fragrance_id: int):
     if product is None:
         raise HTTPException(404, "product not found")
     listings = conn.execute("SELECT * FROM catalog WHERE fragrance_id = ?", (fragrance_id,)).fetchall()
-    rows = sorted(annotate(listings), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
+    rows = sorted(mark_deals(conn, annotate(listings)), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
     for r in rows:  # how each listing's name reads, for "Use this name"
         name, concentration = fragrances.identify(r["name"], r["brand"])
         r["reads_as"] = (" ".join(name.upper().split()), concentration)

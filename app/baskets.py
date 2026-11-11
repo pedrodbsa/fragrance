@@ -6,7 +6,7 @@ and the digest tells you when a basket item sells out, comes back or changes pri
 """
 
 from app.db import now
-from app.fragrances import variant
+from app.fragrances import condition, variant
 
 
 def add(conn, supplier: str, sku: str) -> None:
@@ -42,7 +42,7 @@ def contents(conn) -> list[dict]:
             """SELECT c.*, b.quantity, b.added_at, b.added_price FROM basket b
                JOIN catalog c ON c.supplier = b.supplier AND c.sku = b.sku
                ORDER BY b.supplier, c.brand_name, c.fragrance""").fetchall():
-        line = {**dict(item), "size_label": variant(item["name"])[1],
+        line = {**dict(item), "size_label": variant(item["name"])[1], "condition": condition(item["name"]),
                 "available": item["qty"] > 0 and item["price"] is not None}
         basket = baskets.setdefault(item["supplier"], {"supplier": item["supplier"], "mov": movs.get(item["supplier"]),
                                                        "items": [], "total": 0.0})

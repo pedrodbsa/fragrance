@@ -1,4 +1,4 @@
-{# Stock grouped by fragrance, sizes and testers under it. Shared by Stock and brand pages.
+{# Stock grouped by fragrance, sizes under it (the cheapest of each, tester or not). Shared by Stock and brand pages.
    Needs: groups, back. Stock sorts on the server: it passes `sort` and `sort_links`, and its
    headers are links. Elsewhere the page sorts itself (static/tables.js). #}
 {# A column name that sorts: on Stock a link to the page sorted by it, elsewhere plain text
@@ -29,7 +29,7 @@
       <td>
         <div class="sizes">
         {% for r in g.sizes %}
-          <a class="size {{ 'out' if r.qty == 0 }} {{ 'cheap' if r.cheapest }} {{ 'deal' if r.discount is defined }}" href="{{ page }}" title="{{ r.name }} · {{ r.qty }} at {{ r.supplier }}{{ ' · the cheapest of any supplier' if r.cheapest }}">{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b> {{ hot(r) }}</a>
+          <a class="size {{ 'out' if r.qty == 0 }} {{ 'cheap' if r.cheapest }} {{ 'deal' if r.discount is defined }}" href="{{ page }}" title="{{ r.name }} · {{ r.condition }} · {{ r.qty }} at {{ r.supplier }}{{ ' · the cheapest of any supplier' if r.cheapest }}">{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b> {{ hot(r) }}</a>
         {% endfor %}
         </div>
       </td>

@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS fragrances (
     concentration TEXT,               -- EDP | EDT | EDC | Parfum | Extrait | Cologne, or none
     status        TEXT NOT NULL DEFAULT 'default',  -- wishlist | filler | ignore | default
     owned         INTEGER NOT NULL DEFAULT 0,       -- in your collection
-    size          TEXT,               -- size you'd buy, as shown in Stock ("100 ml", "100 ml tester")
+    size          TEXT,               -- size you'd buy, as shown in Stock ("100 ml"), tester or not
     audience      TEXT,               -- man | woman | unisex: the first supplier to say, or you
     note          TEXT,
     created_at    TEXT NOT NULL
