@@ -9,6 +9,15 @@
     <h1>{{ product.name|pretty('') }}{% if product.concentration %} <span class="muted">{{ product.concentration }}</span>{% endif %}</h1>
     <p class="subtitle">{{ badges(product.status, product.owned) }}{% if product.status == "default" %} On no list: the brand's status applies ({{ "following" if product.brand_status == "follow" else "ignored" if product.brand_status == "ignore" else "no alerts" }}).{% endif %}</p>
     {% if product.note %}<p class="subtitle">{{ product.note }}</p>{% endif %}
+    <details class="subtitle">
+      <summary class="small muted">Correct name or concentration</summary>
+      <form method="post" action="/products/{{ product.id }}/rename" class="toolbar" style="margin-top: 8px">
+        <input type="text" name="name" value="{{ product.name|pretty('') }}" required>
+        <select name="concentration"><option value="">No concentration</option>{% for c in concentrations %}<option {{ 'selected' if c == product.concentration }}>{{ c }}</option>{% endfor %}</select>
+        <button class="btn">Save</button>
+        <span class="small muted">If that fragrance exists already, this one merges into it.</span>
+      </form>
+    </details>
   </div>
   <div class="toolbar">
     {{ fragrance_switch(product.id, product.status, back) }}

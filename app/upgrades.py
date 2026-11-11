@@ -4,9 +4,13 @@
                   on every page load) becomes listings pointing to a fragrance catalogue. Your
                   fragrance decisions and merges carry over.
   brand-cleanup-1 brand names tidied and duplicate spellings merged (app/brand_cleanup.py).
+  brand-reviewed  brands remember whether you've chosen for them yet. Followed and ignored
+                  ones count as chosen, and so do default ones older than 30 days (the old
+                  New brands page no longer showed them).
 """
 
 import sqlite3
+from datetime import datetime, timedelta, timezone
 
 from app import brand_cleanup
 from app.db import SCHEMA, brand_for, now
@@ -17,6 +21,14 @@ def upgrade(conn) -> None:
     if conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'products'").fetchone():
         once(conn, "listings", to_listings)
     once(conn, "brand-cleanup-1", brand_cleanup.apply)
+    once(conn, "brand-reviewed", brand_reviewed)
+
+
+def brand_reviewed(conn) -> None:
+    if "reviewed_at" not in {c["name"] for c in conn.execute("PRAGMA table_info(brands)")}:
+        conn.execute("ALTER TABLE brands ADD COLUMN reviewed_at TEXT")
+    month_ago = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(timespec="seconds")
+    conn.execute("UPDATE brands SET reviewed_at = ? WHERE status != 'default' OR created_at < ?", (now(), month_ago))
 
 
 def once(conn, name: str, step) -> None:

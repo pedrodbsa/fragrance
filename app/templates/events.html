@@ -7,7 +7,7 @@
     <h1>Changes</h1>
     <p class="subtitle">What moved in your suppliers' stock, newest first. What you ignored is left out, except wishlist fragrances of ignored brands.</p>
   </div>
-  {% if new_brands %}<a class="btn" href="/new">{{ new_brands }} new brand{{ "s" if new_brands != 1 }} this week →</a>{% endif %}
+  {% if new_brands %}<a class="btn" href="/brands?status=new">{{ new_brands }} new brand{{ "s" if new_brands != 1 }} to review →</a>{% endif %}
 </div>
 
 <div class="stats">
@@ -30,7 +30,7 @@
   {% if rows %}
   <div class="scroll">
   <table>
-    <thead><tr><th class="hide-sm">When</th><th>Change</th><th>Product</th><th class="hide-sm">EAN</th><th class="num">Price</th><th class="num">Qty</th><th class="hide-sm">Supplier</th><th class="hide-sm" title="Sent to Telegram">Sent</th></tr></thead>
+    <thead><tr><th class="hide-sm">When</th><th>Change</th><th>Product</th><th class="hide-sm">EAN</th><th class="num">Price</th><th class="num">Qty</th><th class="hide-sm">Supplier</th></tr></thead>
     <tbody>
     {% for r in rows %}
     <tr>
@@ -47,7 +47,6 @@
       <td class="num">{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}<span class="muted">—</span>{% endif %}</td>
       <td class="num">{{ r.qty }}</td>
       <td class="muted hide-sm">{{ r.supplier }}</td>
-      <td class="muted hide-sm">{{ "✓" if r.notified_at }}</td>
     </tr>
     {% endfor %}
     </tbody>

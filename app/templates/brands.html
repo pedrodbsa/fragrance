@@ -1,44 +1,66 @@
 {% extends "base.html" %}
-{% from "_macros.html" import follow_switch %}
 {% block title %}Brands{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
-{% set labels = {"follow": "Following", "ignore": "Ignored", "default": "Not decided"} %}
+{% set tabs = {"new": "New", "": "All", "follow": "Following", "default": "Browse", "ignore": "Ignored"} %}
+{% set choices = [("follow", "⭐ Follow", "Alert me about new products and restocks"),
+                  ("default", "👀 Browse", "Show in Stock, no alerts"),
+                  ("ignore", "🚫 Ignore", "Hide it everywhere")] %}
 <div class="page-head">
   <div>
     <h1>Brands</h1>
-    <p class="subtitle">Follow a brand to hear about its new products and restocks, ignore it to hide it. Not deciding keeps it in Stock without alerts.</p>
+    <p class="subtitle"><b>Follow</b> the brands you collect: their new products and restocks alert you. <b>Browse</b> keeps a brand in Stock without alerts. <b>Ignore</b> hides it everywhere. A fragrance on your wishlist alerts whatever its brand. New brands wait in the New tab until you choose.</p>
   </div>
 </div>
 
-<div class="panel">
+<form method="post" action="/brands" class="panel">
+  <input type="hidden" name="back" value="{{ back }}">
   <div class="panel-head">
     <nav class="segmented">
-      <a href="/brands" class="{{ 'active' if not status }}">All</a>
-      {% for k, label in labels.items() %}
-      <a href="/brands?status={{ k }}" class="{{ 'active' if status == k }}">{{ label }} <span class="muted">{{ counts.get(k, 0) }}</span></a>
+      {% for k, label in tabs.items() %}
+      <a href="/brands{{ '?status=' ~ k if k }}" class="{{ 'active' if status == k }}">{{ label }}{% if k %} <span class="muted">{{ counts.get(k, 0) }}</span>{% endif %}</a>
       {% endfor %}
     </nav>
-    <form class="toolbar" method="get">
-      {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
-      <input type="search" name="q" value="{{ q }}" placeholder="Search brands">
-    </form>
+    <div class="toolbar">
+      {% if rows %}
+      <label class="check"><input type="checkbox" onclick="document.querySelectorAll('input[name=ids]').forEach(b => b.checked = this.checked)"> All</label>
+      <span class="muted small">With selected:</span>
+      {% for k, label, tip in choices %}<button class="btn sm" name="action" value="{{ k }}:selected" title="{{ tip }}">{{ label }}</button>{% endfor %}
+      {% endif %}
+      <input type="search" name="q" value="{{ q }}" placeholder="Search brands"
+             onkeydown="if (event.key === 'Enter') { event.preventDefault(); location = '/brands?' + new URLSearchParams({status: '{{ status }}', q: this.value}); }">
+    </div>
   </div>
   {% if rows %}
   <div class="scroll">
   <table>
-    <thead><tr><th>Brand</th><th class="num">In stock</th><th class="hide-sm">Suppliers</th><th>Status</th></tr></thead>
+    <thead><tr><th></th><th>Brand</th><th class="num">In stock</th><th class="hide-sm">Suppliers</th>
+      {% if status == "new" %}<th class="hide-sm">First seen</th><th class="hide-sm">Looks like</th>{% endif %}<th></th></tr></thead>
     <tbody>
     {% for b in rows %}
     <tr>
+      <td><input type="checkbox" name="ids" value="{{ b.id }}"></td>
       <td>
         <div class="product-name"><a class="quiet" href="/brands/{{ b.id }}">{{ b.name }}</a></div>
-        {% if b.spellings > 1 %}<div class="small muted">{{ b.spellings }} spellings</div>{% endif %}
+        {% if status == "new" and b.example %}<div class="small muted">{{ b.example|pretty(b.name) }}</div>
+        {% elif b.spellings > 1 %}<div class="small muted">{{ b.spellings }} spellings</div>{% endif %}
       </td>
       <td class="num">{{ b.in_stock }}</td>
       <td class="muted hide-sm">{{ (b.suppliers or "").split(",")|sort|join(", ") }}</td>
-      <td class="nowrap">
-        {{ follow_switch("/brands/" ~ b.id ~ "/status", b.status, back) }}
+      {% if status == "new" %}
+      <td class="nowrap muted hide-sm">{{ b.created_at|local }}</td>
+      <td class="hide-sm">
+        {% for other, name, reason in hints.get(b.id, [])[:2] %}
+        <button class="btn sm" name="action" value="merge:{{ b.id }}:{{ other }}" title="Merge into {{ name }} ({{ reason }})">Same as {{ name }}</button>
+        {% endfor %}
+      </td>
+      {% endif %}
+      <td class="nowrap num">
+        <div class="choice sm">
+          {% for k, label, tip in choices %}
+          <button class="{{ 'on' if b.status == k and b.reviewed_at }}" name="action" value="{{ k }}:{{ b.id }}" title="{{ tip }}">{{ label }}</button>
+          {% endfor %}
+        </div>
       </td>
     </tr>
     {% endfor %}
@@ -46,7 +68,7 @@
   </table>
   </div>
   {% else %}
-  <div class="empty">No brands match.</div>
+  <div class="empty">{{ "No new brands to review." if status == "new" else "No brands match." }}</div>
   {% endif %}
-</div>
+</form>
 {% endblock %}

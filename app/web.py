@@ -114,11 +114,7 @@ def events(request: Request, kind: str = ""):
            WHERE e.created_at >= ? AND NOT c.hidden GROUP BY e.kind""", (since,)).fetchall())
     in_stock, suppliers = conn.execute(
         "SELECT count(*), count(DISTINCT supplier) FROM catalog WHERE qty > 0 AND NOT hidden").fetchone()
-    week = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat(timespec="seconds")
-    new_brands = conn.execute(  # brands from a supplier's first run have announced_at = created_at
-        """SELECT count(*) FROM brands WHERE status = 'default' AND created_at >= ?
-           AND (announced_at IS NULL OR announced_at != created_at)""",
-        (week,)).fetchone()[0]
+    new_brands = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]
     return templates.TemplateResponse(request, "events.html", {
         "rows": recent, "kind": kind, "last_day": last_day, "in_stock": in_stock,
         "suppliers": suppliers, "new_brands": new_brands,
@@ -220,22 +216,35 @@ LEFT JOIN spellings n ON n.brand_id = b.id
 
 
 @office.get("/new")
-def new_brands(request: Request, days: int = 30):
-    """Brands first seen recently that you haven't followed or ignored."""
+def new_brands():
+    """Old address (earlier digests link here)."""
+    return RedirectResponse("/brands?status=new", status_code=303)
+
+
+@office.get("/brands")
+def brand_list(request: Request, status: str = "", q: str = ""):
+    """Every brand, or one tab: new (not chosen yet, newest first), follow, default (Browse), ignore."""
     conn = connect()
-    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+    if status == "new":
+        where, order = "b.reviewed_at IS NULL", "b.created_at DESC, in_stock DESC, b.name"
+    else:
+        where, order = "(? = '' OR b.status = ?)", "b.name"
     rows = conn.execute(
-        BRAND_ROWS + " WHERE b.status = 'default' AND b.created_at >= ? ORDER BY b.created_at DESC, in_stock DESC, b.name",
-        (since,)).fetchall()
-    return templates.TemplateResponse(request, "new.html", {
-        "rows": rows, "hints": brands.suggestions(conn), "days": days,
+        f"{BRAND_ROWS} WHERE {where} AND b.name LIKE '%' || ? || '%' ORDER BY {order}",
+        (q,) if status == "new" else (status, status, q),
+    ).fetchall()
+    counts = dict(conn.execute("SELECT status, count(*) FROM brands GROUP BY status").fetchall())
+    counts["new"] = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]
+    return templates.TemplateResponse(request, "brands.html", {
+        "rows": rows, "status": status, "q": q, "counts": counts,
+        "hints": brands.suggestions(conn) if status == "new" else {},
     })
 
 
-@office.post("/new")
-def new_brands_post(action: str = Form(...), ids: list[int] = Form([]), back: str = Form("/new")):
-    """action is 'follow:12' for one brand, 'follow:selected' for the ticked ones,
-    or 'merge:12:34' to merge brand 12 into brand 34."""
+@office.post("/brands")
+def brands_post(action: str = Form(...), ids: list[int] = Form([]), back: str = Form("/brands")):
+    """action is 'follow:12' for one brand, 'follow:selected' for the ticked ones (likewise
+    default and ignore), or 'merge:12:34' to merge brand 12 into brand 34."""
     conn = connect()
     kind, *args = action.split(":")
     with conn:
@@ -244,20 +253,7 @@ def new_brands_post(action: str = Form(...), ids: list[int] = Form([]), back: st
         else:
             for brand_id in (ids if args[0] == "selected" else [int(args[0])]):
                 brands.set_status(conn, brand_id, kind)
-    return back_to(back, "/new")
-
-
-@office.get("/brands")
-def brand_list(request: Request, status: str = "", q: str = ""):
-    conn = connect()
-    rows = conn.execute(
-        BRAND_ROWS + " WHERE (? = '' OR b.status = ?) AND b.name LIKE '%' || ? || '%' ORDER BY b.name",
-        (status, status, q),
-    ).fetchall()
-    counts = dict(conn.execute("SELECT status, count(*) FROM brands GROUP BY status").fetchall())
-    return templates.TemplateResponse(request, "brands.html", {
-        "rows": rows, "status": status, "q": q, "counts": counts,
-    })
+    return back_to(back, "/brands")
 
 
 @office.get("/brands/{brand_id}")
@@ -365,7 +361,7 @@ def product_detail(request: Request, fragrance_id: int):
     listings = conn.execute("SELECT * FROM catalog WHERE fragrance_id = ?", (fragrance_id,)).fetchall()
     rows = sorted(annotate(listings), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
     return templates.TemplateResponse(request, "product.html", {
-        "product": product, "rows": rows, "history": price_history(conn, rows),
+        "product": product, "rows": rows, "history": price_history(conn, rows), "concentrations": CONCENTRATIONS,
         **merge_options(conn, product, rows),
     })
 
@@ -385,7 +381,10 @@ def merge_options(conn, product, rows) -> dict:
     sharing = {l["fragrance_id"] for l in conn.execute(
         "SELECT fragrance_id, ean, ean2, ean3 FROM catalog WHERE brand_id = ? AND fragrance_id != ?",
         (product["brand_id"], product["id"])) if eans & {l["ean"], l["ean2"], l["ean3"]}}
-    shared = [o for o in others if o["id"] in sharing]
+    rejected = {r[0] for r in conn.execute(  # pairs you said aren't the same
+        "SELECT other_id FROM not_same WHERE fragrance_id = ? UNION SELECT fragrance_id FROM not_same WHERE other_id = ?",
+        (product["id"], product["id"]))}
+    shared = [o for o in others if o["id"] in sharing - rejected]
     return {"merged": merged, "others": others, "shared": shared}
 
 
@@ -423,6 +422,45 @@ def product_merge(fragrance_id: int, other: int = Form(...)):
     with conn:
         fragrances.merge(conn, other, fragrance_id)
     return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+
+
+@office.post("/products/{fragrance_id}/rename")
+def product_rename(fragrance_id: int, name: str = Form(...), concentration: str = Form("")):
+    """Correct the name or concentration; merges into the corrected fragrance if it exists."""
+    if not name.strip():
+        raise HTTPException(400, "a fragrance needs a name")
+    conn = connect()
+    with conn:
+        fragrance_id = fragrances.rename(conn, fragrance_id, name, concentration or None)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+
+
+@office.get("/merges")
+def merges(request: Request):
+    """Fragrances that share an EAN and might be the same juice: merge them or say they differ."""
+    conn = connect()
+    pairs = fragrances.suggestions(conn)
+    ids = {i for p in pairs for i in (p["a_id"], p["b_id"])}
+    # Each side's name, list, and which suppliers list it under what name.
+    sides = {r["id"]: r for r in conn.execute(
+        f"""SELECT f.id, f.name, f.concentration, f.status, f.owned, group_concat(DISTINCT l.supplier) AS suppliers,
+                   count(l.sku) AS listings, min(l.name) AS example
+            FROM fragrances f LEFT JOIN listings l ON l.fragrance_id = f.id
+            WHERE f.id IN ({",".join("?" * len(ids))}) GROUP BY f.id""", list(ids))}
+    return templates.TemplateResponse(request, "merges.html", {"pairs": pairs, "sides": sides})
+
+
+@office.post("/merges")
+def merges_post(action: str = Form(...)):
+    """action is 'merge:12:34' to merge fragrance 12 into 34, or 'differ:12:34'."""
+    kind, first, second = action.split(":")
+    conn = connect()
+    with conn:
+        if kind == "merge":
+            fragrances.merge(conn, int(first), int(second))
+        else:
+            fragrances.mark_not_same(conn, int(first), int(second))
+    return RedirectResponse("/merges", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/split")

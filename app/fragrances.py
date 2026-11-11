@@ -125,7 +125,67 @@ def merge(conn, fragrance_id: int, into_id: int) -> None:
            WHERE id = ?""", (source["status"], source["owned"], source["size"], source["note"], into_id))
     conn.execute("UPDATE fragrance_names SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))
     conn.execute("UPDATE listings SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))
+    # What you said this one isn't, the merged fragrance isn't either.
+    conn.execute(
+        """INSERT OR IGNORE INTO not_same SELECT min(?, other), max(?, other) FROM (
+             SELECT other_id AS other FROM not_same WHERE fragrance_id = ?
+             UNION SELECT fragrance_id FROM not_same WHERE other_id = ?) WHERE other != ?""",
+        (into_id, into_id, fragrance_id, fragrance_id, into_id))
+    conn.execute("DELETE FROM not_same WHERE ? IN (fragrance_id, other_id)", (fragrance_id,))
     conn.execute("DELETE FROM fragrances WHERE id = ?", (fragrance_id,))
+
+
+# Same brand, at least one EAN in common, not marked as different. Same name first: those are
+# usually suppliers disagreeing about the concentration.
+SUGGESTIONS = """
+WITH codes AS (
+    SELECT fragrance_id, ean FROM listings WHERE ean != ''
+    UNION SELECT fragrance_id, ean2 FROM listings WHERE ean2 != ''
+    UNION SELECT fragrance_id, ean3 FROM listings WHERE ean3 != ''),
+pairs AS (
+    SELECT a.fragrance_id AS a_id, b.fragrance_id AS b_id, min(a.ean) AS ean
+    FROM codes a JOIN codes b ON b.ean = a.ean AND b.fragrance_id > a.fragrance_id
+    GROUP BY a.fragrance_id, b.fragrance_id)
+SELECT p.a_id, p.b_id, p.ean, br.name AS brand_name, fa.name = fb.name AS same_name
+FROM pairs p
+JOIN fragrances fa ON fa.id = p.a_id
+JOIN fragrances fb ON fb.id = p.b_id
+JOIN brands br ON br.id = fa.brand_id
+WHERE fa.brand_id = fb.brand_id
+  AND NOT EXISTS (SELECT 1 FROM not_same n WHERE n.fragrance_id = p.a_id AND n.other_id = p.b_id)
+ORDER BY same_name DESC, br.name, fa.name
+"""
+
+
+def suggestions(conn) -> list:
+    """Pairs of fragrances that might be the same juice, for you to confirm or reject."""
+    return conn.execute(SUGGESTIONS).fetchall()
+
+
+def mark_not_same(conn, fragrance_id: int, other_id: int) -> None:
+    """You said these two are different fragrances: stop suggesting them."""
+    conn.execute("INSERT OR IGNORE INTO not_same VALUES (?, ?)",
+                 (min(fragrance_id, other_id), max(fragrance_id, other_id)))
+
+
+def rename(conn, fragrance_id: int, name: str, concentration: str | None) -> int:
+    """Correct a fragrance's name or concentration when a supplier has it wrong. If the
+    corrected fragrance exists already, this one merges into it. Returns the fragrance's id.
+
+    The supplier's wrong reading keeps pointing here, so their listings, current and future,
+    stay on the corrected fragrance."""
+    brand_id = conn.execute("SELECT brand_id FROM fragrances WHERE id = ?", (fragrance_id,)).fetchone()["brand_id"]
+    existing = conn.execute(
+        "SELECT fragrance_id FROM fragrance_names WHERE brand_id = ? AND name = ? AND concentration = ?",
+        (brand_id, key(name), concentration or "")).fetchone()
+    if existing and existing["fragrance_id"] != fragrance_id:
+        merge(conn, fragrance_id, existing["fragrance_id"])
+        return existing["fragrance_id"]
+    conn.execute("UPDATE fragrances SET name = ?, concentration = ? WHERE id = ?",
+                 (" ".join(name.upper().split()), concentration, fragrance_id))
+    conn.execute("INSERT OR IGNORE INTO fragrance_names VALUES (?, ?, ?, ?)",
+                 (brand_id, key(name), concentration or "", fragrance_id))
+    return fragrance_id
 
 
 def split(conn, fragrance_id: int, name: str, concentration: str) -> int:

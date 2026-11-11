@@ -16,17 +16,19 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 - **collect** fetches a supplier's full in-stock list, compares it with what's stored, and
   records events: `new`, `restock`, `price_drop`, `price_up`, `soldout`. A supplier's first
   run only stores the starting point. Quantity changes are stored but aren't events.
-- **Brands** are *followed* (alerts), *ignored* (hidden) or left on *default* (shown, no
-  alerts). **Fragrances** go on the *wishlist* (alerts), the *fillers* (fine to own, e.g. to
+- **Brands** are *followed* (alerts), *ignored* (hidden) or on *Browse*, the default (shown,
+  no alerts). **Fragrances** go on the *wishlist* (alerts), the *fillers* (fine to own, e.g. to
   reach a minimum order; no alerts), *ignored*, or on no list, where the brand's status
   applies. A fragrance's list wins over its brand's. Supplier
-  spellings of a brand are merged through aliases, with suggestions on the New brands page.
+  spellings of a brand are merged through aliases, with suggestions in the Brands page's New tab.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
   suppliers, followed brands' new products and restocks, wishlist fragrances (new, back in
   stock, cheaper), and new brands with Follow / Ignore buttons. Order suggestions stay on the
   Orders page.
 - **Products** lists the wishlist, fillers, ignored fragrances and your collection (owned, which
   doesn't change alerts).
+- **Merges** suggests fragrances that might be the same juice (same brand, an EAN in common)
+  for you to merge or mark as different; nothing merges without you.
 - **Catalogue**: every listing points to a fragrance (brand + name + concentration), worked
   out once when the listing first appears, from the name read out of the supplier's product
   name. Every fragrance has its own page, on a list or not.
@@ -53,7 +55,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
    come from env vars.
 2. Register it in `app/suppliers/__init__.py`.
 3. Add its env vars in Dokploy. The `fragrance run` schedule picks it up automatically; its
-   first run records a baseline and lists its brands on the New brands page.
+   first run records a baseline and lists its brands in the Brands page's New tab.
 
 ## Suppliers
 

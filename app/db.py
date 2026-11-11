@@ -4,8 +4,8 @@ Tables:
   suppliers         one row per supplier: its minimum order value (set on the Suppliers
                     page) and how its last collection went.
   brands            one row per real brand, with your decision about it: follow | ignore |
-                    default (app/brands.py). announced_at is set once a new brand has been
-                    offered in the digest.
+                    default, shown as Browse (app/brands.py). announced_at is set once a new
+                    brand has been offered in the digest; reviewed_at once you've chosen.
   brand_aliases     every supplier spelling of a brand ("YSL", "YVES SAINT LAURENT"), so
                     listings from all suppliers land on the same brand.
   fragrances        the catalogue: every fragrance (the juice: brand + name + concentration),
@@ -15,6 +15,8 @@ Tables:
   fragrance_names   how listings name a fragrance: the name and concentration read from a
                     supplier's product name -> the fragrance it is. Merging two fragrances
                     points one's names at the other, so later listings land right too.
+  not_same          pairs of fragrances you said aren't the same juice, so the Merges page
+                    stops suggesting them.
   listings          what suppliers offer: one row per supplier + SKU, sold-out ones kept
                     with qty 0. `name` and `brand` are as the supplier writes them;
                     fragrance_id is worked out once, when the listing first appears.
@@ -46,7 +48,8 @@ CREATE TABLE IF NOT EXISTS brands (
     name         TEXT NOT NULL,
     status       TEXT NOT NULL DEFAULT 'default',  -- follow | ignore | default
     created_at   TEXT NOT NULL,
-    announced_at TEXT
+    announced_at TEXT,
+    reviewed_at  TEXT                -- when you first chose Follow, Browse or Ignore; NULL = new
 );
 
 CREATE TABLE IF NOT EXISTS brand_aliases (
@@ -75,6 +78,12 @@ CREATE TABLE IF NOT EXISTS fragrance_names (
     PRIMARY KEY (brand_id, name, concentration)
 );
 CREATE INDEX IF NOT EXISTS fragrance_names_fragrance ON fragrance_names (fragrance_id);
+
+CREATE TABLE IF NOT EXISTS not_same (
+    fragrance_id INTEGER NOT NULL,    -- the lower id of the two
+    other_id     INTEGER NOT NULL,
+    PRIMARY KEY (fragrance_id, other_id)
+);
 
 CREATE TABLE IF NOT EXISTS listings (
     supplier     TEXT NOT NULL REFERENCES suppliers (name),

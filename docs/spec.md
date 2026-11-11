@@ -21,13 +21,13 @@ purchases (personal use, no resale).
 You make decisions about brands and fragrances. Variants and listings are filled in
 automatically from supplier data.
 
-## Brands: Follow, Ignore, or nothing
+## Brands: Follow, Browse, or Ignore
 
-| Choice | Shown in Stock | Alerts |
-|---|---|---|
-| **Follow** a brand | Yes | New products and restocks of every fragrance of the brand |
-| **Ignore** a brand | No (only with "Show hidden") | Never |
-| Nothing (default) | Yes | Never |
+| Choice | For | Shown in Stock | Alerts |
+|---|---|---|---|
+| **Follow** | brands you collect (Amouage) | Yes | New products and restocks of every fragrance of the brand |
+| **Browse** (the default) | brands worth looking at, without alerts | Yes | Never |
+| **Ignore** | brands you'll never want | No (only with "Show hidden") | Never |
 
 ## Fragrances: your lists
 
@@ -68,16 +68,17 @@ wishlist, followed brands, new brands).
 
 ## New brands
 
-Every new brand starts on default (shown, no alerts), so nothing needs triage.
+Every new brand starts on Browse (shown, no alerts), so nothing urgently needs triage.
 
 - **Telegram**: the digest mentions new brands with **Follow / Ignore** buttons. Not tapping
-  keeps the default.
-- **New brands page**: brands first seen in the last 30 days that you haven't decided on,
-  newest first, with bulk Follow / Ignore and merge suggestions.
-- A supplier's first run adds its brands quietly; they appear on the New brands page.
+  keeps Browse.
+- **Brands page, New tab**: brands you haven't chosen for yet, newest first, with merge
+  suggestions. Tick them and choose Follow, Browse or Ignore in bulk; choosing Browse
+  counts too, and takes the brand out of the tab.
+- A supplier's first run adds its brands quietly; they appear in the New tab.
 
-**Merge suggestions.** When a new brand looks like a brand you already have, the New brands
-page and the digest ask
+**Merge suggestions.** When a new brand looks like a brand you already have, the New tab and
+the digest ask
 "Same as Yves Saint Laurent?". Confirming adds the new spelling as an alias, and every
 supplier's listings under that spelling join the existing brand. Suggestions come from three
 signals, strongest first:
@@ -103,6 +104,17 @@ merge them on its product page ("Same juice, other listings"): pick the other na
 a "shares an EAN" hint. Merges are remembered for every supplier and can be split off again.
 EANs never merge anything on their own: Nunu reuses some EANs for different fragrances
 (Carios and Delina share one).
+
+**Merges page.** Every pair of fragrances of the same brand that shares an EAN, for triage:
+same name with a different concentration first (usually suppliers disagreeing about the
+label), then different names (spelling variants, but also flankers such as Phantom and
+Phantom Night). Per pair: merge, keeping either name, or **Not the same**, which is
+remembered so the pair isn't suggested again, there or on the product page.
+
+**Correcting a supplier.** When a supplier gets the name or concentration wrong (Nunu lists
+Outrageous as EDP; it's only an EDT), correct it on the product page. If the corrected
+fragrance exists already, the two merge. The supplier's wrong version stays linked to the
+corrected fragrance, so its listings, including new sizes later, land there too.
 
 Every listing points to a fragrance in the catalogue. It's worked out once, when the listing
 first appears, by reading the name out of the supplier's product name ("AMOUAGE BEACH HUT MAN
@@ -182,10 +194,11 @@ Brands on default, fillers and fragrances on no list never appear in the digest.
   fragrance name read from listings, not EANs, so different EANs per size don't matter.
 - **Product page**: every listing of one fragrance by size, and a price history chart (one
   line per size and supplier, rebuilt from recorded price changes).
-- **New brands**: recent brands you haven't decided on, with merge suggestions and bulk actions.
-- **Brands**: every brand with its status. A brand's page: rename, merge, spellings, and the
-  fragrance decisions made for it.
+- **Brands**: every brand with its status, bulk Follow / Browse / Ignore, and a New tab for
+  brands you haven't chosen for yet (with merge suggestions). A brand's page: rename, merge,
+  spellings, and the fragrance decisions made for it.
 - **Products**: your fragrance lists: Wishlist, Fillers, Collection, Ignored.
+- **Merges**: fragrances that might be the same juice, to merge or mark as different.
 - **Orders**: the order you could place at each supplier.
 - **Suppliers**: collection health and minimum order values.
 
@@ -201,7 +214,7 @@ The wishlist, fillers and collection exist already (see Products). Still to come
 
 ## Build order
 
-1. **Brands and digest.** Follow / Ignore and aliases; the New brands page; merge
+1. **Brands and digest.** Follow / Ignore and aliases; the New tab; merge
    suggestions; Telegram buttons; one digest per window that is sent only when something
    changed. This cuts the noise right away.
 2. **Fragrance catalogue.** Claude parsing, fragrances and variants, follows with per-fragrance

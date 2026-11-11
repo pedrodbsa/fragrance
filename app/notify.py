@@ -22,7 +22,7 @@ from app.db import connect, now
 FOLLOWED_FRAGRANCE_KINDS = ("new", "restock", "price_drop")
 FOLLOWED_BRAND_KINDS = ("new", "restock")
 DIGEST_MAX = 60  # beyond this the message lists a count; the backoffice has the full list
-OFFER_MAX = 8    # more new brands than this go to the New brands page instead of one message each
+OFFER_MAX = 8    # more new brands than this go to the Brands page's New tab instead of one message each
 
 PENDING = """
 SELECT e.id, e.kind, e.old_value, e.new_value, c.*
@@ -68,7 +68,7 @@ def compose(failed, followed, new_brands) -> str:
         more = [f"…and {len(followed) - DIGEST_MAX} more in the backoffice"] if len(followed) > DIGEST_MAX else []
         sections.append([f"<b>⭐ Followed ({len(followed)})</b>"] + [describe(e) for e in followed[:DIGEST_MAX]] + more)
     if len(new_brands) > OFFER_MAX:
-        sections.append([f"<b>🆕 New brands ({len(new_brands)})</b>", f"Follow or ignore them at {link('/new')}"])
+        sections.append([f"<b>🆕 New brands ({len(new_brands)})</b>", f"Choose for them at {link('/brands?status=new')}"])
     elif new_brands:
         sections.append([f"<b>🆕 New brands ({len(new_brands)})</b> below"])
     return "\n\n".join("\n".join(section) for section in sections)

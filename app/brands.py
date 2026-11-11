@@ -3,8 +3,9 @@
 Each brand has one status:
   follow   new products and restocks alert you
   ignore   hidden everywhere, never alerts
-  default  shown in Stock, no alerts. Every brand starts here; new ones are offered in the
-           digest with Follow / Ignore buttons.
+  default  "Browse": shown in Stock, no alerts. Every brand starts here; new ones are offered
+           in the digest with Follow / Ignore buttons, and wait on the Brands page's New tab
+           until you choose (Browse included).
 A fragrance on one of your lists decides for itself (app/fragrances.py).
 """
 
@@ -13,7 +14,7 @@ import unicodedata
 from collections import defaultdict
 
 from app import fragrances
-from app.db import add_brand
+from app.db import add_brand, now
 
 STATUSES = ("follow", "ignore", "default")
 
@@ -21,7 +22,8 @@ STATUSES = ("follow", "ignore", "default")
 def set_status(conn, brand_id: int, status: str) -> None:
     if status not in STATUSES:
         raise ValueError(f"unknown status {status!r}")
-    conn.execute("UPDATE brands SET status = ? WHERE id = ?", (status, brand_id))
+    conn.execute("UPDATE brands SET status = ?, reviewed_at = coalesce(reviewed_at, ?) WHERE id = ?",
+                 (status, now(), brand_id))
 
 
 def rename(conn, brand_id: int, name: str) -> None:
