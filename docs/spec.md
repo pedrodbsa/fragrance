@@ -236,7 +236,7 @@ price (or the price when first seen). Small daily moves add up: five €1.10 dro
   ignored brands are shown). Filters: type of change (including "New or back in stock"), supplier, and all brands or
   following brands only. The Suppliers page links to each supplier's changes, price drops and arrivals.
 - **Stock**: one row per fragrance (brand + name + concentration) with its sizes and testers
-  and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, which brands (following; following and Browse; all, ignored too), men / women / unisex, in stock, alerting only. Grouping uses the
+  and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, which brands (following; following and Browse; all, ignored too), men / women / unisex, in stock, alerting only, cheapest only (sizes no other supplier sells for less; with a supplier picked, where that supplier is cheapest). Grouping uses the
   fragrance name read from listings, not EANs, so different EANs per size don't matter.
 - **Product page**: every listing of one fragrance by size, and a price history chart (one
   line per size and supplier, rebuilt from recorded price changes).

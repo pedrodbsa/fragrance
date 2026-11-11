@@ -180,6 +180,18 @@ def price_history(conn, rows: list[dict]) -> list[dict]:
     return series
 
 
+def cheapest_only(conn, rows: list[dict]) -> list[dict]:
+    """Keep the rows that are the lowest in-stock price for their fragrance and size across
+    every supplier (a tie counts as cheapest). With a supplier filter, that's where that
+    supplier is the cheapest."""
+    lowest = {}  # (fragrance id, size) -> lowest in-stock price at any supplier
+    for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
+        size = (r["fragrance_id"], r["size_label"])
+        lowest[size] = min(lowest.get(size, r["price"]), r["price"])
+    return [r for r in rows if r["qty"] > 0 and r["price"] is not None
+            and r["price"] <= lowest[(r["fragrance_id"], r["size_label"])]]
+
+
 IN_STOCK_FIRST = "ORDER BY qty = 0, name"
 
 # Stock's sortable columns: what to order fragrances by. "?sort=price" is lowest first,
@@ -202,11 +214,12 @@ def sort_stock(groups: list[dict], sort: str) -> list[dict]:
 @office.get("/stock")
 def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
           in_stock: bool = True, followed: bool = False, brands: str = "default", sort: str = "brand", page: int = 1,
-          audience: str = ""):
+          audience: str = "", cheapest: bool = False):
     """One row per fragrance. q matches every word in the listing or brand name (accents and
     punctuation ignored), or an exact EAN or SKU. 'brands' picks which: 'following' (followed brands only),
     'default' (followed and Browse; nothing you ignored), 'all' (ignored ones too).
-    'followed' narrows to what alerts you."""
+    'followed' narrows to what alerts you. 'cheapest' keeps only the sizes no other supplier
+    sells for less."""
     conn = connect()
     words = searchable(q)
     found = conn.execute(
@@ -220,7 +233,10 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'ignore' ORDER BY name").fetchall()
     suppliers = [r[0] for r in conn.execute("SELECT name FROM suppliers ORDER BY name")]
     sort = sort if sort.lstrip("-") in STOCK_SORTS else "brand"
-    groups = sort_stock(group(annotate(found)), sort)
+    rows = annotate(found)
+    if cheapest:
+        rows = cheapest_only(conn, rows)
+    groups = sort_stock(group(rows), sort)
     # Each header links to the first page sorted by its column, reversed if it's the current one.
     query = {k: v for k, v in request.query_params.items() if k != "page"}
     sort_links = {field: "/stock?" + urlencode({**query, "sort": "-" + field if sort == field else field})
@@ -234,6 +250,7 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
         "page": page, "pages": pages, "page_link": page_link, "first": (page - 1) * PAGE + 1, "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
         "brands_shown": brands, "sort": sort, "sort_links": sort_links, "audience": audience,
+        "cheapest": cheapest,
     })
 
 
