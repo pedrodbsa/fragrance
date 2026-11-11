@@ -6,7 +6,7 @@
 <div class="page-head">
   <div>
     <h1>Orders</h1>
-    <p class="subtitle">One panel per supplier: your basket (add listings with "+ Basket" anywhere), then what's suggested to add: your wishlist fragrances it has, and fillers to reach its minimum order with the least overspend, counting what's already in the basket. Tick or untick to try other orders. Sold-out basket items stay, greyed and left out of the total, and the digest tells you when one sells out, comes back or changes price. Set minimums on <a href="/suppliers">Suppliers</a>, and the size you'd buy on a fragrance's page.</p>
+    <p class="subtitle">One panel per supplier: your basket (add listings with "+ Basket" anywhere), then what's suggested to add: your wishlist fragrances it has, and fillers to reach its minimum order with the least overspend. With a basket open, every wishlist fragrance and filler the supplier has is listed unticked, for you to pick. Tick or untick to try other orders. Sold-out basket items stay, flagged, greyed and left out of the total, and the digest tells you when one sells out, comes back or changes price. Set minimums on <a href="/suppliers">Suppliers</a>, and the size you'd buy on a fragrance's page.</p>
   </div>
 </div>
 
@@ -16,6 +16,8 @@
 <div class="panel order" data-mov="{{ mov or 0 }}" data-base="{{ k.total if k else 0 }}" style="margin-bottom: 20px">
   <div class="panel-head">
     <h2>{{ "🧺 " if k }}{{ p.supplier }}</h2>
+    {% set sold_out = k["items"]|rejectattr("available")|list|length if k else 0 %}
+    {% if sold_out %}<span class="pill warn" title="Greyed below and left out of the total">⚠ {{ sold_out }} sold out</span>{% endif %}
     <span class="panel-note" title="The basket{{ ' plus the ticked suggestions' if o }}">
       <b>€<span class="total">{{ "%.2f"|format(k.total if k else 0) }}</span></b>{% if mov %} of €{{ "%.2f"|format(mov) }} minimum · <span class="status"></span>{% else %} · <a href="/suppliers">set its minimum order</a>{% endif %}
     </span>
@@ -29,7 +31,7 @@
     <tr class="{{ '' if i.available else 'faded' }}">
       <td data-sort="{{ i.fragrance }}">
         <div class="product-name"><a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}
-          {% if not i.available %}<span class="pill">Sold out</span>{% elif i.qty < i.quantity %}<span class="pill price_drop">Only {{ i.qty }} left</span>{% endif %}</div>
+          {% if not i.available %}<span class="pill warn">Sold out</span>{% elif i.qty < i.quantity %}<span class="pill price_drop">Only {{ i.qty }} left</span>{% endif %}</div>
         <div class="product-brand">{{ i.brand_name }}</div>
       </td>
       <td class="nowrap">{{ i.size_label }}</td>
@@ -57,13 +59,14 @@
   {% if o and (o.wanted or o.fillers or o.spare) %}
   <form method="post" action="/basket/add" class="suggested">
     <input type="hidden" name="supplier" value="{{ o.supplier }}"><input type="hidden" name="back" value="{{ back }}">
-    <div class="panel-head"><h2 class="small">Suggested to add</h2><span class="panel-note">⭐ wishlist, ➕ fillers to reach the minimum{{ " with what's in the basket" if k }}</span></div>
+    <div class="panel-head"><h2 class="small">Suggested to add</h2><span class="panel-note">{% if k %}⭐ wishlist and ➕ fillers it has: tick what you want to add{% else %}⭐ wishlist, ➕ fillers to reach the minimum{% endif %}</span></div>
     {% if o.short is not none %}<p class="help pad">Your fillers here don't reach the minimum: €{{ "%.2f"|format(o.short) }} short with all of them. Mark more fragrances as ➕ Filler to close the gap.</p>{% endif %}
     <div class="scroll">
     <table class="sortable">
       <thead><tr><th></th><th>Fragrance</th><th>Size</th><th class="num">Price</th><th class="num hide-sm">Qty</th><th class="hide-sm">EAN</th></tr></thead>
       <tbody>
-      {% for kind, items, on in (("wishlist", o.wanted, true), ("filler", o.fillers, true), ("filler", o.spare, false)) %}
+      {# With a basket open nothing is ticked: you pick. Without one, the suggested order is. #}
+      {% for kind, items, on in (("wishlist", o.wanted, not k), ("filler", o.fillers, not k), ("filler", o.spare, false)) %}
       {% for i in items %}
       <tr class="{{ '' if on else 'off' }}">
         <td><input type="checkbox" name="sku" value="{{ i.sku }}" data-price="{{ i.price }}" {{ 'checked' if on }}></td>
