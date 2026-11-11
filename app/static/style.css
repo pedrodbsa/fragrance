@@ -273,3 +273,7 @@ tbody tr:has(input[name=ids]:checked) { background: var(--accent-soft); }
 .was.up { color: var(--purple-fg); }
 .was.down { color: var(--green-fg); }
 input.qty { width: 56px; text-align: right; }
+
+/* The lowest price any supplier has for that size: green cell with a small "Cheapest" note. */
+td:has(> .best) { background: var(--green-bg); }
+.best { color: var(--green-fg); font-weight: 600; }

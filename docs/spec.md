@@ -205,6 +205,10 @@ Listings with the same EAN are grouped into one Stock row:
 - the product page shows a **price history** chart per supplier;
 - alerts and Stock show the **lowest price ever seen**, e.g. "lowest seen" or "was €X on 3 Oct".
 
+- on the product page and the Orders page (baskets and suggestions), the listing with the
+  lowest price in stock for its size is marked **Cheapest** (in green), when at least two
+  suppliers have that size in stock.
+
 ## The digest
 
 - **One message per collection window** (9:00, 12:00, 21:00). It's sent after all suppliers

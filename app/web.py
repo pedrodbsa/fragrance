@@ -470,6 +470,7 @@ def product_detail(request: Request, fragrance_id: int):
     return templates.TemplateResponse(request, "product.html", {
         "product": product, "rows": rows, "history": price_history(conn, rows), "concentrations": CONCENTRATIONS,
         "eans": ean_list(conn, fragrance_id, rows), "in_basket": baskets.keys(conn),
+        "cheapest": fragrances.cheapest(conn, [fragrance_id]),
         "all_brands": conn.execute("SELECT id, name FROM brands ORDER BY name").fetchall(),
         **merge_options(conn, product, rows),
     })
@@ -696,8 +697,12 @@ def orders_page(request: Request):
     """Your open baskets, then the order you could place at each supplier from your wishlist
     and fillers."""
     conn = connect()
+    open_baskets, plan = baskets.contents(conn), orders.plan(conn)
+    shown = [i["fragrance_id"] for b in open_baskets for i in b["items"]]
+    shown += [o["fragrance_id"] for s in plan for o in s["wanted"] + s["fillers"] + s["spare"]]
     return templates.TemplateResponse(request, "orders.html", {
-        "baskets": baskets.contents(conn), "orders": orders.plan(conn), "in_basket": baskets.keys(conn),
+        "baskets": open_baskets, "orders": plan, "in_basket": baskets.keys(conn),
+        "cheapest": fragrances.cheapest(conn, shown),
     })
 
 

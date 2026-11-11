@@ -104,6 +104,25 @@ def variant(name: str) -> tuple[float, str]:
     return float(number.replace(",", ".")), f"{number} {unit.lower()}{kind}"
 
 
+def cheapest(conn, fragrance_ids) -> set[tuple[str, str]]:
+    """(supplier, sku) of the listings that are the lowest price in stock for their fragrance
+    and size, when at least two suppliers have that size in stock (ties all count)."""
+    ids = list(set(fragrance_ids))
+    offers = {}  # (fragrance id, size) -> [(price, supplier, sku)]
+    for at in range(0, len(ids), 500):  # SQLite takes a limited number of ? at once
+        chunk = ids[at:at + 500]
+        for r in conn.execute(f"""SELECT fragrance_id, supplier, sku, name, price FROM listings
+                                  WHERE qty > 0 AND price IS NOT NULL
+                                  AND fragrance_id IN ({",".join("?" * len(chunk))})""", chunk):
+            offers.setdefault((r["fragrance_id"], variant(r["name"])[1]), []).append((r["price"], r["supplier"], r["sku"]))
+    best = set()
+    for found in offers.values():
+        if len({supplier for _, supplier, _ in found}) > 1:
+            low = min(price for price, _, _ in found)
+            best |= {(supplier, sku) for price, supplier, sku in found if price == low}
+    return best
+
+
 def find_or_create(conn, brand_id: int, name: str, concentration: str | None) -> int:
     """The fragrance a name reads as (after your merges), created if it's new. Returns its id."""
     found = conn.execute(

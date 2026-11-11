@@ -39,3 +39,9 @@
 {%- if status == "wishlist" %} <span class="pill new">Wishlist</span>{% elif status == "filler" %} <span class="pill">Filler</span>{% elif status == "ignore" %} <span class="pill">Ignored</span>{% endif -%}
 {%- if owned %} <span class="pill restock">In collection</span>{% endif -%}
 {% endmacro %}
+
+
+{# Marks a listing that's the lowest price in stock for its fragrance and size across suppliers. #}
+{% macro best(is_cheapest) -%}
+{% if is_cheapest %}<div class="small best" title="The lowest price any supplier has for this size right now">Cheapest</div>{% endif %}
+{%- endmacro %}
