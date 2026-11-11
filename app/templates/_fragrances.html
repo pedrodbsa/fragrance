@@ -8,12 +8,12 @@
   <a class="quiet sorter" href="{{ sort_links[field] }}" {% if sort.lstrip("-") == field %}data-dir="{{ 'desc' if sort.startswith('-') else 'asc' }}"{% endif %}>{{ label }}</a>
   {%- else %}{{ label }}{% endif -%}
 {%- endmacro %}
-{% from "_macros.html" import fragrance_switch, owned_switch, badges %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges, hot %}
   <div class="scroll">
   <table class="{{ '' if sort is defined else 'sortable' }}">
     <thead><tr>
       <th>{{ by("Fragrance", "name") }}{% if sort is defined %} · {{ by("Brand", "brand") }}{% endif %}</th>
-      <th data-nosort>Sizes · cheapest each</th>
+      <th data-nosort>Sizes · cheapest each{% if sort is defined %} · {{ by("🔥 deals first", "discount") }}{% endif %}</th>
       <th class="num">{{ by("From", "price") }}</th>
       <th class="num hide-sm">{{ by("Qty", "qty") }}</th>
       <th class="hide-sm">Suppliers</th><th class="hide-sm"></th></tr></thead>
@@ -29,8 +29,7 @@
       <td>
         <div class="sizes">
         {% for r in g.sizes %}
-          <a class="size {{ 'out' if r.qty == 0 }} {{ 'cheap' if r.cheapest }}" href="{{ page }}" title="{{ r.name }} · {{ r.qty }} at {{ r.supplier }}{{ ' · the cheapest of any supplier' if r.cheapest }}">{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b>{% if r.discount is defined %}
-            <span class="best" title="Others ask €{{ "%.2f"|format(r.average) }} on average">−{{ (r.discount * 100)|round|int }}%</span>{% endif %}</a>
+          <a class="size {{ 'out' if r.qty == 0 }} {{ 'cheap' if r.cheapest }} {{ 'deal' if r.discount is defined }}" href="{{ page }}" title="{{ r.name }} · {{ r.qty }} at {{ r.supplier }}{{ ' · the cheapest of any supplier' if r.cheapest }}">{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b> {{ hot(r) }}</a>
         {% endfor %}
         </div>
       </td>

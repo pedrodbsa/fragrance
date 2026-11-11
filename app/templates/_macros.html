@@ -42,6 +42,11 @@
 
 
 {# Marks a listing that's the lowest price in stock for its fragrance and size across suppliers. #}
+{# 🔥 on a listing that's a deal (a row from web.mark_deals / deals_only), nothing otherwise. #}
+{% macro hot(r) -%}
+{% if r and r.discount is defined %}<span class="pill hot" title="A deal: others ask €{{ "%.2f"|format(r.average) }} on average">🔥 −{{ (r.discount * 100)|round|int }}%</span>{% endif %}
+{%- endmacro %}
+
 {% macro best(is_cheapest) -%}
 {% if is_cheapest %}<div class="small best" title="The lowest price any supplier has for this size right now">Cheapest</div>{% endif %}
 {%- endmacro %}

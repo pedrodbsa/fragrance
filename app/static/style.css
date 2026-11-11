@@ -278,3 +278,7 @@ input.qty { width: 56px; text-align: right; }
 /* The lowest price any supplier has for that size: green cell with a small "Cheapest" note. */
 td:has(> .best) { background: var(--green-bg); }
 .best { color: var(--green-fg); font-weight: 600; }
+
+/* A deal: well below what the other suppliers ask (web.mark_deals) */
+.pill.hot { background: #df1b41; color: #fff; font-weight: 600; padding: 0 6px; line-height: 18px; }
+.size.deal { border-color: #df1b41; }

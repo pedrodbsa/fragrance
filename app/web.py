@@ -287,10 +287,9 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
         rows = cheapest_only(conn, rows)
     if testers:
         rows = testers_only(rows)
-    if deals:
-        rows = deals_only(conn, rows)
-    elif supplier:  # one supplier's stock: show where it's the cheapest, and its deals
-        rows = mark_deals(conn, rows)
+    # Deals show everywhere (🔥); where it's the cheapest only with one supplier picked, as
+    # without one every size shown is already the cheapest.
+    rows = deals_only(conn, rows) if deals else mark_deals(conn, rows)
     if supplier:
         rows = mark_cheapest(conn, rows)
     groups = sort_stock(group(rows), sort)
@@ -831,14 +830,15 @@ def orders_page(request: Request):
     conn = connect()
     open_baskets = baskets.contents(conn)
     plan = orders.plan(conn, open_baskets)
-    shown = [i["fragrance_id"] for b in open_baskets for i in b["items"]]
-    shown += [o["fragrance_id"] for s in plan for o in s["wanted"] + s["fillers"] + s["spare"]]
+    lines = [i for b in open_baskets for i in b["items"]]
+    lines += [o for s in plan for o in s["wanted"] + s["fillers"] + s["spare"]]
+    deals = {(r["supplier"], r["sku"]): r for r in deals_only(conn, lines)}
     # One panel per supplier: its basket, then what's suggested to add. Baskets first.
     suggestions = {o["supplier"]: o for o in plan}
     panels = [{"supplier": b["supplier"], "basket": b, "suggestion": suggestions.pop(b["supplier"], None)} for b in open_baskets]
     panels += [{"supplier": o["supplier"], "basket": None, "suggestion": o} for o in suggestions.values()]
     return templates.TemplateResponse(request, "orders.html", {
-        "panels": panels, "cheapest": fragrances.cheapest(conn, shown),
+        "panels": panels, "cheapest": fragrances.cheapest(conn, [r["fragrance_id"] for r in lines]), "deals": deals,
     })
 
 
