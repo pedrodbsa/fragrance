@@ -293,6 +293,9 @@ td:has(> .best) { background: var(--green-bg); }
 .standing.cheapest { background: var(--green-bg); color: var(--green-fg); }
 .standing.only { background: var(--blue-bg); color: var(--blue-fg); }
 .standing.dearer { color: #df1b41; padding: 0; }
+td:has(.standing.deal) { background: rgba(223, 27, 65, 0.14); } /* the whole price cell tinted, to spot good baskets */
+td:has(.standing.cheapest) { background: var(--green-bg); }
+td:has(.standing.only) { background: var(--blue-bg); }
 /* Orders: the basket and the suggestions share column widths, in every supplier's panel */
 table.lines { table-layout: fixed; min-width: 720px; } /* narrower screens scroll it sideways */
 table.lines .c-size { width: 130px; }

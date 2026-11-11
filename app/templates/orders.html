@@ -6,7 +6,7 @@
 <div class="page-head">
   <div>
     <h1>Orders</h1>
-    <p class="subtitle">One panel per supplier: your basket (add listings with "+ Basket" anywhere), then what's suggested to add: your wishlist fragrances it has, and its fillers, the ones that reach its minimum order with the least overspend marked. Take something out of the basket and, if it's on your lists, it's back among the suggestions. Sold-out basket items stay, flagged, greyed and left out of the total, and the digest tells you when one sells out, comes back or changes price. Set minimums on <a href="/suppliers">Suppliers</a>, and the size you'd buy on a fragrance's page.</p>
+    <p class="subtitle">One panel per supplier: your basket (add listings with "+ Basket" anywhere), then what's suggested to add: your wishlist fragrances it has, and its fillers, the ones that reach its minimum order with the least overspend marked. Take something out of the basket and, if it's on your lists, it's back among the suggestions. Sold-out basket items stay, flagged, greyed and left out of the total, and the digest tells you when one sells out, comes back or changes price. Set minimums on <a href="/suppliers">Suppliers</a>, and the size you'd buy on a fragrance's page (📌 by the size; otherwise its cheapest size is suggested).</p>
   </div>
 </div>
 
@@ -73,7 +73,7 @@
           <div class="product-name">{{ "⭐" if kind == "wishlist" else "➕" }} <a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}</div>
           <div class="product-brand">{{ i.brand_name }}</div>
         </td>
-        <td class="nowrap" data-sort="{{ i.size_label }}">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}{% if not i.buy_size %} <span class="muted small" title="No size picked: the cheapest is used">cheapest</span>{% endif %}</td>
+        <td class="nowrap" data-sort="{{ i.size_label }}">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}{% if i.buy_size %} <span class="muted small" title="The size you'd buy, picked on its page">📌</span>{% endif %}</td>
         <td class="num nowrap">€{{ "%.2f"|format(i.price) }}{{ standing(compared.get((i.supplier, i.sku))) }}</td>
         <td class="num hide-sm">{{ i.qty }}</td>
         <td class="mono hide-sm">{{ i.ean or "—" }}</td>
