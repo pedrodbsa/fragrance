@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app import baskets, brands, orders, telegram
-from app.db import connect
+from app.db import connect, fold
 from app.upgrades import upgrade
 from app import fragrances
 from app.fragrances import CONCENTRATIONS, key, variant
@@ -191,17 +191,19 @@ def sort_stock(groups: list[dict], sort: str) -> list[dict]:
 def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
           in_stock: bool = True, followed: bool = False, brands: str = "default", sort: str = "brand", page: int = 1,
           audience: str = ""):
-    """One row per fragrance. 'brands' picks which: 'following' (followed brands only),
+    """One row per fragrance. q matches every word in the listing or brand name (accents and
+    punctuation ignored), or an exact EAN or SKU. 'brands' picks which: 'following' (followed brands only),
     'default' (followed and Browse; nothing you ignored), 'all' (ignored ones too).
     'followed' narrows to what alerts you."""
     conn = connect()
+    words = searchable(q)
     found = conn.execute(
         """SELECT * FROM catalog
-           WHERE (? = '' OR name LIKE '%' || ? || '%' OR ean = ? OR ean2 = ? OR ean3 = ? OR sku = ?)
+           WHERE (? = '' OR (""" + contains("brand_name || name", words) + """) OR ? IN (ean, ean2, ean3, sku))
              AND (? = '' OR brand_id = ?) AND (? = '' OR supplier = ?) AND (NOT ? OR qty > 0)
              AND (? = 'all' OR NOT hidden) AND (? != 'following' OR brand_status = 'follow') AND (NOT ? OR alerting) AND (? = '' OR audience = ?)
            ORDER BY brand_name, fragrance, concentration""",
-        (q, q, q, q, q, q, brand, brand, supplier, supplier, in_stock, brands, brands, followed, audience, audience),
+        (q, *words, q.strip(), brand, brand, supplier, supplier, in_stock, brands, brands, followed, audience, audience),
     ).fetchall()
     brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'ignore' ORDER BY name").fetchall()
     suppliers = [r[0] for r in conn.execute("SELECT name FROM suppliers ORDER BY name")]
@@ -225,6 +227,17 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
 
 # --- Search ----------------------------------------------------------------------------------
 
+def searchable(q: str) -> list[str]:
+    """The words typed, in the form names are compared in (see db.fold)."""
+    return [w for w in map(fold, q.split()) if w]
+
+
+def contains(expr: str, words: list[str]) -> str:
+    """SQL: every word appears in expr, accents, case and punctuation ignored. Pass the words
+    as parameters, in order."""
+    return " AND ".join(f"instr(fold({expr}), ?) > 0" for _ in words) or "1"
+
+
 SEARCH_LIMIT = 100
 
 
@@ -233,30 +246,26 @@ def search(request: Request, q: str = ""):
     """The header's search box: brands and fragrances whose names contain every word typed
     ("amouage beach" finds Amouage Beach Hut), or the fragrance with that EAN or SKU."""
     conn = connect()
-    words = q.split()
+    words = searchable(q)
     if not words:
         return RedirectResponse("/stock", status_code=303)
-    like = ["%" + w + "%" for w in words]
+    # A brand matches through its name or any supplier spelling of it.
+    spellings = "b.name || ' ' || coalesce((SELECT group_concat(alias, ' ') FROM brand_aliases a WHERE a.brand_id = b.id), '')"
     brand_rows = conn.execute(
-        BRAND_ROWS + " WHERE " + " AND ".join(
-            "(b.name LIKE ? OR EXISTS (SELECT 1 FROM brand_aliases a WHERE a.brand_id = b.id AND a.alias LIKE ?))"
-            for _ in words) + " ORDER BY in_stock DESC, b.name LIMIT ?",
-        [v for w in like for v in (w, w)] + [SEARCH_LIMIT]).fetchall()
+        BRAND_ROWS + " WHERE " + contains(spellings, words) + " ORDER BY in_stock DESC, b.name LIMIT ?",
+        words + [SEARCH_LIMIT]).fetchall()
     found = conn.execute(
         """SELECT f.*, b.name AS brand_name, b.status AS brand_status,
                   min(CASE WHEN l.qty > 0 THEN l.price END) AS best, sum(l.qty > 0) AS offers,
                   group_concat(DISTINCT CASE WHEN l.qty > 0 THEN l.supplier END) AS suppliers
            FROM fragrances f JOIN brands b ON b.id = f.brand_id
            LEFT JOIN listings l ON l.fragrance_id = f.id
-           WHERE (""" + " AND ".join(  # each word in the fragrance or brand name, or a brand spelling
-               """(f.name LIKE ? OR b.name LIKE ?
-                   OR EXISTS (SELECT 1 FROM brand_aliases a WHERE a.brand_id = b.id AND a.alias LIKE ?))"""
-               for _ in words) + """)
+           WHERE (""" + contains(f"{spellings} || ' ' || f.name", words) + """)
               OR f.id IN (SELECT fragrance_id FROM listings WHERE ? IN (ean, ean2, ean3, sku))
               OR f.id IN (SELECT fragrance_id FROM fragrance_eans WHERE ean = ?)
            GROUP BY f.id ORDER BY coalesce(sum(l.qty > 0), 0) = 0, b.name, f.name, f.concentration
            LIMIT ?""",
-        [v for w in like for v in (w, w, w)] + [q.strip(), q.strip(), SEARCH_LIMIT]).fetchall()
+        words + [q.strip(), q.strip(), SEARCH_LIMIT]).fetchall()
     return templates.TemplateResponse(request, "search.html", {
         "q": q, "brands": brand_rows, "fragrances": found, "limit": SEARCH_LIMIT,
     })
@@ -299,8 +308,8 @@ def brand_list(request: Request, status: str = "", q: str = ""):
     else:
         where, order = "(? = '' OR b.status = ?)", "b.name"
     rows = conn.execute(
-        f"{BRAND_ROWS} WHERE {where} AND b.name LIKE '%' || ? || '%' ORDER BY {order}",
-        (q,) if status == "new" else (status, status, q),
+        f"{BRAND_ROWS} WHERE {where} AND {contains('b.name', searchable(q))} ORDER BY {order}",
+        (*searchable(q),) if status == "new" else (status, status, *searchable(q)),
     ).fetchall()
     counts = dict(conn.execute("SELECT status, count(*) FROM brands GROUP BY status").fetchall())
     counts["new"] = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]

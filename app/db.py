@@ -35,7 +35,9 @@ View:
 """
 
 import os
+import re
 import sqlite3
+import unicodedata
 from datetime import datetime, timezone
 
 SCHEMA = """
@@ -155,6 +157,13 @@ JOIN brands b ON b.id = f.brand_id;
 """
 
 
+def fold(text: str | None) -> str:
+    """Searchable form of a name: no accents, lower case, letters and digits only.
+    "Lancôme L'Homme No.5" -> "lancomelhommeno5". SQL gets it as fold(...)."""
+    plain = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", plain.lower())
+
+
 def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -165,6 +174,7 @@ def connect() -> sqlite3.Connection:
     # WAL lets the backoffice read while a collector writes, and Litestream requires it.
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=10000")
+    conn.create_function("fold", 1, fold, deterministic=True)
     if not conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'products'").fetchone():
         conn.executescript(SCHEMA)  # an older database gets these from app/upgrades.py instead
     return conn

@@ -225,6 +225,8 @@ Brands on default, fillers and fragrances on no list never appear in the digest.
 - **Merges**: fragrances that might be the same juice, to merge or mark as different.
 - **Search** (box in the header, on every page): brands and fragrances whose names contain
   every word typed ("ysl libre", any spelling of the brand), or the fragrance with an EAN or SKU.
+  Accents, capitals, punctuation and spaces are ignored ("lancome", "lhomme", "no5"), in the
+  Stock and Brands search boxes too.
 - **Orders**: your basket at each supplier, and the order you could place there.
 - **Suppliers**: collection health and minimum order values.
 
