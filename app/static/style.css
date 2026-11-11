@@ -297,8 +297,8 @@ td:has(.standing.deal) { background: rgba(223, 27, 65, 0.14); } /* the whole pri
 td:has(.standing.cheapest) { background: var(--green-bg); }
 td:has(.standing.only) { background: var(--blue-bg); }
 /* Orders: the basket and the suggestions share column widths, in every supplier's panel */
-table.lines { table-layout: fixed; min-width: 720px; } /* narrower screens scroll it sideways */
+table.lines { table-layout: fixed; min-width: 600px; } /* narrower screens scroll it sideways */
 table.lines .c-size { width: 130px; }
 table.lines .c-price { width: 190px; }
 table.lines .c-qty { width: 90px; }
-table.lines .c-act { width: 240px; }
+table.lines .c-act { width: 80px; }

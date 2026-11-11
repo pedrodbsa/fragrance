@@ -27,25 +27,25 @@
   {% if k %}
   <div class="scroll">
   <table class="sortable lines">
-    <thead><tr><th>Fragrance</th><th class="c-size">Size</th><th class="num c-price">Price</th><th class="num hide-sm c-qty">In stock</th><th class="c-act"></th></tr></thead>
+    <thead><tr><th class="c-act" data-nosort></th><th>Fragrance</th><th class="c-size">Size</th><th class="num hide-sm c-qty">In stock</th><th class="num c-price">Price</th></tr></thead>
     <tbody>
     {% for i in k["items"] %}
     <tr class="{{ '' if i.available else 'faded' }}">
+      <td>
+        <form method="post" action="/basket/quantity">
+          <input type="hidden" name="supplier" value="{{ i.supplier }}"><input type="hidden" name="sku" value="{{ i.sku }}"><input type="hidden" name="back" value="{{ back }}">
+          <button class="btn sm ghost danger" name="quantity" value="0" title="Take it out of the basket">✕</button>
+        </form>
+      </td>
       <td data-sort="{{ i.fragrance }}">
         <div class="product-name"><a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}{% if i.ean %} <span class="mono small muted" title="EAN">{{ i.ean }}</span>{% endif %}
           {% if not i.available %}<span class="pill warn">Sold out</span>{% elif i.qty < i.quantity %}<span class="pill price_drop">Only {{ i.qty }} left</span>{% endif %}</div>
         <div class="product-brand">{{ i.brand_name }}</div>
       </td>
       <td class="nowrap">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}</td>
+      <td class="num hide-sm">{{ i.qty }}</td>
       <td class="num nowrap" data-sort="{{ i.price if i.price is not none }}">{% if i.price is not none %}€{{ "%.2f"|format(i.price) }}{% else %}—{% endif %}{{ standing(compared.get((i.supplier, i.sku))) }}
         {% if i.added_price is not none and i.price is not none and (i.price - i.added_price)|abs >= 0.01 %}<div class="small was {{ 'up' if i.price > i.added_price else 'down' }}">was €{{ "%.2f"|format(i.added_price) }}</div>{% endif %}</td>
-      <td class="num hide-sm">{{ i.qty }}</td>
-      <td class="num">
-        <form method="post" action="/basket/quantity">
-          <input type="hidden" name="supplier" value="{{ i.supplier }}"><input type="hidden" name="sku" value="{{ i.sku }}"><input type="hidden" name="back" value="{{ back }}">
-          <button class="btn sm ghost danger" name="quantity" value="0" title="Take it out of the basket">✕</button>
-        </form>
-      </td>
     </tr>
     {% endfor %}
     </tbody>
@@ -63,19 +63,20 @@
     {% if o.short is not none %}<p class="help pad">Your fillers here don't reach the minimum: €{{ "%.2f"|format(o.short) }} short with all of them. Mark more fragrances as ➕ Filler to close the gap.</p>{% endif %}
     <div class="scroll">
     <table class="sortable lines">
-      <thead><tr><th>Fragrance</th><th class="c-size">Size</th><th class="num c-price">Price</th><th class="num hide-sm c-qty">In stock</th><th class="c-act"></th></tr></thead>
+      <thead><tr><th class="c-act" data-nosort></th><th>Fragrance</th><th class="c-size">Size</th><th class="num hide-sm c-qty">In stock</th><th class="num c-price">Price</th></tr></thead>
       <tbody>
       {% for kind, items, reaches in (("wishlist", o.wanted, false), ("filler", o.fillers, true), ("filler", o.spare, false)) %}
       {% for i in items %}
       <tr>
+        <td><button class="btn sm" name="sku" value="{{ i.sku }}">🧺 Add</button></td>
         <td data-sort="{{ i.fragrance }}">
-          <div class="product-name">{{ "⭐" if kind == "wishlist" else "➕" }} <a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}{% if i.ean %} <span class="mono small muted" title="EAN">{{ i.ean }}</span>{% endif %}</div>
+          <div class="product-name">{{ "⭐" if kind == "wishlist" else "➕" }} <a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}{% if i.ean %} <span class="mono small muted" title="EAN">{{ i.ean }}</span>{% endif %}
+            {% if reaches %}<span class="pill new" title="With the basket and your wishlist, these fillers reach the minimum with the least overspend">Reaches the minimum</span>{% endif %}</div>
           <div class="product-brand">{{ i.brand_name }}</div>
         </td>
         <td class="nowrap" data-sort="{{ i.size_label }}">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}{% if i.buy_size %} <span class="muted small" title="The size you'd buy, picked on its page">📌</span>{% endif %}</td>
-        <td class="num nowrap">€{{ "%.2f"|format(i.price) }}{{ standing(compared.get((i.supplier, i.sku))) }}</td>
         <td class="num hide-sm">{{ i.qty }}</td>
-          <td class="num nowrap">{% if reaches %}<span class="pill new" title="With the basket and your wishlist, these fillers reach the minimum with the least overspend">Reaches the minimum</span> {% endif %}<button class="btn sm" name="sku" value="{{ i.sku }}">🧺 Add</button></td>
+        <td class="num nowrap">€{{ "%.2f"|format(i.price) }}{{ standing(compared.get((i.supplier, i.sku))) }}</td>
       </tr>
       {% endfor %}
       {% endfor %}
