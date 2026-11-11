@@ -22,7 +22,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   applies. A fragrance's list wins over its brand's. Supplier
   spellings of a brand are merged through aliases, with suggestions in the Brands page's New tab.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
-  suppliers, followed brands' new products and restocks, wishlist fragrances (new, back in
+  suppliers, basket items that sold out, came back or changed price, followed brands' new products and restocks, wishlist fragrances (new, back in
   stock, cheaper), and new brands with Follow / Ignore buttons. Order suggestions stay on the
   Orders page.
 - **Products** lists the wishlist, fillers, ignored fragrances and your collection (owned, which
@@ -41,6 +41,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 | `app/collect.py` | Compares a fetch with the database, records events |
 | `app/notify.py` | Builds and sends the digest |
 | `app/orders.py` | Order suggestions: wishlist plus fillers up to each supplier's minimum |
+| `app/baskets.py` | Your open basket per supplier, kept until you place the order |
 | `app/brands.py` | Brand statuses, merging, merge suggestions |
 | `app/fragrances.py` | The fragrance catalogue: matching listings, lists, merges |
 | `app/telegram.py` | Telegram messages, buttons and webhook |

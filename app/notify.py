@@ -2,6 +2,7 @@
 
 Sections:
   ⚠️ suppliers whose collection failed this window
+  🧺 Baskets: items in one of your baskets that sold out, came back, or changed price
   ⭐ Followed: wishlist fragrances (new, back in stock, or cheaper), plus new products and
      restocks from brands you follow (except fragrances you ignored or marked as filler)
   🆕 New brands: each one follows as its own message with Follow / Ignore buttons (and
@@ -25,7 +26,8 @@ DIGEST_MAX = 60  # beyond this the message lists a count; the backoffice has the
 OFFER_MAX = 8    # more new brands than this go to the Brands page's New tab instead of one message each
 
 PENDING = """
-SELECT e.id, e.kind, e.old_value, e.new_value, c.*
+SELECT e.id, e.kind, e.old_value, e.new_value, c.*,
+       EXISTS (SELECT 1 FROM basket b WHERE b.supplier = e.supplier AND b.sku = e.sku) AS in_basket
 FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
 WHERE e.notified_at IS NULL ORDER BY c.brand_name, c.name
 """
@@ -34,11 +36,12 @@ WHERE e.notified_at IS NULL ORDER BY c.brand_name, c.name
 def notify(failed: list[str]) -> None:
     conn = connect()
     pending = conn.execute(PENDING).fetchall()
-    followed = [e for e in pending if alerts(e)]
+    basket = [e for e in pending if e["in_basket"]]  # every change to a basket item matters
+    followed = [e for e in pending if alerts(e) and not e["in_basket"]]
     new_brands = conn.execute(
         "SELECT * FROM brands WHERE status = 'default' AND announced_at IS NULL ORDER BY name").fetchall()
 
-    digest = compose(failed, followed, new_brands)
+    digest = compose(failed, basket, followed, new_brands)
     if digest:
         telegram.send(digest)
     if len(new_brands) <= OFFER_MAX:
@@ -50,7 +53,7 @@ def notify(failed: list[str]) -> None:
     with conn:
         conn.executemany("UPDATE events SET notified_at = ? WHERE id = ?", [(stamp, e["id"]) for e in pending])
         conn.executemany("UPDATE brands SET announced_at = ? WHERE id = ?", [(stamp, b["id"]) for b in new_brands])
-    print(f"notify: {len(pending)} events, {len(followed)} followed, {len(new_brands)} new brands, "
+    print(f"notify: {len(pending)} events, {len(basket)} basket, {len(followed)} followed, {len(new_brands)} new brands, "
           f"{len(failed)} failed{'' if digest else '; nothing to send'}")
 
 
@@ -60,10 +63,12 @@ def alerts(event) -> bool:
     return event["alerting"] and event["kind"] in kinds
 
 
-def compose(failed, followed, new_brands) -> str:
+def compose(failed, basket, followed, new_brands) -> str:
     sections = []
     if failed:
         sections.append([f"⚠️ Collection failed: {escape(', '.join(failed))}. See the Dokploy schedule log."])
+    if basket:
+        sections.append([f"<b>🧺 Baskets ({len(basket)})</b>"] + [describe(e) for e in basket] + [f"See {link('/orders')}"])
     if followed:
         more = [f"…and {len(followed) - DIGEST_MAX} more in the backoffice"] if len(followed) > DIGEST_MAX else []
         sections.append([f"<b>⭐ Followed ({len(followed)})</b>"] + [describe(e) for e in followed[:DIGEST_MAX]] + more)
@@ -76,8 +81,10 @@ def compose(failed, followed, new_brands) -> str:
 
 def describe(e) -> str:
     price = f"€{e['price']:.2f}" if e["price"] is not None else "no price"
-    if e["kind"] == "price_drop":
-        what = f"price drop €{e['old_value']:.2f} → {price}"
+    if e["kind"] in ("price_drop", "price_up"):
+        what = f"price {'drop' if e['kind'] == 'price_drop' else 'up'} €{e['old_value']:.2f} → {price}"
+    elif e["kind"] == "soldout":
+        what = f"sold out (was {price})"
     else:
         what = f"{'back in stock' if e['kind'] == 'restock' else 'new'} · {price}"
     return (f"• <b>{escape(e['brand_name'])}</b> {escape(e['name'])}\n"

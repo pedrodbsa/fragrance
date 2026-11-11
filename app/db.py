@@ -25,6 +25,8 @@ Tables:
                     fragrance_id is worked out once, when the listing first appears.
   events            what changed between runs (new, restock, sold out, price change).
                     notified_at is set once the notifier has handled the event.
+  basket            what you're gathering to order, per supplier (app/baskets.py). Items stay
+                    when they sell out.
   upgrades          one-time data changes already applied, so they run once (app/upgrades.py).
 
 View:
@@ -126,6 +128,15 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS events_pending ON events (notified_at) WHERE notified_at IS NULL;
 CREATE INDEX IF NOT EXISTS events_listing ON events (supplier, sku);
+
+CREATE TABLE IF NOT EXISTS basket (
+    supplier    TEXT NOT NULL,
+    sku         TEXT NOT NULL,        -- the listing: one supplier's size of a fragrance
+    quantity    INTEGER NOT NULL DEFAULT 1,
+    added_at    TEXT NOT NULL,
+    added_price REAL,                 -- its price when you added it
+    PRIMARY KEY (supplier, sku)
+);
 
 CREATE TABLE IF NOT EXISTS upgrades (
     name       TEXT PRIMARY KEY,    -- e.g. "brand-cleanup-1"

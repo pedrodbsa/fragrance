@@ -161,7 +161,7 @@ tbody tr:hover td { background: var(--surface-2); }
 
 /* Forms */
 .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-input[type=text], input[type=search], select {
+input[type=text], input[type=search], input[type=number], select {
   height: 32px; padding: 0 10px; font: inherit; font-size: 13px; color: var(--text);
   background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px;
   box-shadow: 0 1px 1px rgba(0,0,0,0.03);
@@ -269,3 +269,7 @@ tr.off { opacity: 0.55; }
 tbody tr:has(td:first-child input[type=checkbox]) { cursor: pointer; }
 tbody tr:has(input[name=ids]:checked) { background: var(--accent-soft); }
 .pager { display: flex; gap: 12px; align-items: center; justify-content: center; padding: 16px; border-top: 1px solid var(--border); }
+/* Baskets (Orders page) */
+.was.up { color: var(--purple-fg); }
+.was.down { color: var(--green-fg); }
+input.qty { width: 56px; text-align: right; }

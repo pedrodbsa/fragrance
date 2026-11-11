@@ -1,15 +1,69 @@
 {% extends "base.html" %}
 {% block title %}Orders{% endblock %}
 {% block content %}
+{% set back = request.url.path %}
 <div class="page-head">
   <div>
     <h1>Orders</h1>
-    <p class="subtitle">For each supplier with wishlist fragrances in stock: one bottle of each, topped up with fillers to reach its minimum order with the least overspend. Tick or untick to try other baskets. Set minimums on <a href="/suppliers">Suppliers</a>, and the size you'd buy on a fragrance's page.</p>
+    <p class="subtitle">Your baskets, one per supplier: add listings with "+ Basket" on a product page or from the suggestions below. Sold-out items stay, greyed and left out of the total, and the digest tells you when a basket item sells out, comes back or changes price.</p>
   </div>
 </div>
 
+{% for k in baskets %}
+<div class="panel" style="margin-bottom: 20px">
+  <div class="panel-head">
+    <h2>🧺 {{ k.supplier }}</h2>
+    <span class="panel-note">
+      <b>€{{ "%.2f"|format(k.total) }}</b>{% if k.mov %} of €{{ "%.2f"|format(k.mov) }} minimum · {% if k.total >= k.mov %}reached{% else %}€{{ "%.2f"|format(k.mov - k.total) }} to go{% endif %}{% else %} · <a href="/suppliers">set its minimum order</a>{% endif %}
+    </span>
+  </div>
+  <div class="scroll">
+  <table class="sortable">
+    <thead><tr><th>Fragrance</th><th>Size</th><th class="num">Price</th><th class="num">Bottles</th><th class="num hide-sm">In stock</th><th class="hide-sm">EAN</th></tr></thead>
+    <tbody>
+    {% for i in k["items"] %}
+    <tr class="{{ '' if i.available else 'faded' }}">
+      <td data-sort="{{ i.fragrance }}">
+        <div class="product-name"><a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}
+          {% if not i.available %}<span class="pill">Sold out</span>{% elif i.qty < i.quantity %}<span class="pill price_drop">Only {{ i.qty }} left</span>{% endif %}</div>
+        <div class="product-brand">{{ i.brand_name }}</div>
+      </td>
+      <td class="nowrap">{{ i.size_label }}</td>
+      <td class="num nowrap" data-sort="{{ i.price if i.price is not none }}">{% if i.price is not none %}€{{ "%.2f"|format(i.price) }}{% else %}—{% endif %}
+        {% if i.added_price is not none and i.price is not none and (i.price - i.added_price)|abs >= 0.01 %}<div class="small was {{ 'up' if i.price > i.added_price else 'down' }}">was €{{ "%.2f"|format(i.added_price) }}</div>{% endif %}</td>
+      <td class="num nowrap" data-sort="{{ i.quantity }}">
+        <form method="post" action="/basket/quantity" class="toolbar" style="justify-content: flex-end">
+          <input type="hidden" name="supplier" value="{{ i.supplier }}"><input type="hidden" name="sku" value="{{ i.sku }}"><input type="hidden" name="back" value="{{ back }}">
+          <input class="qty" type="number" name="quantity" min="0" value="{{ i.quantity }}" onchange="this.form.submit()" title="0 takes it out">
+          <button class="btn sm ghost danger" name="quantity" value="0" title="Take it out of the basket">✕</button>
+        </form>
+      </td>
+      <td class="num hide-sm">{{ i.qty }}</td>
+      <td class="mono hide-sm">{{ i.ean or "—" }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <form method="post" action="/basket/empty" class="pad" onsubmit="return confirm('Empty the {{ k.supplier }} basket? Do this once the order is placed.')">
+    <input type="hidden" name="supplier" value="{{ k.supplier }}">
+    <button class="btn sm">Ordered: empty the basket</button>
+  </form>
+</div>
+{% endfor %}
+
+{% if orders %}
+<div class="page-head" style="margin-top: 32px">
+  <div>
+    <h2>Suggestions</h2>
+    <p class="subtitle">For each supplier with wishlist fragrances in stock: one bottle of each, topped up with fillers to reach its minimum order with the least overspend. Tick or untick to try other baskets, then add the ticked ones to your basket. Set minimums on <a href="/suppliers">Suppliers</a>, and the size you'd buy on a fragrance's page.</p>
+  </div>
+</div>
+{% endif %}
+
 {% for o in orders %}
-<div class="panel order" data-mov="{{ o.mov or 0 }}" style="margin-bottom: 20px">
+<form method="post" action="/basket/add" class="panel order" data-mov="{{ o.mov or 0 }}" style="margin-bottom: 20px">
+  <input type="hidden" name="supplier" value="{{ o.supplier }}"><input type="hidden" name="back" value="{{ back }}">
   <div class="panel-head">
     <h2>{{ o.supplier }}</h2>
     <span class="panel-note">
@@ -26,9 +80,9 @@
     {% for kind, items, on in (("wishlist", o.wanted, true), ("filler", o.fillers, true), ("filler", o.spare, false)) %}
     {% for i in items %}
     <tr class="{{ '' if on else 'off' }}">
-      <td><input type="checkbox" data-price="{{ i.price }}" {{ 'checked' if on }}></td>
+      <td><input type="checkbox" name="sku" value="{{ i.sku }}" data-price="{{ i.price }}" {{ 'checked' if on }}></td>
       <td data-sort="{{ i.fragrance }}">
-        <div class="product-name">{{ "⭐" if kind == "wishlist" else "➕" }} <a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}</div>
+        <div class="product-name">{{ "⭐" if kind == "wishlist" else "➕" }} <a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}{% if (i.supplier, i.sku) in in_basket %} <span class="pill">🧺 In basket</span>{% endif %}</div>
         <div class="product-brand">{{ i.brand_name }}</div>
       </td>
       <td class="nowrap" data-sort="{{ i.size_label }}">{{ i.size_label }}{% if not i.buy_size %} <span class="muted small" title="No size picked: the cheapest is used">cheapest</span>{% endif %}</td>
@@ -41,9 +95,10 @@
     </tbody>
   </table>
   </div>
-</div>
+  <div class="pad"><button class="btn sm primary">🧺 Add ticked to the {{ o.supplier }} basket</button></div>
+</form>
 {% else %}
-<div class="panel"><div class="empty">No supplier has anything from your wishlist in stock right now.</div></div>
+{% if not baskets %}<div class="panel"><div class="empty">No baskets yet, and no supplier has anything from your wishlist in stock right now. Add listings with "+ Basket" on a product page.</div></div>{% endif %}
 {% endfor %}
 
 <script>

@@ -54,17 +54,27 @@ is often topped up with fragrances you don't mind owning: those are the fillers.
 error, or no update in 24 hours), when it last worked, how much it has in stock, and its
 minimum order value (MOV), entered on the same basis as its prices.
 
-**Orders page**: for each supplier with wishlist fragrances in stock, an order you could place:
+**Baskets**: one open basket per supplier, on the Orders page, filled as you find things
+until you place the order. Add a listing (that supplier's size) with "+ Basket" on a product
+page, or tick suggestions below and add them. Each item shows its price now ("was €X" if it
+changed since you added it) and how many bottles you want ("only N left" when the supplier
+has fewer). Items that sell out stay, greyed and left out of the total, which is shown
+against the supplier's MOV. The digest tells you when a basket item sells out, comes back or
+changes price. "Ordered: empty the basket" starts it again.
+
+**Order suggestions** (Orders page, under the baskets): for each supplier with wishlist
+fragrances in stock, an order you could place:
 
 1. every wishlist fragrance it has, one bottle each, in the size you picked on the fragrance's
    page ("Size I'd buy"), or the cheapest size if you didn't pick one;
 2. if that's under the MOV, the fillers it has in stock that reach the MOV with the least
    money spent over it. If all its fillers together don't reach it, the page says how short.
 
-Ticking and unticking lines recomputes the total, to try other baskets.
+Ticking and unticking lines recomputes the total, to try other baskets; the ticked lines
+can then go into the supplier's basket.
 
-Orders aren't sent to Telegram: the digest is only for what needs your attention (the
-wishlist, followed brands, new brands).
+Suggestions aren't sent to Telegram: the digest is only for what needs your attention
+(baskets, the wishlist, followed brands, new brands).
 
 ## New brands
 
@@ -125,6 +135,9 @@ remembered so the pair isn't suggested again, there or on the product page.
 Outrageous as EDP; it's only an EDT), correct it on the product page. If the corrected
 fragrance exists already, the two merge. The supplier's wrong version stays linked to the
 corrected fragrance, so its listings, including new sizes later, land there too.
+The same goes for a fragrance a supplier filed under the wrong brand: move it to the right
+brand there (it merges if that brand has it already). When a whole supplier spelling belongs
+to another brand, fix it on the brand's page instead (merge, or split the spelling off).
 
 Every listing points to a fragrance in the catalogue. It's worked out once, when the listing
 first appears, by reading the name out of the supplier's product name ("AMOUAGE BEACH HUT MAN
@@ -189,9 +202,10 @@ Listings with the same EAN are grouped into one Stock row:
 
 Sections, in this order:
 
-1. **⭐ Followed**: new listings, restocks, price drops and low stock for followed brands and
+1. **🧺 Baskets**: basket items that sold out, came back, or changed price (up or down).
+2. **⭐ Followed**: new listings, restocks, price drops and low stock for followed brands and
    wishlist fragrances, with the best-price and lowest-ever notes.
-2. **🆕 New brands**: each brand with Follow / Ignore buttons and any merge suggestion.
+3. **🆕 New brands**: each brand with Follow / Ignore buttons and any merge suggestion.
 
 Brands on default, fillers and fragrances on no list never appear in the digest. You see them in the backoffice.
 
@@ -211,7 +225,7 @@ Brands on default, fillers and fragrances on no list never appear in the digest.
 - **Merges**: fragrances that might be the same juice, to merge or mark as different.
 - **Search** (box in the header, on every page): brands and fragrances whose names contain
   every word typed ("ysl libre", any spelling of the brand), or the fragrance with an EAN or SKU.
-- **Orders**: the order you could place at each supplier.
+- **Orders**: your basket at each supplier, and the order you could place there.
 - **Suppliers**: collection health and minimum order values.
 
 Tables sort by clicking a column header (again to reverse). Stock does the same across all

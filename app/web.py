@@ -23,7 +23,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app import brands, orders, telegram
+from app import baskets, brands, orders, telegram
 from app.db import connect
 from app.upgrades import upgrade
 from app import fragrances
@@ -431,7 +431,8 @@ def product_detail(request: Request, fragrance_id: int):
     rows = sorted(annotate(listings), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
     return templates.TemplateResponse(request, "product.html", {
         "product": product, "rows": rows, "history": price_history(conn, rows), "concentrations": CONCENTRATIONS,
-        "eans": ean_list(conn, fragrance_id, rows),
+        "eans": ean_list(conn, fragrance_id, rows), "in_basket": baskets.keys(conn),
+        "all_brands": conn.execute("SELECT id, name FROM brands ORDER BY name").fetchall(),
         **merge_options(conn, product, rows),
     })
 
@@ -545,6 +546,15 @@ def merges_post(action: str = Form(...)):
     return RedirectResponse("/merges", status_code=303)
 
 
+@office.post("/products/{fragrance_id}/brand")
+def product_brand(fragrance_id: int, brand_id: int = Form(...)):
+    """The supplier had the wrong brand: move it (and its listings, now and later)."""
+    conn = connect()
+    with conn:
+        fragrance_id = fragrances.move_to_brand(conn, fragrance_id, brand_id)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+
+
 @office.post("/products/{fragrance_id}/audience")
 def product_audience(fragrance_id: int, audience: str = Form("")):
     """Who it's for, when the suppliers got it wrong or didn't say. Empty: unknown."""
@@ -627,8 +637,41 @@ def supplier_mov(name: str, mov: str = Form("")):
 
 @office.get("/orders")
 def orders_page(request: Request):
-    """The order you could place at each supplier from your wishlist and fillers."""
-    return templates.TemplateResponse(request, "orders.html", {"orders": orders.plan(connect())})
+    """Your open baskets, then the order you could place at each supplier from your wishlist
+    and fillers."""
+    conn = connect()
+    return templates.TemplateResponse(request, "orders.html", {
+        "baskets": baskets.contents(conn), "orders": orders.plan(conn), "in_basket": baskets.keys(conn),
+    })
+
+
+@office.post("/basket/add")
+def basket_add(supplier: str = Form(...), sku: list[str] = Form([]), back: str = Form("/orders")):
+    """Put one or more of a supplier's listings in its basket."""
+    conn = connect()
+    with conn:
+        for one in sku:
+            baskets.add(conn, supplier, one)
+    return back_to(back, "/orders")
+
+
+@office.post("/basket/quantity")
+def basket_quantity(supplier: str = Form(...), sku: str = Form(...), quantity: int = Form(...),
+                    back: str = Form("/orders")):
+    """How many bottles; 0 takes it out of the basket."""
+    conn = connect()
+    with conn:
+        baskets.set_quantity(conn, supplier, sku, quantity)
+    return back_to(back, "/orders")
+
+
+@office.post("/basket/empty")
+def basket_empty(supplier: str = Form(...)):
+    """You placed the order: the supplier's basket starts again empty."""
+    conn = connect()
+    with conn:
+        baskets.empty(conn, supplier)
+    return RedirectResponse("/orders", status_code=303)
 
 
 app.include_router(office)

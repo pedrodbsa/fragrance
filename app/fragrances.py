@@ -243,6 +243,25 @@ def rename(conn, fragrance_id: int, name: str, concentration: str | None) -> int
     return fragrance_id
 
 
+def move_to_brand(conn, fragrance_id: int, brand_id: int) -> int:
+    """A supplier put this fragrance under the wrong brand: it moves to brand_id, merging into
+    that brand's fragrance of the same name if there is one. Returns the fragrance's id.
+
+    The supplier's reading (wrong brand + name) keeps pointing here, so their listings, current
+    and future, stay under the right brand."""
+    fragrance = conn.execute("SELECT * FROM fragrances WHERE id = ?", (fragrance_id,)).fetchone()
+    existing = conn.execute(
+        "SELECT fragrance_id FROM fragrance_names WHERE brand_id = ? AND name = ? AND concentration = ?",
+        (brand_id, key(fragrance["name"]), fragrance["concentration"] or "")).fetchone()
+    if existing and existing["fragrance_id"] != fragrance_id:
+        merge(conn, fragrance_id, existing["fragrance_id"])
+        return existing["fragrance_id"]
+    conn.execute("UPDATE fragrances SET brand_id = ? WHERE id = ?", (brand_id, fragrance_id))
+    conn.execute("INSERT OR IGNORE INTO fragrance_names VALUES (?, ?, ?, ?)",
+                 (brand_id, key(fragrance["name"]), fragrance["concentration"] or "", fragrance_id))
+    return fragrance_id
+
+
 def split(conn, fragrance_id: int, name: str, concentration: str) -> int:
     """Undo a merge: listings read as name/concentration become a fragrance of their own again.
     Returns its id."""
