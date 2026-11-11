@@ -1,13 +1,13 @@
 {# Every listing of one fragrance, by size. Used on the product page. Needs: rows, in_basket, cheapest, back,
    and for moving a listing out by its EAN: product, others, concentrations. #}
-{% from "_macros.html" import best, hot, move_ean %}
+{% from "_macros.html" import best, hot, move_ean, per_ml_line %}
   <div class="scroll">
   <table class="sortable">
     <thead><tr><th>Size</th><th>Condition</th><th>As listed</th><th class="hide-sm">EAN</th><th class="num">Price</th><th class="num">Qty</th><th class="hide-sm">Supplier</th><th class="hide-sm">First seen</th><th></th></tr></thead>
     <tbody>
     {% for r in rows %}
     <tr class="{{ 'faded' if r.qty == 0 }}">
-      <td class="nowrap product-name" data-sort="{{ r.size }}">{{ r.size_label }}<div class="small muted">{{ r|per_ml }}</div></td>
+      <td class="nowrap product-name" data-sort="{{ r.size }}">{{ r.size_label }}{{ per_ml_line(r) }}</td>
       <td class="nowrap">{% if r.condition == "Tester" %}<span class="pill" title="A tester or an unboxed bottle">Tester</span>{% else %}<span class="muted">New</span>{% endif %}</td>
       <td><span title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</span>{% if r.flagged_new %} <span class="pill" title="Marked new by the supplier">Supplier: new</span>{% endif %}
         <details>

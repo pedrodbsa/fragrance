@@ -59,6 +59,12 @@
 {%- endif %}
 {%- endmacro %}
 
+{# Under a size: its price per ml, 💧 and highlighted when it's the fragrance's best (a row
+   from web.mark_value). #}
+{% macro per_ml_line(r) -%}
+{% if r|per_ml %}<div class="small {{ 'value' if r.best_value else 'muted' }}"{% if r.best_value %} title="The most perfume for the money: this fragrance's lowest price per ml, across every supplier and size"{% endif %}>{{ "💧 " if r.best_value }}{{ r|per_ml }}</div>{% endif %}
+{%- endmacro %}
+
 {% macro best(is_cheapest) -%}
 {% if is_cheapest %}<div class="small best" title="The lowest price any supplier has for this size right now">Cheapest</div>{% endif %}
 {%- endmacro %}

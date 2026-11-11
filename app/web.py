@@ -104,6 +104,17 @@ def per_ml(listing) -> str:
 templates.env.filters["per_ml"] = per_ml
 
 
+def mark_value(conn, rows: list[dict]) -> list[dict]:
+    """Sets "best_value" on each row (in place) that's its fragrance's lowest price per ml in
+    stock, across every supplier and size: the most perfume for the money (💧)."""
+    best = fragrances.best_per_ml(conn, [r["fragrance_id"] for r in rows])
+    for r in rows:
+        ml = fragrances.millilitres(r["name"])
+        r["best_value"] = bool(ml and r["qty"] > 0 and r["price"] is not None
+                               and r["price"] / ml <= best.get(r["fragrance_id"], 0) + 1e-9)
+    return rows
+
+
 def back_to(back: str, fallback: str) -> RedirectResponse:
     """Return to the page a form was posted from (only paths on this site)."""
     safe = back.startswith("/") and not back.startswith("//")
@@ -340,9 +351,12 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     pages = max(1, -(-len(groups) // PAGE))
     page = min(max(page, 1), pages)
     page_link = lambda n: "/stock?" + urlencode({**query, "page": n})
-    shown = groups[(page - 1) * PAGE:page * PAGE]  # with a supplier, other sizes are added greyed, unless filtered by price
+    shown = groups[(page - 1) * PAGE:page * PAGE]
+    if supplier and not price:  # with a supplier, other sizes are added greyed, unless filtered by price
+        shown = add_elsewhere(conn, shown, supplier)
+    mark_value(conn, [r for g in shown for r in g["sizes"]])
     return templates.TemplateResponse(request, "stock.html", {
-        "groups": add_elsewhere(conn, shown, supplier) if supplier and not price else shown, "total": len(groups),
+        "groups": shown, "total": len(groups),
         "page": page, "pages": pages, "page_link": page_link, "first": (page - 1) * PAGE + 1, "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
         "brands_shown": brands, "sort": sort, "sort_links": sort_links,
@@ -578,7 +592,7 @@ def product_detail(request: Request, fragrance_id: int):
     if product is None:
         raise HTTPException(404, "product not found")
     listings = conn.execute("SELECT * FROM catalog WHERE fragrance_id = ?", (fragrance_id,)).fetchall()
-    rows = sorted(mark_deals(conn, annotate(listings)), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
+    rows = sorted(mark_value(conn, mark_deals(conn, annotate(listings))), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
     for r in rows:  # how each listing's name reads, for "Use this name"
         name, concentration = fragrances.identify(r["name"], r["brand"])
         r["reads_as"] = (" ".join(name.upper().split()), concentration)
@@ -873,7 +887,7 @@ def orders_page(request: Request):
     lines = [i for b in open_baskets for i in b["items"]]
     lines += [o for s in plan for o in s["wanted"] + s["fillers"] + s["spare"]]
     # Each line against the next cheapest supplier: its deal, or how much dearer or cheaper.
-    compared = {(r["supplier"], r["sku"]): r for r in mark_deals(conn, mark_rivals(conn, lines))}
+    compared = {(r["supplier"], r["sku"]): r for r in mark_value(conn, mark_deals(conn, mark_rivals(conn, lines)))}
     # One panel per supplier: its basket, then what's suggested to add. Baskets first.
     suggestions = {o["supplier"]: o for o in plan}
     panels = [{"supplier": b["supplier"], "basket": b, "suggestion": suggestions.pop(b["supplier"], None)} for b in open_baskets]

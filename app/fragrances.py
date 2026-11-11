@@ -119,6 +119,21 @@ def millilitres(name: str) -> float | None:
     return amount * 29.5735 if found.group(2) == "OZ" else amount
 
 
+def best_per_ml(conn, fragrance_ids) -> dict[int, float]:
+    """Each fragrance's lowest in-stock price per ml, across every supplier and size."""
+    ids = list(set(fragrance_ids))
+    best = {}
+    for at in range(0, len(ids), 500):  # SQLite takes a limited number of ? at once
+        chunk = ids[at:at + 500]
+        for r in conn.execute(f"""SELECT fragrance_id, name, price FROM listings
+                                  WHERE qty > 0 AND price IS NOT NULL
+                                  AND fragrance_id IN ({",".join("?" * len(chunk))})""", chunk):
+            ml = millilitres(r["name"])
+            if ml:
+                best[r["fragrance_id"]] = min(best.get(r["fragrance_id"], r["price"] / ml), r["price"] / ml)
+    return best
+
+
 def condition(name: str) -> str:
     """ "Tester" for a tester or an unboxed bottle (suppliers name both "... Tester"), else "New"."""
     return "Tester" if TESTER.search(name.upper()) else "New"

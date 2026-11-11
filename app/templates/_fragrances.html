@@ -36,7 +36,8 @@
           {%- set delta = r.price - r.rival if r.rival and r.price is not none and r.qty > 0 else none %}
           <a class="size {{ 'out' if r.qty == 0 }} {{ state }} {{ 'elsewhere' if r.elsewhere }}" href="{{ page }}" title="{% if r.elsewhere %}Not at {{ supplier }}: the cheapest elsewhere, {% endif %}{{ r.name }} · {{ r.condition }}{% if r|per_ml %} · {{ r|per_ml }}{% endif %} · {{ r.qty }} at {{ r.supplier }}{% if state == 'only' %} · no other supplier has this size{% endif %}{% if delta is not none %} · the next cheapest supplier asks €{{ "%.2f"|format(r.rival) }}{% endif %}">
             {{- {"deal": "🔥 ", "cheapest": "👑 ", "only": "🦄 "}.get(state, "") }}{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b>
-            {%- if delta is not none %} <span class="delta {{ 'up' if delta > 0 else 'down' if delta < 0 }}">{{ "+" if delta > 0 else "−" if delta < 0 else "±" }}{{ (delta|abs / r.rival * 100)|round|int }}%</span>{% endif %}</a>
+            {%- if delta is not none %} <span class="delta {{ 'up' if delta > 0 else 'down' if delta < 0 }}">{{ "+" if delta > 0 else "−" if delta < 0 else "±" }}{{ (delta|abs / r.rival * 100)|round|int }}%</span>{% endif %}
+            {%- if r.best_value %} <span class="value" title="The most perfume for the money: this fragrance's lowest price per ml ({{ r|per_ml }}), across every supplier and size">💧</span>{% endif %}</a>
         {% endfor %}
         </div>
       </td>
