@@ -108,23 +108,33 @@ def variant(name: str) -> tuple[float, str]:
     return float(number.replace(",", ".")), f"{number} {unit.lower()}{kind}"
 
 
-def cheapest(conn, fragrance_ids) -> set[tuple[str, str]]:
-    """(supplier, sku) of the listings that are the lowest price in stock for their fragrance
-    and size, when at least two suppliers have that size in stock (ties all count)."""
+def offers(conn, fragrance_ids) -> dict:
+    """The listings in stock with a price, by fragrance and size: (fragrance id, size) ->
+    [(price, supplier, sku)]."""
     ids = list(set(fragrance_ids))
-    offers = {}  # (fragrance id, size) -> [(price, supplier, sku)]
+    found = {}
     for at in range(0, len(ids), 500):  # SQLite takes a limited number of ? at once
         chunk = ids[at:at + 500]
         for r in conn.execute(f"""SELECT fragrance_id, supplier, sku, name, price FROM listings
                                   WHERE qty > 0 AND price IS NOT NULL
                                   AND fragrance_id IN ({",".join("?" * len(chunk))})""", chunk):
-            offers.setdefault((r["fragrance_id"], variant(r["name"])[1]), []).append((r["price"], r["supplier"], r["sku"]))
+            found.setdefault((r["fragrance_id"], variant(r["name"])[1]), []).append((r["price"], r["supplier"], r["sku"]))
+    return found
+
+
+def lowest(found) -> set[tuple[str, str]]:
+    """(supplier, sku) of the lowest price of each size in these offers (ties all count)."""
     best = set()
-    for found in offers.values():
-        if len({supplier for _, supplier, _ in found}) > 1:
-            low = min(price for price, _, _ in found)
-            best |= {(supplier, sku) for price, supplier, sku in found if price == low}
+    for size in found.values():
+        low = min(price for price, _, _ in size)
+        best |= {(supplier, sku) for price, supplier, sku in size if price == low}
     return best
+
+
+def cheapest(conn, fragrance_ids) -> set[tuple[str, str]]:
+    """(supplier, sku) of the listings that are the lowest price in stock for their fragrance
+    and size, when at least two suppliers have that size in stock (ties all count)."""
+    return lowest({k: v for k, v in offers(conn, fragrance_ids).items() if len({s for _, s, _ in v}) > 1})
 
 
 def find_or_create(conn, brand_id: int, name: str, concentration: str | None) -> int:

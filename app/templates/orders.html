@@ -30,7 +30,7 @@
         <div class="product-brand">{{ i.brand_name }}</div>
       </td>
       <td class="nowrap">{{ i.size_label }}</td>
-      <td class="num nowrap" data-sort="{{ i.price if i.price is not none }}">{% if i.price is not none %}€{{ "%.2f"|format(i.price) }}{% else %}—{% endif %}{{ best((i.supplier, i.sku) in cheapest) }}
+      <td class="num nowrap" data-sort="{{ i.price if i.price is not none }}">{% if i.price is not none %}€{{ "%.2f"|format(i.price) }}{% else %}—{% endif %}{{ best((i.supplier, i.sku) in basket_cheapest) }}
         {% if i.added_price is not none and i.price is not none and (i.price - i.added_price)|abs >= 0.01 %}<div class="small was {{ 'up' if i.price > i.added_price else 'down' }}">was €{{ "%.2f"|format(i.added_price) }}</div>{% endif %}</td>
       <td class="num nowrap" data-sort="{{ i.quantity }}">
         <form method="post" action="/basket/quantity" class="toolbar" style="justify-content: flex-end">
