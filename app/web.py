@@ -241,11 +241,20 @@ def deals_only(conn, rows: list[dict]) -> list[dict]:
     return [r for r in mark_deals(conn, rows) if "discount" in r]
 
 
-def mark_cheapest(conn, rows: list[dict]) -> list[dict]:
-    """The rows, each with "cheapest": the lowest in-stock price any supplier has for its
-    fragrance and size (see fragrances.cheapest)."""
-    best = fragrances.cheapest(conn, [r["fragrance_id"] for r in rows])
-    return [{**r, "cheapest": (r["supplier"], r["sku"]) in best} for r in rows]
+def mark_rivals(conn, rows: list[dict]) -> list[dict]:
+    """The rows (one supplier's), each with "rival": the lowest in-stock price another
+    supplier asks for the same fragrance and size (None if no one else has it), and
+    "cheapest": no one else asks less."""
+    rivals = {}  # (fragrance id, size) -> [(supplier, price)] of everything in stock
+    for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
+        rivals.setdefault((r["fragrance_id"], r["size_label"]), []).append((r["supplier"], r["price"]))
+    marked = []
+    for r in rows:
+        others = [p for s, p in rivals.get((r["fragrance_id"], r["size_label"]), []) if s != r["supplier"]]
+        rival = min(others, default=None)
+        marked.append({**r, "rival": rival, "cheapest": r["qty"] > 0 and r["price"] is not None
+                       and (rival is None or r["price"] <= rival)})
+    return marked
 
 
 IN_STOCK_FIRST = "ORDER BY qty = 0, name"
@@ -303,7 +312,7 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     # without one every size shown is already the cheapest.
     rows = deals_only(conn, rows) if deals else mark_deals(conn, rows)
     if supplier:
-        rows = mark_cheapest(conn, rows)
+        rows = mark_rivals(conn, rows)
     groups = sort_stock(group(rows), sort)
     # Each header links to the first page sorted by its column, reversed if it's the current one.
     query = {k: v for k, v in request.query_params.items() if k != "page"}
