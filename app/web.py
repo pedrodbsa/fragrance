@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from html import escape
 from pathlib import Path
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Body, Depends, FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -24,7 +25,7 @@ from fastapi.templating import Jinja2Templates
 
 from app import brands, telegram
 from app.db import connect, upgrade
-from app.fragrances import CONCENTRATIONS, STATUSES, hidden, identify, matcher
+from app.fragrances import CONCENTRATIONS, STATUSES, hidden, identify, key, matcher
 from app.fragrances import save as fragrance_save
 
 security = HTTPBasic()
@@ -107,7 +108,7 @@ def events(request: Request, kind: str = ""):
            WHERE c.status != 'ignore' AND (? = '' OR e.kind = ?) ORDER BY e.id DESC LIMIT ?""",
         (kind, kind, PAGE * 3),
     ).fetchall()
-    rows = [r for r in recent if not hidden(r, match(r))][:PAGE]
+    rows = [r for r in annotate(recent, match) if not hidden(r, r["decision"])][:PAGE]
     since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds")
     day = conn.execute(
         """SELECT e.kind, c.name, c.brand, c.brand_id, c.status FROM events e
@@ -123,12 +124,15 @@ def events(request: Request, kind: str = ""):
 
 
 def annotate(listings, match) -> list[dict]:
-    """Catalog rows plus what the stock table needs: the fragrance decision covering each
-    listing, and the fragrance name and concentration read from it."""
+    """Catalog rows plus what the stock tables need: the fragrance decision covering each
+    listing, the fragrance name and concentration read from it, and its product page."""
     rows = []
     for r in listings:
         name, concentration = identify(r["name"], r["brand"])
-        rows.append({**dict(r), "decision": match(r), "fragrance": name, "concentration": concentration})
+        decision = match(r)
+        page = (f"/products/{decision['id']}" if decision else
+                "/fragrance?" + urlencode({"brand": r["brand_id"], "name": name, "concentration": concentration or ""}))
+        rows.append({**dict(r), "decision": decision, "fragrance": name, "concentration": concentration, "page": page})
     return rows
 
 
@@ -297,6 +301,26 @@ def product_detail(request: Request, fragrance_id: int):
         f"SELECT * FROM catalog WHERE ? IS NULL OR brand_id = ? {IN_STOCK_FIRST}",
         (product["brand_id"], product["brand_id"])).fetchall()
     rows = [r for r in annotate(candidates, match) if r["decision"] and r["decision"]["id"] == fragrance_id]
+    return templates.TemplateResponse(request, "product.html", {"product": product, "rows": rows})
+
+
+@office.get("/fragrance")
+def fragrance_page(request: Request, brand: int, name: str, concentration: str = ""):
+    """Page for any fragrance seen in stock, decided on or not. Once there's a decision
+    covering it, its product page takes over."""
+    conn = connect()
+    match = matcher(conn)
+    listings = conn.execute(f"SELECT * FROM catalog WHERE brand_id = ? {IN_STOCK_FIRST}", (brand,)).fetchall()
+    rows = [r for r in annotate(listings, match)
+            if key(r["fragrance"]) == key(name) and (r["concentration"] or "") == concentration]
+    decided = next((r["decision"] for r in rows if r["decision"]), None)
+    if decided:
+        return RedirectResponse(f"/products/{decided['id']}", status_code=303)
+    brand_row = conn.execute("SELECT name FROM brands WHERE id = ?", (brand,)).fetchone()
+    if brand_row is None:
+        raise HTTPException(404, "brand not found")
+    product = {"id": None, "brand_id": brand, "brand_name": brand_row["name"], "name": name,
+               "concentration": concentration or None, "status": None, "note": None}
     return templates.TemplateResponse(request, "product.html", {"product": product, "rows": rows})
 
 

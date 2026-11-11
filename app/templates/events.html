@@ -40,7 +40,7 @@
         {% if r.kind in ("price_drop", "price_up") %}<span class="delta"><s>€{{ "%.2f"|format(r.old_value) }}</s></span>{% endif %}
       </td>
       <td>
-        <div class="product-name" title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</div>
+        <div class="product-name"><a class="quiet" title="{{ r.name }}" href="{{ r.page }}">{{ r.name|pretty(r.brand) }}</a></div>
         <div class="product-brand">{{ r.brand_name }}</div>
       </td>
       <td class="mono hide-sm">{{ r.ean or "—" }}</td>

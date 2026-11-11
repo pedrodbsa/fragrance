@@ -1,20 +1,29 @@
 {% extends "base.html" %}
 {% block title %}{{ product.name|pretty('') }}{% endblock %}
 {% block content %}
-{% set back = request.url.path %}
+{% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
 {% set tabs = {"want": "Wishlist", "own": "Collection", "ignore": "Not interested"} %}
 <div class="page-head">
   <div>
-    <p class="subtitle"><a href="/products?status={{ product.status }}">← {{ tabs[product.status] }}</a></p>
+    <p class="subtitle">{% if product.status %}<a href="/products?status={{ product.status }}">← {{ tabs[product.status] }}</a>{% else %}<a href="/brands/{{ product.brand_id }}">← {{ product.brand_name }}</a>{% endif %}</p>
     <h1>{{ product.name|pretty('') }}{% if product.concentration %} <span class="muted">{{ product.concentration }}</span>{% endif %}</h1>
     <p class="subtitle">{% if product.brand_id %}<a href="/brands/{{ product.brand_id }}">{{ product.brand_name }}</a>{% else %}Any brand{% endif %}{% if product.note %} · {{ product.note }}{% endif %}</p>
   </div>
   <div class="toolbar">
+    {% if product.id %}
     <form method="post" action="/products/{{ product.id }}/status" class="choice">
       <input type="hidden" name="back" value="{{ back }}">
       {% for k, label in tabs.items() %}<button class="{{ 'on' if product.status == k }}" name="status" value="{{ k }}">{{ label }}</button>{% endfor %}
     </form>
     <form method="post" action="/products/{{ product.id }}/delete"><input type="hidden" name="back" value="/products?status={{ product.status }}"><button class="btn sm ghost danger">Remove</button></form>
+    {% else %}
+    <span class="muted small">No decision yet: the brand's status applies.</span>
+    <form method="post" action="/products" class="choice">
+      <input type="hidden" name="back" value="{{ back }}"><input type="hidden" name="brand_id" value="{{ product.brand_id }}">
+      <input type="hidden" name="name" value="{{ product.name }}"><input type="hidden" name="concentration" value="{{ product.concentration or '' }}">
+      {% for k, label in tabs.items() %}<button name="status" value="{{ k }}">{{ label }}</button>{% endfor %}
+    </form>
+    {% endif %}
   </div>
 </div>
 

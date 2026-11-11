@@ -9,7 +9,7 @@
     {% set alerting = (d.status == "want") if d else (r.status == "follow") %}
     <tr class="{{ 'faded' if (d and d.status == 'ignore') or (not d and r.status in ('ignore', 'new')) }}">
       <td>
-        <div class="product-name">{% if alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<span title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</span>
+        <div class="product-name">{% if alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<a class="quiet" title="{{ r.name }}" href="{{ r.page }}">{{ r.name|pretty(r.brand) }}</a>
           {% if d %}<a href="/products/{{ d.id }}" class="pill {{ badge[d.status][1] }}" title="Open this product">{{ badge[d.status][0] }}</a>{% endif %}
           {% if r.flagged_new %}<span class="pill" title="Marked new by the supplier">Supplier: new</span>{% endif %}</div>
         <div class="product-brand"><a class="quiet" href="/brands/{{ r.brand_id }}">{{ r.brand_name }}</a></div>
