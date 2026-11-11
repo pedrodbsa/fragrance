@@ -641,6 +641,15 @@ def product_ean_remove(fragrance_id: int, ean: str = Form(...)):
     return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
 
 
+@office.post("/listings/detach")
+def listing_detach(supplier: str = Form(...), sku: str = Form(...)):
+    """One listing isn't this fragrance and isn't any other yet: it becomes its own fragrance."""
+    conn = connect()
+    with conn:
+        fragrance_id = fragrances.detach(conn, supplier, sku)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+
+
 @office.post("/products/{fragrance_id}/split")
 def product_split(fragrance_id: int, name: str = Form(...), concentration: str = Form("")):
     """Listings read as name/concentration aren't this fragrance after all."""

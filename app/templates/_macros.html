@@ -46,11 +46,9 @@
 {% if is_cheapest %}<div class="small best" title="The lowest price any supplier has for this size right now">Cheapest</div>{% endif %}
 {%- endmacro %}
 
-{# "Not this fragrance?": the listings with this EAN go to another of the brand's fragrances, or
-   to a new one, now and in later syncs (POST /products/<id>/eans/move). On the product page. #}
+{# The listings with this EAN go to another of the brand's fragrances, or to a new one, now and
+   in later syncs (POST /products/<id>/eans/move). On the product page, under "Not this fragrance?". #}
 {% macro move_ean(product, ean, others, concentrations) %}
-<details>
-  <summary class="small muted">Not this fragrance?</summary>
   <form method="post" action="/products/{{ product.id }}/eans/move" class="toolbar" style="margin-top: 6px">
     <input type="hidden" name="ean" value="{{ ean }}">
     <select name="to" required onchange="this.form.querySelectorAll('.new-only').forEach(x => x.hidden = this.value !== 'new')">
@@ -62,5 +60,4 @@
     <button class="btn sm">Move</button>
   </form>
   <p class="small muted">Every listing with EAN {{ ean }} moves there, and later ones with it land there too.</p>
-</details>
 {% endmacro %}

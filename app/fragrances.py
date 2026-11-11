@@ -134,10 +134,33 @@ def find_or_create(conn, brand_id: int, name: str, concentration: str | None) ->
         (brand_id, key(name), concentration or "")).fetchone()
     if found:
         return found["fragrance_id"]
-    fragrance_id = conn.execute(
+    fragrance_id = create(conn, brand_id, name, concentration)
+    conn.execute("INSERT INTO fragrance_names VALUES (?, ?, ?, ?)", (brand_id, key(name), concentration or "", fragrance_id))
+    return fragrance_id
+
+
+def create(conn, brand_id: int, name: str, concentration: str | None) -> int:
+    """A new fragrance, even if one with this name exists. Returns its id."""
+    return conn.execute(
         "INSERT INTO fragrances (brand_id, name, concentration, created_at) VALUES (?, ?, ?, ?)",
         (brand_id, " ".join(name.upper().split()), concentration, now())).lastrowid
-    conn.execute("INSERT INTO fragrance_names VALUES (?, ?, ?, ?)", (brand_id, key(name), concentration or "", fragrance_id))
+
+
+def detach(conn, supplier: str, sku: str) -> int:
+    """This listing isn't the fragrance it's on: it becomes a fragrance of its own, named as read
+    from the listing, for you to rename or merge from there. Returns the new fragrance's id.
+
+    With an EAN, the EAN is added to the new fragrance, so listings with it (from any supplier,
+    now and later) land there too. Without one, the listing stays there until the supplier
+    renames it."""
+    listing = conn.execute("SELECT * FROM listings WHERE supplier = ? AND sku = ?", (supplier, sku)).fetchone()
+    brand_id = conn.execute("SELECT brand_id FROM fragrances WHERE id = ?", (listing["fragrance_id"],)).fetchone()["brand_id"]
+    fragrance_id = create(conn, brand_id, *identify(listing["name"], listing["brand"]))
+    learn_audience(conn, fragrance_id, read_audience(listing["name"]))
+    if listing["ean"]:
+        add_ean(conn, fragrance_id, listing["ean"])
+    else:
+        conn.execute("UPDATE listings SET fragrance_id = ? WHERE supplier = ? AND sku = ?", (fragrance_id, supplier, sku))
     return fragrance_id
 
 

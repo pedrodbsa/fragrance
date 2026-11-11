@@ -82,7 +82,10 @@
         <button class="btn sm ghost danger" title="Stop matching listings by this EAN; those attached stay">Remove</button></form>
       {% endif %}
       {% if e.where %}
-      {{ move_ean(product, e.ean, others, concentrations) }}
+      <details>
+        <summary class="small muted">Not this fragrance?</summary>
+        {{ move_ean(product, e.ean, others, concentrations) }}
+      </details>
       {% endif %}
     </div>
     {% endfor %}

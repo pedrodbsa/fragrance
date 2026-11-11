@@ -9,7 +9,14 @@
     <tr class="{{ 'faded' if r.qty == 0 }}">
       <td class="nowrap product-name" data-sort="{{ r.size }}">{{ r.size_label }}</td>
       <td><span title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</span>{% if r.flagged_new %} <span class="pill" title="Marked new by the supplier">Supplier: new</span>{% endif %}
-        {% if r.ean %}{{ move_ean(product, r.ean, others, concentrations) }}{% endif %}</td>
+        <details>
+          <summary class="small muted">Not this fragrance?</summary>
+          <form method="post" action="/listings/detach" class="toolbar" style="margin-top: 6px">
+            <input type="hidden" name="supplier" value="{{ r.supplier }}"><input type="hidden" name="sku" value="{{ r.sku }}">
+            <button class="btn sm" title="Take it off this fragrance; rename or merge it from its own page">Detach: make it a fragrance of its own</button>
+          </form>
+          {% if r.ean %}<p class="small muted">Or move it to a fragrance:</p>{{ move_ean(product, r.ean, others, concentrations) }}{% endif %}
+        </details></td>
       <td class="mono hide-sm">{{ r.ean or "—" }}</td>
       <td class="num nowrap" data-sort="{{ r.price if r.price is not none }}">{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}<span class="muted">—</span>{% endif %}{{ best((r.supplier, r.sku) in cheapest) }}</td>
       <td class="num" data-sort="{{ r.qty }}">{% if r.qty == 0 %}<span class="pill">Sold out</span>{% else %}{{ r.qty }}{% endif %}</td>
