@@ -301,5 +301,4 @@ table.lines { table-layout: fixed; min-width: 720px; } /* narrower screens scrol
 table.lines .c-size { width: 130px; }
 table.lines .c-price { width: 190px; }
 table.lines .c-qty { width: 90px; }
-table.lines .c-ean { width: 150px; }
 table.lines .c-act { width: 240px; }
