@@ -29,11 +29,12 @@
       <td>
         <div class="sizes">
         {% for r in g.sizes %}
-          <a class="size {{ 'out' if r.qty == 0 }} {{ 'deal' if r.discount is defined }} {{ 'elsewhere' if r.elsewhere }}" href="{{ page }}" title="{% if r.elsewhere %}Not at {{ supplier }}: the cheapest elsewhere, {% endif %}{{ r.name }} · {{ r.condition }} · {{ r.qty }} at {{ r.supplier }}{{ ' · the cheapest of any supplier' if r.cheapest }}">{% if r.cheapest %}<span title="The cheapest: no other supplier asks less">👑</span> {% endif %}{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b>
-            {#- Against the next cheapest supplier: a 🔥 deal when it's well below, else the plain %. #}
+          <a class="size {{ 'out' if r.qty == 0 }} {{ 'deal' if r.discount is defined }} {{ 'elsewhere' if r.elsewhere }}" href="{{ page }}" title="{% if r.elsewhere %}Not at {{ supplier }}: the cheapest elsewhere, {% endif %}{{ r.name }} · {{ r.condition }} · {{ r.qty }} at {{ r.supplier }}{{ ' · the cheapest of any supplier' if r.cheapest }}">{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b>
+            {#- One pill against the next cheapest supplier: red 🔥 a deal, green 👑 the cheapest, grey dearer. #}
             {%- if r.discount is defined %} {{ hot(r) }}
             {%- elif r.rival and r.price is not none and r.qty > 0 %}{% set delta = r.price - r.rival %}
-            <span class="delta {{ 'up' if delta > 0 else 'down' }}" title="The next best supplier asks €{{ "%.2f"|format(r.rival) }}: €{{ "%.2f"|format(delta|abs) }} {{ 'more' if delta > 0 else 'less' }} here">{{ "+" if delta > 0 else "−" }}{{ (delta|abs / r.rival * 100)|round|int }}%</span>{% endif %}</a>
+            <span class="pill {{ 'cheapest' if r.cheapest else 'dearer' }}" title="The next cheapest supplier asks €{{ "%.2f"|format(r.rival) }}: €{{ "%.2f"|format(delta|abs) }} {{ 'more' if delta > 0 else 'less' }} here">{{ "👑 " if r.cheapest }}{{ "+" if delta > 0 else "−" if delta < 0 }}{{ (delta|abs / r.rival * 100)|round|int }}%</span>
+            {%- elif r.cheapest %} <span class="pill cheapest" title="No other supplier has this size in stock">👑</span>{% endif %}</a>
         {% endfor %}
         </div>
       </td>
