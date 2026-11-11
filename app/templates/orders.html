@@ -18,7 +18,7 @@
   <div class="panel-head">
     <h2>{{ "🧺 " if k }}{{ p.supplier }}</h2>
     {% set sold_out = k["items"]|rejectattr("available")|list|length if k else 0 %}
-    <a class="small" href="/stock?{{ {'supplier': p.supplier, 'deals': 'true'}|urlencode }}" title="Everything at {{ p.supplier }} well below what other suppliers ask, to fill the order">🔥 Its deals</a>
+    <a class="small" href="/stock?{{ {'supplier': p.supplier, 'price': 'deals'}|urlencode }}" title="Everything at {{ p.supplier }} well below what other suppliers ask, to fill the order">🔥 Its deals</a>
     {% if sold_out %}<span class="pill warn" title="Greyed below and left out of the total">⚠ {{ sold_out }} sold out</span>{% endif %}
     <span class="panel-note" title="What's in the basket and in stock">
       <b>€{{ "%.2f"|format(total) }}</b>{% if mov %} of €{{ "%.2f"|format(mov) }} minimum · {{ "reached" if total >= mov else "€%.2f to go"|format(mov - total) }}{% else %} · <a href="/suppliers">set its minimum order</a>{% endif %}

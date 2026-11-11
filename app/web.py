@@ -210,11 +210,6 @@ def add_elsewhere(conn, groups: list[dict], supplier: str) -> list[dict]:
     return groups
 
 
-def testers_only(rows: list[dict]) -> list[dict]:
-    """Keep testers (and unboxed bottles, which are sold like them)."""
-    return [r for r in rows if r["condition"] == "Tester"]
-
-
 DEAL = 0.20  # a deal: at least this much below the next cheapest supplier
 
 
@@ -281,33 +276,35 @@ def sort_stock(groups: list[dict], sort: str) -> list[dict]:
 @office.get("/stock")
 def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
           in_stock: bool = True, followed: bool = False, brands: str = "default", sort: str = "brand", page: int = 1,
-          audience: str = "", cheapest: bool = False, testers: bool = False, deals: bool = False):
+          price: str = "", condition: str = ""):
     """One row per fragrance. q matches every word in the listing or brand name (accents and
     punctuation ignored), or an exact EAN or SKU. 'brands' picks which: 'following' (followed brands only),
     'default' (followed and Browse; nothing you ignored), 'all' (ignored ones too).
-    'followed' narrows to what alerts you. 'cheapest' keeps only the sizes no other supplier
-    sells for less, 'testers' only testers, 'deals' only sizes well below the other suppliers'
-    next cheapest supplier's price (biggest discount first, unless you sort by a column)."""
+    'followed' narrows to what alerts you. 'price' keeps only the sizes no other supplier sells
+    for less ('cheapest', for a supplier picked), or only deals, well below the next cheapest
+    supplier ('deals', biggest discount first unless you sort by a column). 'condition' keeps
+    only New or only Tester listings."""
     conn = connect()
     words = searchable(q)
     found = conn.execute(
         """SELECT * FROM catalog
            WHERE (? = '' OR (""" + contains("brand_name || name", words) + """) OR ? IN (ean, ean2, ean3, sku))
              AND (? = '' OR brand_id = ?) AND (? = '' OR supplier = ?) AND (NOT ? OR qty > 0)
-             AND (? = 'all' OR NOT hidden) AND (? != 'following' OR brand_status = 'follow') AND (NOT ? OR alerting) AND (? = '' OR audience = ?)
+             AND (? = 'all' OR NOT hidden) AND (? != 'following' OR brand_status = 'follow') AND (NOT ? OR alerting)
            ORDER BY brand_name, fragrance, concentration""",
-        (q, *words, q.strip(), brand, brand, supplier, supplier, in_stock, brands, brands, followed, audience, audience),
+        (q, *words, q.strip(), brand, brand, supplier, supplier, in_stock, brands, brands, followed),
     ).fetchall()
     brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'ignore' ORDER BY name").fetchall()
     suppliers = [r[0] for r in conn.execute("SELECT name FROM suppliers ORDER BY name")]
+    deals = price == "deals"
     if "sort" not in request.query_params and deals:
         sort = "discount"
     sort = sort if sort.lstrip("-") in STOCK_SORTS else "brand"
     rows = annotate(found)
-    if cheapest:
+    if price == "cheapest":
         rows = cheapest_only(conn, rows)
-    if testers:
-        rows = testers_only(rows)
+    if condition:
+        rows = [r for r in rows if r["condition"] == condition]
     # Deals show everywhere (🔥); where it's the cheapest only with one supplier picked, as
     # without one every size shown is already the cheapest.
     rows = deals_only(conn, rows) if deals else mark_deals(conn, rows)
@@ -322,13 +319,13 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     pages = max(1, -(-len(groups) // PAGE))
     page = min(max(page, 1), pages)
     page_link = lambda n: "/stock?" + urlencode({**query, "page": n})
-    shown = groups[(page - 1) * PAGE:page * PAGE]
+    shown = groups[(page - 1) * PAGE:page * PAGE]  # with a supplier, other sizes are added greyed, unless filtered by price
     return templates.TemplateResponse(request, "stock.html", {
-        "groups": add_elsewhere(conn, shown, supplier) if supplier else shown, "total": len(groups),
+        "groups": add_elsewhere(conn, shown, supplier) if supplier and not price else shown, "total": len(groups),
         "page": page, "pages": pages, "page_link": page_link, "first": (page - 1) * PAGE + 1, "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
-        "brands_shown": brands, "sort": sort, "sort_links": sort_links, "audience": audience,
-        "cheapest": cheapest, "testers": testers, "deals": deals, "deal_percent": round(DEAL * 100),
+        "brands_shown": brands, "sort": sort, "sort_links": sort_links,
+        "price": price, "condition": condition, "deal_percent": round(DEAL * 100),
     })
 
 

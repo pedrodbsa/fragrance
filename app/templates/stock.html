@@ -24,20 +24,22 @@
       <select name="brands" title="Which brands">
         {% for k, label in (("following", "Following brands"), ("default", "Following and Browse"), ("all", "All brands, ignored too")) %}<option value="{{ k }}" {{ 'selected' if k == brands_shown }}>{{ label }}</option>{% endfor %}
       </select>
-      <select name="audience">
-        <option value="">Men, women, unisex</option>
-        {% for k, label in (("man", "Men"), ("woman", "Women"), ("unisex", "Unisex")) %}<option value="{{ k }}" {{ 'selected' if k == audience }}>{{ label }}</option>{% endfor %}
+      <select name="price" title="Only the sizes priced well">
+        <option value="">Any price</option>
+        <option value="deals" {{ 'selected' if price == "deals" }} title="At least {{ deal_percent }}% below the next cheapest supplier, biggest discount first">🔥 Deals only</option>
+        {% if supplier %}<option value="cheapest" {{ 'selected' if price == "cheapest" }} title="No other supplier sells the size for less">👑 Where it's the cheapest</option>{% endif %}
+      </select>
+      <select name="condition">
+        <option value="">New and testers</option>
+        {% for k in ("New", "Tester") %}<option {{ 'selected' if k == condition }}>{{ k }}</option>{% endfor %}
       </select>
       <!-- hidden first: when the box is ticked, its later "true" wins -->
       <input type="hidden" name="in_stock" value="false">
       <label class="check"><input type="checkbox" name="in_stock" value="true" {% if in_stock %}checked{% endif %}> In stock</label>
       <label class="check"><input type="checkbox" name="followed" value="true" {% if followed %}checked{% endif %}> Alerting only</label>
-      <label class="check" title="Only sizes no other supplier sells for less"><input type="checkbox" name="cheapest" value="true" {% if cheapest %}checked{% endif %}> Cheapest only</label>
-      <label class="check" title="Only testers and unboxed bottles"><input type="checkbox" name="testers" value="true" {% if testers %}checked{% endif %}> Testers only</label>
-      <label class="check" title="Only sizes at least {{ deal_percent }}% below the next cheapest supplier, biggest discount first"><input type="checkbox" name="deals" value="true" {% if deals %}checked{% endif %}> Deals</label>
       {% if "sort" in request.query_params %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
       <button class="btn primary" type="submit">Filter</button>
-      {% if q or brand or supplier or audience or not in_stock or followed or cheapest or testers or deals or brands_shown != "default" %}<a class="btn ghost" href="/stock">Clear</a>{% endif %}
+      {% if q or brand or supplier or price or condition or not in_stock or followed or brands_shown != "default" %}<a class="btn ghost" href="/stock">Clear</a>{% endif %}
     </form>
     <span class="panel-note">{% if pages > 1 %}{{ "{:,}".format(first) }}–{{ "{:,}".format(first + groups|length - 1) }} of {% endif %}{{ "{:,}".format(total) }} fragrances</span>
   </div>
