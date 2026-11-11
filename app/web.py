@@ -206,22 +206,34 @@ def testers_only(rows: list[dict]) -> list[dict]:
 DEAL = 0.20  # a deal: at least this much below what the other suppliers ask on average
 
 
-def deals_only(conn, rows: list[dict]) -> list[dict]:
-    """Keep the in-stock rows priced at least DEAL below the average of the other suppliers'
-    in-stock prices for the same fragrance and size. Each kept row gets its "discount" (0.32
-    for 32% off) and that "average"."""
+def mark_deals(conn, rows: list[dict]) -> list[dict]:
+    """The rows, those that are a deal with their "discount" (0.32 for 32% off) and the
+    "average" it's measured from: in stock and priced at least DEAL below the average of the
+    other suppliers' in-stock prices for the same fragrance and size."""
     prices = {}  # (fragrance id, size) -> [(supplier, price)] of everything in stock
     for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
         prices.setdefault((r["fragrance_id"], r["size_label"]), []).append((r["supplier"], r["price"]))
-    kept = []
+    marked = []
     for r in rows:
         others = [price for supplier, price in prices.get((r["fragrance_id"], r["size_label"]), [])
                   if supplier != r["supplier"]]
-        if r["qty"] > 0 and r["price"] is not None and others:
-            average = sum(others) / len(others)
-            if r["price"] <= average * (1 - DEAL):
-                kept.append({**r, "discount": 1 - r["price"] / average, "average": average})
-    return kept
+        average = sum(others) / len(others) if others else None
+        if r["qty"] > 0 and r["price"] is not None and average and r["price"] <= average * (1 - DEAL):
+            r = {**r, "discount": 1 - r["price"] / average, "average": average}
+        marked.append(r)
+    return marked
+
+
+def deals_only(conn, rows: list[dict]) -> list[dict]:
+    """Keep the rows that are a deal (see mark_deals)."""
+    return [r for r in mark_deals(conn, rows) if "discount" in r]
+
+
+def mark_cheapest(conn, rows: list[dict]) -> list[dict]:
+    """The rows, each with "cheapest": the lowest in-stock price any supplier has for its
+    fragrance and size (see fragrances.cheapest)."""
+    best = fragrances.cheapest(conn, [r["fragrance_id"] for r in rows])
+    return [{**r, "cheapest": (r["supplier"], r["sku"]) in best} for r in rows]
 
 
 IN_STOCK_FIRST = "ORDER BY qty = 0, name"
@@ -277,6 +289,10 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
         rows = testers_only(rows)
     if deals:
         rows = deals_only(conn, rows)
+    elif supplier:  # one supplier's stock: show where it's the cheapest, and its deals
+        rows = mark_deals(conn, rows)
+    if supplier:
+        rows = mark_cheapest(conn, rows)
     groups = sort_stock(group(rows), sort)
     # Each header links to the first page sorted by its column, reversed if it's the current one.
     query = {k: v for k, v in request.query_params.items() if k != "page"}

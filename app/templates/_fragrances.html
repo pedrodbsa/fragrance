@@ -29,7 +29,7 @@
       <td>
         <div class="sizes">
         {% for r in g.sizes %}
-          <a class="size {{ 'out' if r.qty == 0 }}" href="{{ page }}" title="{{ r.name }} · {{ r.qty }} at {{ r.supplier }}">{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b>{% if r.discount is defined %}
+          <a class="size {{ 'out' if r.qty == 0 }} {{ 'cheap' if r.cheapest }}" href="{{ page }}" title="{{ r.name }} · {{ r.qty }} at {{ r.supplier }}{{ ' · the cheapest of any supplier' if r.cheapest }}">{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b>{% if r.discount is defined %}
             <span class="best" title="Others ask €{{ "%.2f"|format(r.average) }} on average">−{{ (r.discount * 100)|round|int }}%</span>{% endif %}</a>
         {% endfor %}
         </div>
