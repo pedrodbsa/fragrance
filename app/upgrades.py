@@ -14,6 +14,9 @@
                   you chose for (else the oldest) and its status.
   drop-wholesale-fragrances  that shop is no longer collected (fragrances-wholesale has the
                   same products, cheaper): its listings count as sold out, quietly.
+  forget-wholesale-fragrances  and then everything it left is deleted: its listings, their
+                  recorded changes and price history, basket items, and its Suppliers row.
+                  Fragrances only it listed go too, unless you put them on a list or own them.
 """
 
 import sqlite3
@@ -22,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 from app import brand_cleanup, brands
 from app.brands import brand_for
 from app.db import SCHEMA, now
-from app.fragrances import find_or_create, identify, key
+from app.fragrances import find_or_create, identify, key, prune
 
 
 def upgrade(conn) -> None:
@@ -33,6 +36,13 @@ def upgrade(conn) -> None:
     once(conn, "audience", audience)
     once(conn, "drop-wholesale-fragrances", drop_wholesale_fragrances)
     once(conn, "same-name-brands", same_name_brands)
+    once(conn, "forget-wholesale-fragrances", forget_wholesale_fragrances)
+
+
+def forget_wholesale_fragrances(conn) -> None:
+    for table, column in (("events", "supplier"), ("basket", "supplier"), ("listings", "supplier"), ("suppliers", "name")):
+        conn.execute(f"DELETE FROM {table} WHERE {column} = 'wholesale-fragrances'")
+    prune(conn)
 
 
 def same_name_brands(conn) -> None:
