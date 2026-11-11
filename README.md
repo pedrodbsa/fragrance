@@ -68,6 +68,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 | `symphonya` | symphonya.eu | JSON API, product call only (`/api/getProducts/{key}?cat=fragrance`, `SUPPLIER_SYMPHONYA_KEY`); their order and checkout calls are never used. Perfumes and perfume sets, boxed or tester; no vials, minis or samples. |
 | `parfumcompany` | parfumcompany.pl | XML feed (`/en/xml/dropshipping.xml?token=&mode=xml`, `SUPPLIER_PARFUMCOMPANY_TOKEN`), prices in euros without VAT. Perfumes, testers, unboxed bottles ("flacon") and sets; no miniatures, mists, oils or cosmetics. |
 | `fragranta` | fragranta.eu | Logged in as the B2B customer (`SUPPLIER_FRAGRANTA_EMAIL`, `SUPPLIER_FRAGRANTA_PASSWORD`), downloads the Excel catalogue (`/en/catalogue`); logged out the site hides stock and prices. Perfumes and perfume gift sets only; the promo price when there is one. |
+| `romscent` | romscent.com | Logged in as the B2B customer (`SUPPLIER_ROMSCENT_EMAIL`, `SUPPLIER_ROMSCENT_PASSWORD`), downloads the Excel price list behind the site's Stock export page. Men's, women's and unisex perfumes and gift sets only. |
 
 ## Running locally
 
