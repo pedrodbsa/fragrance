@@ -313,3 +313,6 @@ table.lines .c-act { width: 48px; }
 .copy:hover { color: var(--accent); background: var(--accent-soft); }
 .copy.copied { color: var(--green-fg); }
 .value { color: var(--blue-fg); font-weight: 600; } /* 💧 a fragrance's best price per ml */
+/* Orders: a fragrance's name says which list it's on (wishlist gold, filler purple) */
+.product-name a.wishlist { color: var(--amber-fg); }
+.product-name a.filler { color: var(--purple-fg); }

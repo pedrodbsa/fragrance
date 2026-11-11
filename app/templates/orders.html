@@ -6,7 +6,7 @@
 <div class="page-head">
   <div>
     <h1>Orders</h1>
-    <p class="subtitle">One panel per supplier: your basket (add listings with "+ Basket" anywhere), then what's suggested to add: your wishlist fragrances it has, and its fillers, the ones that reach its minimum order with the least overspend marked. Take something out of the basket and, if it's on your lists, it's back among the suggestions. Sold-out basket items stay, flagged, greyed and left out of the total, and the digest tells you when one sells out, comes back or changes price. Set minimums on <a href="/suppliers">Suppliers</a>, and the size you'd buy on a fragrance's page (📌 by the size; otherwise its cheapest size is suggested).</p>
+    <p class="subtitle">One panel per supplier: your basket (add listings with "+ Basket" anywhere), then what's suggested to add: your wishlist fragrances it has (names in gold), and its fillers (purple), the ones that reach its minimum order with the least overspend marked. Take something out of the basket and, if it's on your lists, it's back among the suggestions. Sold-out basket items stay, flagged, greyed and left out of the total, and the digest tells you when one sells out, comes back or changes price. Set minimums on <a href="/suppliers">Suppliers</a>, and the size you'd buy on a fragrance's page (📌 by the size; otherwise its cheapest size is suggested).</p>
   </div>
 </div>
 
@@ -38,7 +38,7 @@
         </form>
       </td>
       <td data-sort="{{ i.fragrance }}">
-        <div class="product-name"><a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}{% if i.fragrance_status == "wishlist" %} <span title="On your wishlist">⭐</span>{% elif i.fragrance_status == "filler" %} <span title="A filler">🧩</span>{% endif %}
+        <div class="product-name"><a class="quiet {{ i.fragrance_status }}" href="/products/{{ i.fragrance_id }}"{% if i.fragrance_status in ("wishlist", "filler") %} title="{{ "On your wishlist" if i.fragrance_status == "wishlist" else "A filler" }}"{% endif %}>{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}
           {% if not i.available %}<span class="pill warn">Sold out</span>{% elif i.qty < i.quantity %}<span class="pill price_drop">Only {{ i.qty }} left</span>{% endif %}</div>
         <div class="product-brand">{{ i.brand_name }}{% if i.ean %} · <span class="ean">{{ i.ean }}</span><button type="button" class="copy" data-copy="{{ i.ean }}" title="Copy the EAN" aria-label="Copy the EAN"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="8" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 10.5V3.5A1.5 1.5 0 0 1 4.5 2h5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>{% endif %}</div>
       </td>
@@ -59,7 +59,7 @@
   {% if o and (o.wanted or o.fillers or o.spare) %}
   <form method="post" action="/basket/add">
     <input type="hidden" name="supplier" value="{{ o.supplier }}"><input type="hidden" name="back" value="{{ back }}">
-    <div class="panel-head"><h2 class="small">Suggested to add</h2><span class="panel-note">⭐ wishlist, 🧩 fillers{% if mov and total < mov %}, "Reaches the minimum" on the ones that get you there{% endif %}</span></div>
+    <div class="panel-head"><h2 class="small">Suggested to add</h2></div>
     {% if o.short is not none %}<p class="help pad">Your fillers here don't reach the minimum: €{{ "%.2f"|format(o.short) }} short with all of them. Mark more fragrances as 🧩 Filler to close the gap.</p>{% endif %}
     <div class="scroll">
     <table class="sortable lines">
@@ -70,7 +70,7 @@
       <tr>
         <td><button class="btn sm icon add" name="sku" value="{{ i.sku }}" title="Add to the {{ o.supplier }} basket" aria-label="Add"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></td>
         <td data-sort="{{ i.fragrance }}">
-          <div class="product-name"><a class="quiet" href="/products/{{ i.fragrance_id }}">{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}{% if i.fragrance_status == "wishlist" %} <span title="On your wishlist">⭐</span>{% elif i.fragrance_status == "filler" %} <span title="A filler">🧩</span>{% endif %}
+          <div class="product-name"><a class="quiet {{ i.fragrance_status }}" href="/products/{{ i.fragrance_id }}"{% if i.fragrance_status in ("wishlist", "filler") %} title="{{ "On your wishlist" if i.fragrance_status == "wishlist" else "A filler" }}"{% endif %}>{{ i.fragrance|pretty('') }}</a>{% if i.concentration %} <span class="muted">{{ i.concentration }}</span>{% endif %}
             {% if reaches %}<span class="pill new" title="With the basket and your wishlist, these fillers reach the minimum with the least overspend">Reaches the minimum</span>{% endif %}</div>
           <div class="product-brand">{{ i.brand_name }}{% if i.ean %} · <span class="ean">{{ i.ean }}</span><button type="button" class="copy" data-copy="{{ i.ean }}" title="Copy the EAN" aria-label="Copy the EAN"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="8" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3 10.5V3.5A1.5 1.5 0 0 1 4.5 2h5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>{% endif %}</div>
         </td>
