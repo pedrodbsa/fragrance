@@ -18,7 +18,7 @@
       <select name="brand_id" required><option value="">Brand…</option>{% for b in brands %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
       <input type="text" name="name" placeholder="Fragrance, e.g. Ithaque" required>
       <select name="concentration"><option value="">No concentration</option>{% for c in concentrations %}<option>{{ c }}</option>{% endfor %}</select>
-      <select name="status"><option value="wishlist">⭐ Wishlist</option><option value="filler">➕ Filler</option><option value="ignore">🚫 Ignore</option><option value="default">No list</option></select>
+      <select name="status"><option value="wishlist">⭐ Wishlist</option><option value="filler">🧩 Filler</option><option value="ignore">🚫 Ignore</option><option value="default">No list</option></select>
       <label class="check"><input type="checkbox" name="owned" value="1" {% if tab == "owned" %}checked{% endif %}> In my collection</label>
       <input type="text" name="note" placeholder="Note (optional)">
       <button class="btn primary">Add</button>
@@ -63,7 +63,7 @@
   </table>
   </div>
   {% else %}
-  <div class="empty">{% if tab == "wishlist" %}Your wishlist is empty. Add a fragrance above, even one no supplier lists yet, or use ⭐ Wishlist on a Stock row.{% elif tab == "filler" %}No fillers yet. Use ➕ Filler on a Stock row.{% elif tab == "owned" %}Your collection is empty. Use "+ Collection" on a Stock row or add one above.{% else %}Nothing ignored.{% endif %}</div>
+  <div class="empty">{% if tab == "wishlist" %}Your wishlist is empty. Add a fragrance above, even one no supplier lists yet, or use ⭐ Wishlist on a Stock row.{% elif tab == "filler" %}No fillers yet. Use 🧩 Filler on a Stock row.{% elif tab == "owned" %}Your collection is empty. Use "+ Collection" on a Stock row or add one above.{% else %}Nothing ignored.{% endif %}</div>
   {% endif %}
 </div>
 {% endblock %}

@@ -17,7 +17,7 @@
 <form method="post" action="/products/{{ fragrance_id }}/status" class="choice{{ ' sm' if small }}">
   <input type="hidden" name="back" value="{{ back }}">
   {% for value, icon, label, tip in [("wishlist", "⭐", "Wishlist", "I want to buy it: alert me"),
-                                     ("filler", "➕", "Filler", "I wouldn't mind owning it, e.g. to reach a minimum order. No alerts"),
+                                     ("filler", "🧩", "Filler", "I wouldn't mind owning it, e.g. to reach a minimum order. No alerts"),
                                      ("ignore", "🚫", "Ignore", "Hide it everywhere")] %}
   <button class="{{ 'on' if current == value }}" name="status" value="{{ 'default' if current == value else value }}"
           title="{{ 'Click to take it off this list' if current == value else tip }}">{{ icon }} {{ label }}</button>
