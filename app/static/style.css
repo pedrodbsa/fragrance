@@ -258,8 +258,6 @@ tr.faded .sizes { opacity: 0.7; }
 /* Suppliers and orders */
 .pill.bad { background: rgba(223, 27, 65, 0.1); color: #df1b41; }
 .mov { width: 110px; }
-.order-total { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
-tr.off { opacity: 0.55; }
 
 /* Sortable headers and clickable rows (static/tables.js) */
 .sorter { cursor: pointer; user-select: none; }
@@ -273,7 +271,6 @@ tbody tr:has(input[name=ids]:checked) { background: var(--accent-soft); }
 /* Baskets (Orders page) */
 .was.up { color: var(--purple-fg); }
 .was.down { color: var(--green-fg); }
-input.qty { width: 56px; text-align: right; }
 
 /* The lowest price any supplier has for that size: green cell with a small "Cheapest" note. */
 td:has(> .best) { background: var(--green-bg); }
