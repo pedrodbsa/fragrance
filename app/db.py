@@ -194,12 +194,6 @@ def add_brand(conn, spelling: str, announced: bool) -> int:
     return brand_id
 
 
-def brand_for(conn, spelling: str, announced: bool) -> int:
-    """The brand a supplier spelling belongs to, created on default if it's new."""
-    row = conn.execute("SELECT brand_id FROM brand_aliases WHERE alias = ?", (spelling,)).fetchone()
-    return row["brand_id"] if row else add_brand(conn, spelling, announced)
-
-
 def collected(conn, supplier: str, count: int, stamp: str) -> None:
     """Note that a supplier's collection worked."""
     conn.execute(

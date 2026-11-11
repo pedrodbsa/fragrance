@@ -9,6 +9,9 @@
   brand-reviewed  brands remember whether you've chosen for them yet. Followed and ignored
                   ones count as chosen, and so do default ones older than 30 days (the old
                   New brands page no longer showed them).
+  same-name-brands  brands whose names match once capitals, accents and words like "Parfums"
+                  or "Paris" are ignored ("Hermès" and "HERMES") become one, keeping the one
+                  you chose for (else the oldest) and its status.
   drop-wholesale-fragrances  that shop is no longer collected (fragrances-wholesale has the
                   same products, cheaper): its listings count as sold out, quietly.
 """
@@ -16,8 +19,9 @@
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
-from app import brand_cleanup
-from app.db import SCHEMA, brand_for, now
+from app import brand_cleanup, brands
+from app.brands import brand_for
+from app.db import SCHEMA, now
 from app.fragrances import find_or_create, identify, key
 
 
@@ -28,6 +32,17 @@ def upgrade(conn) -> None:
     once(conn, "brand-reviewed", brand_reviewed)
     once(conn, "audience", audience)
     once(conn, "drop-wholesale-fragrances", drop_wholesale_fragrances)
+    once(conn, "same-name-brands", same_name_brands)
+
+
+def same_name_brands(conn) -> None:
+    groups = {}
+    for b in conn.execute("SELECT * FROM brands ORDER BY reviewed_at IS NULL, status = 'default', id"):
+        groups.setdefault(brands.key(b["name"]), []).append(b)
+    for keep, *others in groups.values():
+        for other in others:
+            brands.merge(conn, other["id"], keep["id"])
+            print(f"upgrade: brand {other['name']!r} merged into {keep['name']!r}")
 
 
 def drop_wholesale_fragrances(conn) -> None:

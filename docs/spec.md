@@ -87,6 +87,11 @@ Every new brand starts on Browse (shown, no alerts), so nothing urgently needs t
   counts too, and takes the brand out of the tab.
 - A supplier's first run adds its brands quietly; they appear in the New tab.
 
+**Same name, same brand.** A spelling seen for the first time joins the brand with the same
+name, ignoring capitals, accents, punctuation and words like "Parfums", "Perfumes" or "Paris":
+"Hermès" joins HERMES, "Orlov Paris" joins Orlov. If two brands share that name it's unclear
+which, so it becomes a new brand instead, with a suggestion.
+
 **Merge suggestions.** When a new brand looks like a brand you already have, the New tab and
 the digest ask
 "Same as Yves Saint Laurent?". Confirming adds the new spelling as an alias, and every

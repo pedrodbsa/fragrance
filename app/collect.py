@@ -9,7 +9,8 @@ matter.
 from collections import Counter
 from datetime import datetime, timezone
 
-from app.db import brand_for, collected, connect
+from app.brands import brand_for
+from app.db import collected, connect
 from app.fragrances import assign, by_ean, learn_audience, read_audience
 from app.item import Item
 from app.suppliers import SUPPLIERS

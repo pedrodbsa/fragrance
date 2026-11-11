@@ -26,15 +26,36 @@ def set_status(conn, brand_id: int, status: str) -> None:
                  (status, now(), brand_id))
 
 
-def add(conn, name: str, status: str) -> int:
-    """A brand you add yourself, e.g. to follow it before any supplier lists it. If you have it
-    already, however it's spelled ("Hermes Parfums" for Hermès), that one gets the status
-    instead. Returns its id. A supplier listing it under the same name lands on it; under
-    another spelling it shows in the New tab with a "Same as" suggestion."""
+def brand_for(conn, spelling: str, announced: bool) -> int:
+    """The brand a supplier spelling belongs to. A spelling seen for the first time joins the
+    brand with the same name ("Hermès" joins HERMES: capitals, accents and words like "Parfums"
+    or "Paris" don't count) and is remembered; with no such brand it becomes a new one, on
+    default (announced=True keeps it out of the digest)."""
+    row = conn.execute("SELECT brand_id FROM brand_aliases WHERE alias = ?", (spelling,)).fetchone()
+    if row:
+        return row["brand_id"]
+    brand_id = same_name(conn, spelling)
+    if brand_id is None:
+        return add_brand(conn, spelling, announced)
+    conn.execute("INSERT INTO brand_aliases (alias, brand_id) VALUES (?, ?)", (spelling, brand_id))
+    return brand_id
+
+
+def same_name(conn, name: str) -> int | None:
+    """The one brand whose name or a spelling matches this name (see key()); None if no
+    brand does, or if several do and it's unclear which."""
     wanted = key(name)
     known = conn.execute("SELECT brand_id, alias FROM brand_aliases UNION SELECT id, name FROM brands").fetchall()
-    found = next((row["brand_id"] for row in known if key(row["alias"]) == wanted), None)
-    brand_id = found or add_brand(conn, name.strip(), announced=True)
+    found = {row["brand_id"] for row in known if key(row["alias"]) == wanted}
+    return found.pop() if len(found) == 1 else None
+
+
+def add(conn, name: str, status: str) -> int:
+    """A brand you add yourself, e.g. to follow it before any supplier lists it. If you have it
+    already under the same name ("Hermes Parfums" for Hermès), that one gets the status
+    instead. Returns its id. Suppliers listing it under that name land on it; under another
+    spelling it shows in the New tab with a "Same as" suggestion."""
+    brand_id = same_name(conn, name) or add_brand(conn, name.strip(), announced=True)
     set_status(conn, brand_id, status)
     return brand_id
 
