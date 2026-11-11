@@ -390,17 +390,16 @@ def brand_list(request: Request, status: str = "", q: str = ""):
 
 
 @office.post("/brands")
-def brands_post(action: str = Form(...), ids: list[int] = Form([]), back: str = Form("/brands")):
-    """action is 'follow:12' for one brand, 'follow:selected' for the ticked ones (likewise
-    default and ignore), or 'merge:12:34' to merge brand 12 into brand 34."""
+def brands_post(action: str = Form(...), back: str = Form("/brands")):
+    """action is 'follow:12' for one brand (likewise default and ignore), or 'merge:12:34' to
+    merge brand 12 into brand 34."""
     conn = connect()
     kind, *args = action.split(":")
     with conn:
         if kind == "merge":
             brands.merge(conn, int(args[0]), int(args[1]))
         else:
-            for brand_id in (ids if args[0] == "selected" else [int(args[0])]):
-                brands.set_status(conn, brand_id, kind)
+            brands.set_status(conn, int(args[0]), kind)
     return back_to(back, "/brands")
 
 

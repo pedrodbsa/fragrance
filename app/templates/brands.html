@@ -24,17 +24,12 @@
 <form method="post" action="/brands" class="panel">
   <input type="hidden" name="back" value="{{ back }}">
   <div class="panel-head">
-    <nav class="segmented">
-      {% for k, label in tabs.items() %}
-      <a href="/brands?{{ {'status': k, 'sort': request.query_params.get('sort', '')}|urlencode }}" class="{{ 'active' if status == k }}">{{ label }}{% if k %} <span class="muted">{{ counts.get(k, 0) }}</span>{% endif %}</a>
-      {% endfor %}
-    </nav>
     <div class="toolbar">
-      {% if rows %}
-      <label class="check"><input type="checkbox" onclick="document.querySelectorAll('input[name=ids]').forEach(b => b.checked = this.checked)"> All</label>
-      <span class="muted small">With selected:</span>
-      {% for k, label, tip in choices %}<button class="btn sm" name="action" value="{{ k }}:selected" title="{{ tip }}">{{ label }}</button>{% endfor %}
-      {% endif %}
+      <nav class="segmented">
+        {% for k, label in tabs.items() %}
+        <a href="/brands?{{ {'status': k, 'sort': request.query_params.get('sort', '')}|urlencode }}" class="{{ 'active' if status == k }}">{{ label }}{% if k %} <span class="muted">{{ counts.get(k, 0) }}</span>{% endif %}</a>
+        {% endfor %}
+      </nav>
       <input type="search" name="q" value="{{ q }}" placeholder="Search brands"
              onkeydown="if (event.key === 'Enter') { event.preventDefault(); location = '/brands?' + new URLSearchParams({status: '{{ status }}', q: this.value, sort: new URLSearchParams(location.search).get('sort') || ''}); }">
     </div>
@@ -42,12 +37,11 @@
   {% if rows %}
   <div class="scroll">
   <table class="sortable">
-    <thead><tr><th></th><th>Brand</th><th class="num">In stock</th><th class="num" title="Cheapest listing in stock, any size">From</th><th class="num" title="Dearest listing in stock, any size">To</th><th class="hide-sm">Suppliers</th>
+    <thead><tr><th>Brand</th><th class="num">In stock</th><th class="num" title="Cheapest listing in stock, any size">From</th><th class="num" title="Dearest listing in stock, any size">To</th><th class="hide-sm">Suppliers</th>
       {% if status == "new" %}<th class="hide-sm">First seen</th><th class="hide-sm" data-nosort>Looks like</th>{% endif %}<th></th></tr></thead>
     <tbody>
     {% for b in rows %}
     <tr>
-      <td><input type="checkbox" name="ids" value="{{ b.id }}"></td>
       <td data-sort="{{ b.name }}">
         <div class="product-name"><a class="quiet" href="/brands/{{ b.id }}">{{ b.name }}</a></div>
         {% if status == "new" and b.example %}<div class="small muted">{{ b.example|pretty(b.name) }}</div>
