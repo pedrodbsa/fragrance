@@ -65,6 +65,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 | `nunu` | nunutrading.com | BigCommerce storefront GraphQL (the API behind the stock-offer Excel download), logged in as the B2B customer so prices are included. Perfume category only. |
 | `wholesale-fragrances` | wholesale-fragrances.eu | XML catalogue (`/generator/catalog/xml?token=`, `SUPPLIER_WHOLESALE_FRAGRANCES_TOKEN`). Perfumes, testers and gift sets only. |
 | `fragrances-wholesale` | fragrances-wholesale.eu | Same company and format, its own prices (`SUPPLIER_FRAGRANCES_WHOLESALE_TOKEN`). |
+| `perfumes-wholesale` | perfumes-wholesale.eu | Two XML feeds: the nightly catalogue for names and the 10-minute stock feed for price and quantity (`SUPPLIER_PERFUMES_WHOLESALE_HASH`). Perfumes, testers, unboxed bottles and gift sets only; the cheapest warehouse when there are several. |
 
 ## Running locally
 
