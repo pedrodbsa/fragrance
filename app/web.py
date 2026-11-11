@@ -867,7 +867,7 @@ def orders_page(request: Request):
     panels = [{"supplier": b["supplier"], "basket": b, "suggestion": suggestions.pop(b["supplier"], None)} for b in open_baskets]
     panels += [{"supplier": o["supplier"], "basket": None, "suggestion": o} for o in suggestions.values()]
     return templates.TemplateResponse(request, "orders.html", {
-        "panels": panels, "cheapest": fragrances.cheapest(conn, [r["fragrance_id"] for r in lines]), "compared": compared,
+        "panels": panels, "compared": compared,
     })
 
 

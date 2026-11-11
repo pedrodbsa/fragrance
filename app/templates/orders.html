@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import best, vs_rival %}
+{% from "_macros.html" import standing %}
 {% block title %}Orders{% endblock %}
 {% block content %}
 {% set back = request.url.path %}
@@ -37,7 +37,7 @@
         <div class="product-brand">{{ i.brand_name }}</div>
       </td>
       <td class="nowrap">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}</td>
-      <td class="num nowrap" data-sort="{{ i.price if i.price is not none }}">{% if i.price is not none %}€{{ "%.2f"|format(i.price) }}{% else %}—{% endif %} {{ vs_rival(compared.get((i.supplier, i.sku))) }}{{ best((i.supplier, i.sku) in cheapest) }}
+      <td class="num nowrap" data-sort="{{ i.price if i.price is not none }}">{% if i.price is not none %}€{{ "%.2f"|format(i.price) }}{% else %}—{% endif %}{{ standing(compared.get((i.supplier, i.sku))) }}
         {% if i.added_price is not none and i.price is not none and (i.price - i.added_price)|abs >= 0.01 %}<div class="small was {{ 'up' if i.price > i.added_price else 'down' }}">was €{{ "%.2f"|format(i.added_price) }}</div>{% endif %}</td>
       <td class="num hide-sm">{{ i.qty }}</td>
       <td class="mono hide-sm">{{ i.ean or "—" }}</td>
@@ -74,7 +74,7 @@
           <div class="product-brand">{{ i.brand_name }}</div>
         </td>
         <td class="nowrap" data-sort="{{ i.size_label }}">{{ i.size_label }}{% if i.condition == "Tester" %} <span class="muted small">tester</span>{% endif %}{% if not i.buy_size %} <span class="muted small" title="No size picked: the cheapest is used">cheapest</span>{% endif %}</td>
-        <td class="num nowrap">€{{ "%.2f"|format(i.price) }} {{ vs_rival(compared.get((i.supplier, i.sku))) }}{{ best((i.supplier, i.sku) in cheapest) }}</td>
+        <td class="num nowrap">€{{ "%.2f"|format(i.price) }}{{ standing(compared.get((i.supplier, i.sku))) }}</td>
         <td class="num hide-sm">{{ i.qty }}</td>
         <td class="mono hide-sm">{{ i.ean or "—" }}</td>
         <td class="num nowrap">{% if reaches %}<span class="pill new" title="With the basket and your wishlist, these fillers reach the minimum with the least overspend">Reaches the minimum</span> {% endif %}<button class="btn sm" name="sku" value="{{ i.sku }}">🧺 Add</button></td>
