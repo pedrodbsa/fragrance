@@ -66,6 +66,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 | `fragrances-wholesale` | fragrances-wholesale.eu | XML catalogue (`/generator/catalog/xml?token=`, `SUPPLIER_FRAGRANCES_WHOLESALE_TOKEN`). Perfumes, testers and gift sets only. Its sister shop wholesale-fragrances.eu has the same products about 0.8% dearer, so it isn't collected. |
 | `perfumes-wholesale` | perfumes-wholesale.eu | Two XML feeds: the nightly catalogue for names and the 10-minute stock feed for price and quantity (`SUPPLIER_PERFUMES_WHOLESALE_HASH`). Perfumes, testers, unboxed bottles and gift sets only; the cheapest warehouse when there are several. |
 | `symphonya` | symphonya.eu | JSON API, product call only (`/api/getProducts/{key}?cat=fragrance`, `SUPPLIER_SYMPHONYA_KEY`); their order and checkout calls are never used. Perfumes and perfume sets, boxed or tester; no vials, minis or samples. |
+| `parfumcompany` | parfumcompany.pl | XML feed (`/en/xml/dropshipping.xml?token=&mode=xml`, `SUPPLIER_PARFUMCOMPANY_TOKEN`), prices in euros without VAT. Perfumes, testers, unboxed bottles ("flacon") and sets; no miniatures, mists, oils or cosmetics. |
 
 ## Running locally
 
