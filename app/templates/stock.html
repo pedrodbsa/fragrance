@@ -26,16 +26,21 @@
       <label class="check"><input type="checkbox" name="in_stock" value="true" {% if in_stock %}checked{% endif %}> In stock</label>
       <label class="check"><input type="checkbox" name="followed" value="true" {% if followed %}checked{% endif %}> Alerting only</label>
       <label class="check" title="Include ignored brands and fragrances"><input type="checkbox" name="everything" value="true" {% if everything %}checked{% endif %}> Show hidden</label>
-      <select name="sort" onchange="this.form.submit()" title="Sort">
-        {% for k, (label, _, _) in sorts.items() %}<option value="{{ k }}" {{ 'selected' if k == sort }}>Sort: {{ label }}</option>{% endfor %}
-      </select>
+      <input type="hidden" name="sort" value="{{ sort }}">
       <button class="btn primary" type="submit">Filter</button>
       {% if q or brand or supplier or not in_stock or followed or everything %}<a class="btn ghost" href="/stock">Clear</a>{% endif %}
     </form>
-    <span class="panel-note">{% if total > groups|length %}Showing {{ groups|length }} of {{ "{:,}".format(total) }}{% else %}{{ "{:,}".format(total) }} fragrances{% endif %}</span>
+    <span class="panel-note">{% if pages > 1 %}{{ "{:,}".format(first) }}–{{ "{:,}".format(first + groups|length - 1) }} of {% endif %}{{ "{:,}".format(total) }} fragrances</span>
   </div>
   {% if groups %}
   {% include "_fragrances.html" %}
+  {% if pages > 1 %}
+  <div class="pager">
+    {% if page > 1 %}<a class="btn sm" href="{{ page_link(page - 1) }}">← Previous</a>{% endif %}
+    <span class="muted small">Page {{ page }} of {{ pages }}</span>
+    {% if page < pages %}<a class="btn sm" href="{{ page_link(page + 1) }}">Next →</a>{% endif %}
+  </div>
+  {% endif %}
   {% else %}
   <div class="empty">Nothing matches these filters.</div>
   {% endif %}

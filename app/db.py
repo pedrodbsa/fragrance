@@ -15,6 +15,8 @@ Tables:
   fragrance_names   how listings name a fragrance: the name and concentration read from a
                     supplier's product name -> the fragrance it is. Merging two fragrances
                     points one's names at the other, so later listings land right too.
+  fragrance_eans    EANs you added to a fragrance: listings with one of them belong to it,
+                    whatever their name says, now and when they appear later.
   not_same          pairs of fragrances you said aren't the same juice, so the Merges page
                     stops suggesting them.
   listings          what suppliers offer: one row per supplier + SKU, sold-out ones kept
@@ -78,6 +80,13 @@ CREATE TABLE IF NOT EXISTS fragrance_names (
     PRIMARY KEY (brand_id, name, concentration)
 );
 CREATE INDEX IF NOT EXISTS fragrance_names_fragrance ON fragrance_names (fragrance_id);
+
+CREATE TABLE IF NOT EXISTS fragrance_eans (
+    ean          TEXT PRIMARY KEY,
+    fragrance_id INTEGER NOT NULL REFERENCES fragrances (id),
+    added_at     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS fragrance_eans_fragrance ON fragrance_eans (fragrance_id);
 
 CREATE TABLE IF NOT EXISTS not_same (
     fragrance_id INTEGER NOT NULL,    -- the lower id of the two

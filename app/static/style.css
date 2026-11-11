@@ -86,6 +86,8 @@ a:hover { text-decoration: underline; }
 }
 .tabs a:hover { color: var(--text); text-decoration: none; }
 .tabs a.active { color: var(--accent); border-bottom-color: var(--accent); }
+.quick-search { margin-left: auto; }
+.quick-search input[type=search] { min-width: 0; width: 220px; }
 
 /* Page */
 main.wrap { padding-top: 28px; padding-bottom: 64px; }
@@ -202,6 +204,7 @@ tr:hover .row-actions, .row-actions:focus-within { opacity: 1; }
   .hide-sm { display: none; }
   td, th { padding-left: 12px; padding-right: 12px; }
   .tabs a { padding: 0 8px; white-space: nowrap; }
+  .quick-search input[type=search] { width: 110px; flex: none; }
   .btn.sm { padding: 0 5px; }
 }
 
@@ -258,10 +261,11 @@ tr.faded .sizes { opacity: 0.7; }
 tr.off { opacity: 0.55; }
 
 /* Sortable headers and clickable rows (static/tables.js) */
-th.sorter { cursor: pointer; user-select: none; }
-th.sorter::after { content: " ↕"; opacity: 0.4; }
-th.sorter:hover { color: var(--text); }
-th[data-dir="asc"]::after { content: " ▲"; opacity: 1; }
-th[data-dir="desc"]::after { content: " ▼"; opacity: 1; }
+.sorter { cursor: pointer; user-select: none; }
+.sorter::after { content: " ↕"; opacity: 0.4; }
+.sorter:hover { color: var(--text); }
+.sorter[data-dir="asc"]::after { content: " ▲"; opacity: 1; }
+.sorter[data-dir="desc"]::after { content: " ▼"; opacity: 1; }
 tbody tr:has(td:first-child input[type=checkbox]) { cursor: pointer; }
 tbody tr:has(input[name=ids]:checked) { background: var(--accent-soft); }
+.pager { display: flex; gap: 12px; align-items: center; justify-content: center; padding: 16px; border-top: 1px solid var(--border); }

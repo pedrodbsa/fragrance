@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badges %}
+{% block title %}Search{% endblock %}
+{% block content %}
+{% set labels = {"follow": "⭐ Following", "ignore": "🚫 Ignored", "default": "👀 Browse"} %}
+<div class="page-head">
+  <div>
+    <h1>“{{ q }}”</h1>
+    <p class="subtitle">{{ brands|length }} brand{{ "s" if brands|length != 1 }} · {{ fragrances|length }}{% if fragrances|length == limit %}+{% endif %} fragrance{{ "s" if fragrances|length != 1 }}{% if fragrances|length == limit %} (first {{ limit }}: type more words to narrow it){% endif %}</p>
+  </div>
+</div>
+
+{% if brands %}
+<div class="panel" style="margin-bottom: 20px">
+  <div class="panel-head"><h2>Brands</h2></div>
+  <div class="scroll">
+  <table class="sortable">
+    <thead><tr><th>Brand</th><th class="num">In stock</th><th class="num">Prices</th><th class="hide-sm">Suppliers</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for b in brands %}
+    <tr class="{{ 'faded' if b.status == 'ignore' }}">
+      <td class="product-name" data-sort="{{ b.name }}"><a class="quiet" href="/brands/{{ b.id }}">{{ b.name }}</a></td>
+      <td class="num">{{ b.in_stock }}</td>
+      <td class="num nowrap" data-sort="{{ b.low if b.low is not none }}">{% if b.low is not none %}€{{ "%.0f"|format(b.low) }}{% if b.high|round > b.low|round %}–€{{ "%.0f"|format(b.high) }}{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td class="muted hide-sm">{{ (b.suppliers or "").split(",")|sort|join(", ") }}</td>
+      <td class="nowrap muted">{{ labels[b.status] }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
+{% if fragrances %}
+<div class="panel">
+  <div class="panel-head"><h2>Fragrances</h2><span class="panel-note">In stock first</span></div>
+  <div class="scroll">
+  <table class="sortable">
+    <thead><tr><th>Fragrance</th><th class="num">From</th><th class="num">Offers</th><th class="hide-sm">Suppliers</th></tr></thead>
+    <tbody>
+    {% for f in fragrances %}
+    <tr class="{{ 'faded' if not f.offers }}">
+      <td data-sort="{{ f.name }}">
+        <div class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}{{ badges(f.status, f.owned) }}</div>
+        <div class="product-brand"><a class="quiet" href="/brands/{{ f.brand_id }}">{{ f.brand_name }}</a></div>
+      </td>
+      <td class="num" data-sort="{{ f.best if f.best is not none }}">{% if f.best is not none %}€{{ "%.2f"|format(f.best) }}{% else %}<span class="pill">{{ "Sold out" if f.offers is not none else "Not listed" }}</span>{% endif %}</td>
+      <td class="num">{{ f.offers or 0 }}</td>
+      <td class="muted hide-sm">{{ (f.suppliers or "").split(",")|sort|join(", ") }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}
+
+{% if not brands and not fragrances %}
+<div class="panel"><div class="empty">Nothing matches “{{ q }}”. Try fewer words, or part of a name.</div></div>
+{% endif %}
+{% endblock %}

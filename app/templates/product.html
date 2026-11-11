@@ -55,6 +55,27 @@
 </div>
 
 <div class="panel" style="margin-top: 20px">
+  <div class="panel-head"><h2>EANs</h2><span class="panel-note">Listings with an EAN you add are attached here, now and when they appear later, whatever their name says</span></div>
+  <div class="pad">
+    {% for e in eans %}
+    <div class="merge-row">
+      <span><span class="mono">{{ e.ean }}</span>
+        {% if e.where %}<span class="muted small">· {{ e.where|sort|join(", ") }}</span>{% endif %}
+        {% if e.added %}<span class="pill">Added by you</span>{% endif %}</span>
+      {% if e.added %}
+      <form method="post" action="/products/{{ product.id }}/eans/remove"><input type="hidden" name="ean" value="{{ e.ean }}">
+        <button class="btn sm ghost danger" title="Stop matching listings by this EAN; those attached stay">Remove</button></form>
+      {% endif %}
+    </div>
+    {% endfor %}
+    <form method="post" action="/products/{{ product.id }}/eans" class="toolbar">
+      <input type="text" name="ean" inputmode="numeric" pattern="\s*[0-9 ]{8,17}\s*" placeholder="Add an EAN" required>
+      <button class="btn">Add</button>
+    </form>
+  </div>
+</div>
+
+<div class="panel" style="margin-top: 20px">
   <div class="panel-head"><h2>Same juice, other listings</h2><span class="panel-note">Merge names or EANs that are this same fragrance; split them off again any time</span></div>
   <div class="pad">
     {% for a in merged %}

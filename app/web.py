@@ -14,6 +14,7 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from html import escape
+from urllib.parse import urlencode
 from pathlib import Path
 
 from fastapi import APIRouter, Body, Depends, FastAPI, Form, Header, HTTPException, Request
@@ -169,21 +170,26 @@ def price_history(conn, rows: list[dict]) -> list[dict]:
 
 IN_STOCK_FIRST = "ORDER BY qty = 0, name"
 
-# Stock's sort choices: label, what to order fragrances by, and whether highest comes first.
-# Sold-out fragrances (no price) go last when sorting by price.
+# Stock's sortable columns: what to order fragrances by. "?sort=price" is lowest first,
+# "?sort=-price" highest first. Fragrances without a value (sold out: no price) always go last.
 STOCK_SORTS = {
-    "brand": ("Brand", lambda g: (g["brand_name"].lower(), g["fragrance"], g["concentration"] or ""), False),
-    "name": ("Name", lambda g: (g["fragrance"], g["brand_name"].lower()), False),
-    "price": ("Price, low to high", lambda g: (g["best"] is None, g["best"] or 0), False),
-    "price_desc": ("Price, high to low", lambda g: (g["best"] is not None, g["best"] or 0), True),
-    "qty": ("Most in stock", lambda g: g["qty"], True),
-    "newest": ("Newest first", lambda g: min(l["first_seen"] for l in g["listings"]), True),
+    "brand": lambda g: (g["brand_name"].lower(), g["fragrance"], g["concentration"] or ""),
+    "name": lambda g: (g["fragrance"], g["brand_name"].lower()),
+    "price": lambda g: g["best"],
+    "qty": lambda g: g["qty"],
 }
+
+
+def sort_stock(groups: list[dict], sort: str) -> list[dict]:
+    field = sort.lstrip("-")
+    order = STOCK_SORTS[field]
+    present = sorted((g for g in groups if order(g) is not None), key=order, reverse=sort.startswith("-"))
+    return present + [g for g in groups if order(g) is None]
 
 
 @office.get("/stock")
 def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
-          in_stock: bool = True, followed: bool = False, everything: bool = False, sort: str = "brand"):
+          in_stock: bool = True, followed: bool = False, everything: bool = False, sort: str = "brand", page: int = 1):
     """Everything that isn't ignored, one row per fragrance. 'followed' narrows to what alerts
     you; 'everything' adds what's ignored."""
     conn = connect()
@@ -197,13 +203,60 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     ).fetchall()
     brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'ignore' ORDER BY name").fetchall()
     suppliers = [r[0] for r in conn.execute("SELECT name FROM suppliers ORDER BY name")]
-    sort = sort if sort in STOCK_SORTS else "brand"
-    _, order, highest_first = STOCK_SORTS[sort]
-    groups = sorted(group(annotate(found)), key=order, reverse=highest_first)
+    sort = sort if sort.lstrip("-") in STOCK_SORTS else "brand"
+    groups = sort_stock(group(annotate(found)), sort)
+    # Each header links to the first page sorted by its column, reversed if it's the current one.
+    query = {k: v for k, v in request.query_params.items() if k != "page"}
+    sort_links = {field: "/stock?" + urlencode({**query, "sort": "-" + field if sort == field else field})
+                  for field in STOCK_SORTS}
+    # Pages of PAGE fragrances; Previous / Next keep the filters and sort.
+    pages = max(1, -(-len(groups) // PAGE))
+    page = min(max(page, 1), pages)
+    page_link = lambda n: "/stock?" + urlencode({**query, "page": n})
     return templates.TemplateResponse(request, "stock.html", {
-        "groups": groups[:PAGE], "total": len(groups), "brands": brand_list, "suppliers": suppliers,
+        "groups": groups[(page - 1) * PAGE:page * PAGE], "total": len(groups),
+        "page": page, "pages": pages, "page_link": page_link, "first": (page - 1) * PAGE + 1, "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
-        "everything": everything, "sort": sort, "sorts": STOCK_SORTS,
+        "everything": everything, "sort": sort, "sort_links": sort_links,
+    })
+
+
+# --- Search ----------------------------------------------------------------------------------
+
+SEARCH_LIMIT = 100
+
+
+@office.get("/search")
+def search(request: Request, q: str = ""):
+    """The header's search box: brands and fragrances whose names contain every word typed
+    ("amouage beach" finds Amouage Beach Hut), or the fragrance with that EAN or SKU."""
+    conn = connect()
+    words = q.split()
+    if not words:
+        return RedirectResponse("/stock", status_code=303)
+    like = ["%" + w + "%" for w in words]
+    brand_rows = conn.execute(
+        BRAND_ROWS + " WHERE " + " AND ".join(
+            "(b.name LIKE ? OR EXISTS (SELECT 1 FROM brand_aliases a WHERE a.brand_id = b.id AND a.alias LIKE ?))"
+            for _ in words) + " ORDER BY in_stock DESC, b.name LIMIT ?",
+        [v for w in like for v in (w, w)] + [SEARCH_LIMIT]).fetchall()
+    found = conn.execute(
+        """SELECT f.*, b.name AS brand_name, b.status AS brand_status,
+                  min(CASE WHEN l.qty > 0 THEN l.price END) AS best, sum(l.qty > 0) AS offers,
+                  group_concat(DISTINCT CASE WHEN l.qty > 0 THEN l.supplier END) AS suppliers
+           FROM fragrances f JOIN brands b ON b.id = f.brand_id
+           LEFT JOIN listings l ON l.fragrance_id = f.id
+           WHERE (""" + " AND ".join(  # each word in the fragrance or brand name, or a brand spelling
+               """(f.name LIKE ? OR b.name LIKE ?
+                   OR EXISTS (SELECT 1 FROM brand_aliases a WHERE a.brand_id = b.id AND a.alias LIKE ?))"""
+               for _ in words) + """)
+              OR f.id IN (SELECT fragrance_id FROM listings WHERE ? IN (ean, ean2, ean3, sku))
+              OR f.id IN (SELECT fragrance_id FROM fragrance_eans WHERE ean = ?)
+           GROUP BY f.id ORDER BY coalesce(sum(l.qty > 0), 0) = 0, b.name, f.name, f.concentration
+           LIMIT ?""",
+        [v for w in like for v in (w, w, w)] + [q.strip(), q.strip(), SEARCH_LIMIT]).fetchall()
+    return templates.TemplateResponse(request, "search.html", {
+        "q": q, "brands": brand_rows, "fragrances": found, "limit": SEARCH_LIMIT,
     })
 
 
@@ -376,8 +429,21 @@ def product_detail(request: Request, fragrance_id: int):
     rows = sorted(annotate(listings), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
     return templates.TemplateResponse(request, "product.html", {
         "product": product, "rows": rows, "history": price_history(conn, rows), "concentrations": CONCENTRATIONS,
+        "eans": ean_list(conn, fragrance_id, rows),
         **merge_options(conn, product, rows),
     })
+
+
+def ean_list(conn, fragrance_id: int, rows) -> list[dict]:
+    """Every EAN of a fragrance: those on its listings (where, which size) and those you added."""
+    eans = {}
+    for r in rows:
+        for ean in (r["ean"], r["ean2"], r["ean3"]):
+            if ean:
+                eans.setdefault(ean, {"ean": ean, "where": set(), "added": False})["where"].add(f"{r['supplier']} {r['size_label']}")
+    for e in conn.execute("SELECT ean FROM fragrance_eans WHERE fragrance_id = ?", (fragrance_id,)):
+        eans.setdefault(e["ean"], {"ean": e["ean"], "where": set(), "added": False})["added"] = True
+    return sorted(eans.values(), key=lambda e: e["ean"])
 
 
 def merge_options(conn, product, rows) -> dict:
@@ -475,6 +541,26 @@ def merges_post(action: str = Form(...)):
         else:
             fragrances.mark_not_same(conn, int(first), int(second))
     return RedirectResponse("/merges", status_code=303)
+
+
+@office.post("/products/{fragrance_id}/eans")
+def product_ean_add(fragrance_id: int, ean: str = Form(...)):
+    """Listings with this EAN are this fragrance, now and later."""
+    ean = re.sub(r"\s", "", ean)
+    if not re.fullmatch(r"\d{8,14}", ean):
+        raise HTTPException(400, "an EAN is 8 to 14 digits")
+    conn = connect()
+    with conn:
+        fragrances.add_ean(conn, fragrance_id, ean)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+
+
+@office.post("/products/{fragrance_id}/eans/remove")
+def product_ean_remove(fragrance_id: int, ean: str = Form(...)):
+    conn = connect()
+    with conn:
+        fragrances.remove_ean(conn, ean)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/split")

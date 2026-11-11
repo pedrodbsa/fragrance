@@ -88,6 +88,29 @@ def find_or_create(conn, brand_id: int, name: str, concentration: str | None) ->
     return fragrance_id
 
 
+def by_ean(conn, eans) -> int | None:
+    """The fragrance you added one of these EANs to, if any."""
+    for ean in eans:
+        if ean:
+            found = conn.execute("SELECT fragrance_id FROM fragrance_eans WHERE ean = ?", (ean,)).fetchone()
+            if found:
+                return found["fragrance_id"]
+    return None
+
+
+def add_ean(conn, fragrance_id: int, ean: str) -> None:
+    """This EAN is this fragrance: its listings move here now, and later ones land here. An EAN
+    added to another fragrance before moves over."""
+    conn.execute("INSERT OR REPLACE INTO fragrance_eans VALUES (?, ?, ?)", (ean, fragrance_id, now()))
+    conn.execute("UPDATE listings SET fragrance_id = ? WHERE ? IN (ean, ean2, ean3)", (fragrance_id, ean))
+    prune(conn)  # the fragrance they came from, if that left it empty and undecided
+
+
+def remove_ean(conn, ean: str) -> None:
+    """Stop matching by this EAN. Listings already attached stay where they are."""
+    conn.execute("DELETE FROM fragrance_eans WHERE ean = ?", (ean,))
+
+
 def assign(conn, brand_id: int, listing_name: str, spelling: str) -> int:
     """The fragrance a supplier listing is: read its name, then find or create it."""
     return find_or_create(conn, brand_id, *identify(listing_name, spelling))
@@ -125,6 +148,7 @@ def merge(conn, fragrance_id: int, into_id: int) -> None:
            WHERE id = ?""", (source["status"], source["owned"], source["size"], source["note"], into_id))
     conn.execute("UPDATE fragrance_names SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))
     conn.execute("UPDATE listings SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))
+    conn.execute("UPDATE fragrance_eans SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))
     # What you said this one isn't, the merged fragrance isn't either.
     conn.execute(
         """INSERT OR IGNORE INTO not_same SELECT min(?, other), max(?, other) FROM (
@@ -205,8 +229,9 @@ def split(conn, fragrance_id: int, name: str, concentration: str) -> int:
 
 def prune(conn) -> None:
     """Forget fragrances nothing lists and you made no decision about (left over after a brand
-    split or merge)."""
+    split or merge, or after their listings moved to an EAN you added elsewhere)."""
     unused = """SELECT id FROM fragrances f WHERE status = 'default' AND owned = 0 AND note IS NULL
-                AND NOT EXISTS (SELECT 1 FROM listings l WHERE l.fragrance_id = f.id)"""
+                AND NOT EXISTS (SELECT 1 FROM listings l WHERE l.fragrance_id = f.id)
+                AND NOT EXISTS (SELECT 1 FROM fragrance_eans e WHERE e.fragrance_id = f.id)"""
     conn.execute(f"DELETE FROM fragrance_names WHERE fragrance_id IN ({unused})")
     conn.execute(f"DELETE FROM fragrances WHERE id IN ({unused})")

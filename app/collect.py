@@ -10,7 +10,7 @@ from collections import Counter
 from datetime import datetime, timezone
 
 from app.db import brand_for, collected, connect
-from app.fragrances import assign
+from app.fragrances import assign, by_ean
 from app.item import Item
 from app.suppliers import SUPPLIERS
 
@@ -51,7 +51,9 @@ def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
         if old is not None and (old["name"], old["brand"]) == (item.name, item.brand):
             fragrance_id = old["fragrance_id"]
         else:  # brands seen for the first time start on default (shown, no alerts)
-            fragrance_id = assign(conn, brand_for(conn, item.brand, announced=baseline), item.name, item.brand)
+            brand_id = brand_for(conn, item.brand, announced=baseline)
+            # An EAN you added to a fragrance decides; otherwise the name is read.
+            fragrance_id = by_ean(conn, (item.ean, item.ean2, item.ean3)) or assign(conn, brand_id, item.name, item.brand)
         conn.execute(UPSERT, (supplier, item.sku, item.name, item.brand, item.ean, item.ean2, item.ean3,
                               item.qty, item.price, item.flagged_new, now, now, fragrance_id))
 

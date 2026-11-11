@@ -1,9 +1,22 @@
 {# Stock grouped by fragrance, sizes and testers under it. Shared by Stock and brand pages.
-   Needs: groups, back. Stock sorts on the server (passes `sort`); elsewhere headers sort. #}
+   Needs: groups, back. Stock sorts on the server: it passes `sort` and `sort_links`, and its
+   headers are links. Elsewhere the page sorts itself (static/tables.js). #}
+{# A column name that sorts: on Stock a link to the page sorted by it, elsewhere plain text
+   that static/tables.js makes clickable. #}
+{% macro by(label, field) -%}
+  {%- if sort is defined -%}
+  <a class="quiet sorter" href="{{ sort_links[field] }}" {% if sort.lstrip("-") == field %}data-dir="{{ 'desc' if sort.startswith('-') else 'asc' }}"{% endif %}>{{ label }}</a>
+  {%- else %}{{ label }}{% endif -%}
+{%- endmacro %}
 {% from "_macros.html" import fragrance_switch, owned_switch, badges %}
   <div class="scroll">
   <table class="{{ '' if sort is defined else 'sortable' }}">
-    <thead><tr><th>Fragrance</th><th data-nosort>Sizes · cheapest each</th><th class="num">From</th><th class="num hide-sm">Qty</th><th class="hide-sm">Suppliers</th><th class="hide-sm"></th></tr></thead>
+    <thead><tr>
+      <th>{{ by("Fragrance", "name") }}{% if sort is defined %} · {{ by("Brand", "brand") }}{% endif %}</th>
+      <th data-nosort>Sizes · cheapest each</th>
+      <th class="num">{{ by("From", "price") }}</th>
+      <th class="num hide-sm">{{ by("Qty", "qty") }}</th>
+      <th class="hide-sm">Suppliers</th><th class="hide-sm"></th></tr></thead>
     <tbody>
     {% for g in groups %}
     {% set page = "/products/" ~ g.fragrance_id %}

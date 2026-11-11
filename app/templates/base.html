@@ -23,6 +23,9 @@
         <a href="/merges" class="{{ 'active' if path.startswith('/merges') }}">Merges</a>
         <a href="/suppliers" class="{{ 'active' if path.startswith('/suppliers') }}">Suppliers</a>
       </nav>
+      <form class="quick-search" method="get" action="/search">
+        <input type="search" name="q" value="{{ request.query_params.get('q', '') if path == '/search' }}" placeholder="Brand, fragrance or EAN" aria-label="Search">
+      </form>
     </div>
   </header>
   <main class="wrap">

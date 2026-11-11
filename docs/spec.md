@@ -105,6 +105,11 @@ a "shares an EAN" hint. Merges are remembered for every supplier and can be spli
 EANs never merge anything on their own: Nunu reuses some EANs for different fragrances
 (Carios and Delina share one).
 
+**EANs.** The product page lists every EAN of the fragrance (which supplier and size has it)
+and lets you add more. A listing with an EAN you added belongs to that fragrance, whatever its
+name says: listings already there move over, and new ones land there from then on. Removing an
+added EAN stops that; listings already attached stay.
+
 **Merges page.** Every pair of fragrances of the same brand that shares an EAN, for triage:
 same name with a different concentration first (usually suppliers disagreeing about the
 label), then different names (spelling variants, but also flankers such as Phantom and
@@ -199,12 +204,13 @@ Brands on default, fillers and fragrances on no list never appear in the digest.
   spellings, and the fragrance decisions made for it.
 - **Products**: your fragrance lists: Wishlist, Fillers, Collection, Ignored.
 - **Merges**: fragrances that might be the same juice, to merge or mark as different.
+- **Search** (box in the header, on every page): brands and fragrances whose names contain
+  every word typed ("ysl libre", any spelling of the brand), or the fragrance with an EAN or SKU.
 - **Orders**: the order you could place at each supplier.
 - **Suppliers**: collection health and minimum order values.
 
-Tables sort by clicking a column header (again to reverse). Stock, which shows the first 200
-fragrances of thousands, has a Sort choice instead: brand, name, price either way, most in
-stock, newest first.
+Tables sort by clicking a column header (again to reverse). Stock does the same across all
+its fragrances (by name, brand, price, quantity), shown in pages of 200 with Previous / Next.
 
 The old Rules page is gone: brand watch rules became Follow, EAN and keyword watches went on
 the wishlist; mute and supplier rules were dropped (default covers them).
