@@ -535,14 +535,21 @@ def product_detail(request: Request, fragrance_id: int):
 
 
 def ean_list(conn, fragrance_id: int, rows) -> list[dict]:
-    """Every EAN of a fragrance: those on its listings (where, which size) and those you added."""
+    """Every EAN of a fragrance: those on its listings (where, which size) and those pinned to it.
+    'added' means pinned here; 'pinned_to' is the other fragrance an EAN of a listing here is
+    pinned to, a clash for you to sort out."""
     eans = {}
     for r in rows:
         for ean in (r["ean"], r["ean2"], r["ean3"]):
             if ean:
-                eans.setdefault(ean, {"ean": ean, "where": set(), "added": False})["where"].add(f"{r['supplier']} {r['size_label']}")
+                eans.setdefault(ean, {"ean": ean, "where": set(), "added": False, "pinned_to": None})["where"].add(f"{r['supplier']} {r['size_label']}")
     for e in conn.execute("SELECT ean FROM fragrance_eans WHERE fragrance_id = ?", (fragrance_id,)):
-        eans.setdefault(e["ean"], {"ean": e["ean"], "where": set(), "added": False})["added"] = True
+        eans.setdefault(e["ean"], {"ean": e["ean"], "where": set(), "added": False, "pinned_to": None})["added"] = True
+    for e in eans.values():
+        if not e["added"]:
+            e["pinned_to"] = conn.execute(
+                """SELECT f.id, f.name, f.concentration FROM fragrance_eans e JOIN fragrances f ON f.id = e.fragrance_id
+                   WHERE e.ean = ?""", (e["ean"],)).fetchone()
     return sorted(eans.values(), key=lambda e: e["ean"])
 
 

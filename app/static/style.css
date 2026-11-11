@@ -148,7 +148,7 @@ tbody tr:hover td { background: var(--surface-2); }
 }
 .pill.new, .pill.watch { background: var(--green-bg); color: var(--green-fg); }
 .pill.restock { background: var(--blue-bg); color: var(--blue-fg); }
-.pill.price_drop { background: var(--amber-bg); color: var(--amber-fg); }
+.pill.price_drop, .pill.warn { background: var(--amber-bg); color: var(--amber-fg); }
 .pill.price_up { background: var(--purple-bg); color: var(--purple-fg); }
 .delta { color: var(--muted); font-size: 12px; margin-left: 6px; font-variant-numeric: tabular-nums; }
 .delta s { opacity: 0.8; }

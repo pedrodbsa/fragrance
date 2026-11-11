@@ -176,10 +176,30 @@ def by_ean(conn, eans) -> int | None:
 
 def add_ean(conn, fragrance_id: int, ean: str) -> None:
     """This EAN is this fragrance: its listings move here now, and later ones land here. An EAN
-    added to another fragrance before moves over."""
+    added to another fragrance before moves over.
+
+    The other EANs those listings carry are learned too, so a supplier listing the fragrance
+    under only one of them also lands here (see learn_eans)."""
     conn.execute("INSERT OR REPLACE INTO fragrance_eans VALUES (?, ?, ?)", (ean, fragrance_id, now()))
     conn.execute("UPDATE listings SET fragrance_id = ? WHERE ? IN (ean, ean2, ean3)", (fragrance_id, ean))
+    learn_eans(conn, fragrance_id, ean)
     prune(conn)  # the fragrance they came from, if that left it empty and undecided
+
+
+def learn_eans(conn, fragrance_id: int, ean: str) -> None:
+    """Pin to this fragrance the other EANs of the listings that carry this one."""
+    for listing in conn.execute("SELECT ean, ean2, ean3 FROM listings WHERE ? IN (ean, ean2, ean3)", (ean,)).fetchall():
+        for other in (listing["ean"], listing["ean2"], listing["ean3"]):
+            if other and other != ean:
+                learn_ean(conn, fragrance_id, other)
+
+
+def learn_ean(conn, fragrance_id: int, ean: str) -> None:
+    """Pin an EAN a listing here also carries, and bring its listings here. An EAN already pinned
+    to another fragrance is left there: the product page shows the clash for you to decide."""
+    pinned = conn.execute("INSERT OR IGNORE INTO fragrance_eans VALUES (?, ?, ?)", (ean, fragrance_id, now())).rowcount
+    if pinned:
+        conn.execute("UPDATE listings SET fragrance_id = ? WHERE ? IN (ean, ean2, ean3)", (fragrance_id, ean))
 
 
 def remove_ean(conn, ean: str) -> None:

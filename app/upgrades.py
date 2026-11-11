@@ -24,6 +24,9 @@
                   every fragrance's listings are read again, and a fragrance whose listings
                   all read as a new name is renamed to it, or merged into the fragrance that
                   already has that name (decisions carry over, as with a merge by hand).
+  learn-eans      a fragrance now learns every EAN of the listings matched to it by EAN:
+                  the other EANs of those listings are matched to it too, unless already
+                  matched to another fragrance.
 """
 
 import sqlite3
@@ -32,7 +35,7 @@ from datetime import datetime, timedelta, timezone
 from app import brand_cleanup, brands
 from app.brands import brand_for
 from app.db import SCHEMA, now
-from app.fragrances import find_or_create, identify, key, prune, rename
+from app.fragrances import find_or_create, identify, key, learn_eans, prune, rename
 
 
 def upgrade(conn) -> None:
@@ -47,6 +50,14 @@ def upgrade(conn) -> None:
     once(conn, "recorded-price", recorded_price)
     once(conn, "small-price-changes", small_price_changes)
     once(conn, "reread-names", reread_names)
+    once(conn, "learn-eans", learn_pinned_eans)
+
+
+def learn_pinned_eans(conn) -> None:
+    """EANs matched before a fragrance learned all its listings' EANs: learn the rest now."""
+    for pin in conn.execute("SELECT ean, fragrance_id FROM fragrance_eans").fetchall():
+        learn_eans(conn, pin["fragrance_id"], pin["ean"])
+    prune(conn)  # fragrances whose listings all moved, if left empty and undecided
 
 
 def reread_names(conn) -> None:
