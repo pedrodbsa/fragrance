@@ -567,27 +567,18 @@ def merge_options(conn, product, rows) -> dict:
 
 
 def candidates(conn, product, rows) -> list[dict]:
-    """The brand's listings on another fragrance that may be this one: they share an EAN with
-    it (suppliers sometimes reuse one, so check), or one name holds all the other's words
-    ("Danger" and "Danger Pour Homme"). Fragrances you said aren't this one are left out."""
+    """The brand's listings on another fragrance that share an EAN with this one (suppliers
+    sometimes reuse one, so check). Fragrances you said aren't this one are left out."""
     eans = {e for r in rows for e in (r["ean"], r["ean2"], r["ean3"]) if e}
     eans |= {e["ean"] for e in conn.execute("SELECT ean FROM fragrance_eans WHERE fragrance_id = ?", (product["id"],))}
-    words = set(key(product["name"]).split())
     rejected = {r[0] for r in conn.execute(  # pairs you said aren't the same
         "SELECT other_id FROM not_same WHERE fragrance_id = ? UNION SELECT fragrance_id FROM not_same WHERE other_id = ?",
         (product["id"], product["id"]))}
-    found = []
-    for l in annotate(conn.execute("SELECT * FROM catalog WHERE brand_id = ? AND fragrance_id != ?",
-                                   (product["brand_id"], product["id"]))):
-        if l["fragrance_id"] in rejected:
-            continue
-        theirs = set(key(l["fragrance"]).split())
-        if eans & {l["ean"], l["ean2"], l["ean3"]}:
-            found.append({**l, "why": "Same EAN"})
-        elif words <= theirs or theirs <= words:
-            found.append({**l, "why": "Similar name"})
-    # Same EAN first, then by the fragrance they're on, in stock first.
-    return sorted(found, key=lambda l: (l["why"] != "Same EAN", l["fragrance"], l["qty"] == 0, l["size"]))
+    found = [l for l in annotate(conn.execute("SELECT * FROM catalog WHERE brand_id = ? AND fragrance_id != ?",
+                                              (product["brand_id"], product["id"])))
+             if l["fragrance_id"] not in rejected and eans & {l["ean"], l["ean2"], l["ean3"]}]
+    # By the fragrance they're on, in stock first.
+    return sorted(found, key=lambda l: (l["fragrance"], l["qty"] == 0, l["size"]))
 
 
 @office.post("/products/{fragrance_id}/status")

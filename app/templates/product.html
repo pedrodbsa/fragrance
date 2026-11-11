@@ -104,11 +104,11 @@
 </div>
 
 <div class="panel" style="margin-top: 20px">
-  <div class="panel-head"><h2>Same juice, other listings</h2><span class="panel-note">Listings filed under another {{ product.brand_name }} fragrance that may be this one: bring them here</span></div>
+  <div class="panel-head"><h2>Same juice, other listings</h2><span class="panel-note">Listings filed under another {{ product.brand_name }} fragrance that share an EAN with this one (suppliers sometimes reuse EANs, so check): bring them here</span></div>
   {% if candidates %}
   <div class="scroll">
   <table class="sortable">
-    <thead><tr><th>As listed</th><th>Size</th><th class="hide-sm">EAN</th><th class="num">Price</th><th class="num">Qty</th><th class="hide-sm">Supplier</th><th>Now on</th><th>Why</th><th></th></tr></thead>
+    <thead><tr><th>As listed</th><th>Size</th><th class="hide-sm">EAN</th><th class="num">Price</th><th class="num">Qty</th><th class="hide-sm">Supplier</th><th>Now on</th><th></th></tr></thead>
     <tbody>
     {% for l in candidates %}
     <tr class="{{ 'faded' if l.qty == 0 }}">
@@ -119,7 +119,6 @@
       <td class="num" data-sort="{{ l.qty }}">{% if l.qty == 0 %}<span class="pill">Sold out</span>{% else %}{{ l.qty }}{% endif %}</td>
       <td class="muted hide-sm">{{ l.supplier }}</td>
       <td><a href="/products/{{ l.fragrance_id }}">{{ l.fragrance|pretty('') }}{% if l.concentration %} {{ l.concentration }}{% endif %}</a></td>
-      <td>{% if l.why == "Same EAN" %}<span class="pill warn" title="Suppliers sometimes reuse an EAN for a different fragrance, so check">Same EAN</span>{% else %}<span class="pill">Similar name</span>{% endif %}</td>
       <td class="num nowrap">
         <form method="post" action="/products/{{ product.id }}/attach"><input type="hidden" name="supplier" value="{{ l.supplier }}"><input type="hidden" name="sku" value="{{ l.sku }}">
           <button class="btn sm" title="{% if l.ean %}Every listing with EAN {{ l.ean }} comes here, now and later{% else %}It has no EAN: it moves alone, and stays until the supplier renames it{% endif %}">Bring here</button></form>
@@ -130,7 +129,7 @@
   </table>
   </div>
   {% else %}
-  <div class="empty">No listings elsewhere look like this fragrance.</div>
+  <div class="empty">No listings elsewhere share an EAN with this fragrance.</div>
   {% endif %}
   <div class="pad">
     {% for a in merged %}
