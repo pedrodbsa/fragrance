@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import fragrance_switch, owned_switch, badges %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges, move_ean %}
 {% block title %}{{ product.name|pretty('') }}{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
@@ -82,20 +82,7 @@
         <button class="btn sm ghost danger" title="Stop matching listings by this EAN; those attached stay">Remove</button></form>
       {% endif %}
       {% if e.where %}
-      <details>
-        <summary class="small muted">Not this fragrance?</summary>
-        <form method="post" action="/products/{{ product.id }}/eans/move" class="toolbar" style="margin-top: 6px">
-          <input type="hidden" name="ean" value="{{ e.ean }}">
-          <select name="to" required onchange="this.form.querySelectorAll('.new-only').forEach(x => x.hidden = this.value !== 'new')">
-            <option value="new">A new {{ product.brand_name }} fragrance named…</option>
-            {% for o in others %}<option value="{{ o.id }}">{{ o.name|pretty('') }}{% if o.concentration %} {{ o.concentration }}{% endif %}</option>{% endfor %}
-          </select>
-          <input class="new-only" type="text" name="name" placeholder="Name">
-          <select class="new-only" name="concentration"><option value="">No concentration</option>{% for c in concentrations %}<option {{ 'selected' if c == product.concentration }}>{{ c }}</option>{% endfor %}</select>
-          <button class="btn sm">Move</button>
-        </form>
-        <p class="small muted">Its listings move there, and later ones with this EAN land there too.</p>
-      </details>
+      {{ move_ean(product, e.ean, others, concentrations) }}
       {% endif %}
     </div>
     {% endfor %}

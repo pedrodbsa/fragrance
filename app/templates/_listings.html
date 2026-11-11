@@ -1,5 +1,6 @@
-{# Every listing of one fragrance, by size. Used on the product page. Needs: rows, in_basket, cheapest, back. #}
-{% from "_macros.html" import best %}
+{# Every listing of one fragrance, by size. Used on the product page. Needs: rows, in_basket, cheapest, back,
+   and for moving a listing out by its EAN: product, others, concentrations. #}
+{% from "_macros.html" import best, move_ean %}
   <div class="scroll">
   <table class="sortable">
     <thead><tr><th>Size</th><th>As listed</th><th class="hide-sm">EAN</th><th class="num">Price</th><th class="num">Qty</th><th class="hide-sm">Supplier</th><th class="hide-sm">First seen</th><th></th></tr></thead>
@@ -7,7 +8,8 @@
     {% for r in rows %}
     <tr class="{{ 'faded' if r.qty == 0 }}">
       <td class="nowrap product-name" data-sort="{{ r.size }}">{{ r.size_label }}</td>
-      <td><span title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</span>{% if r.flagged_new %} <span class="pill" title="Marked new by the supplier">Supplier: new</span>{% endif %}</td>
+      <td><span title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</span>{% if r.flagged_new %} <span class="pill" title="Marked new by the supplier">Supplier: new</span>{% endif %}
+        {% if r.ean %}{{ move_ean(product, r.ean, others, concentrations) }}{% endif %}</td>
       <td class="mono hide-sm">{{ r.ean or "—" }}</td>
       <td class="num nowrap" data-sort="{{ r.price if r.price is not none }}">{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}<span class="muted">—</span>{% endif %}{{ best((r.supplier, r.sku) in cheapest) }}</td>
       <td class="num" data-sort="{{ r.qty }}">{% if r.qty == 0 %}<span class="pill">Sold out</span>{% else %}{{ r.qty }}{% endif %}</td>
