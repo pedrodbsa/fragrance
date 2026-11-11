@@ -26,9 +26,13 @@ CONCENTRATIONS = ("EDP", "EDT", "EDC", "Parfum", "Extrait", "Cologne")
 # Where a supplier name stops naming the fragrance, strongest signal first.
 STRONG = re.compile(r"\b(EAU DE PARFUM|EAU DE TOILETTE|EAU DE COLOGNE|EDP|EDT|EDC|EXTRAIT(?: DE PARFUM)?)\b")
 SIZE = re.compile(r"\b\d+(?:[.,]\d+)?\s*(?:ML|GR|G|OZ)\b")
-WEAK = re.compile(r"\b(PARFUM|COLOGNE)\s+(?=\d)")  # only right before a size: "LE PARFUM" is a name
+# Parfum (or "Perfume", as fragrances-wholesale writes it) or Cologne count only right before a
+# size, a "Unisex", or a "- Tester" / "- Unpacked": "LE PARFUM" is a name, but in
+# "ISOLA BLU PARFUM UNISEX 50 ML" and "TAIF AOUD PARFUM UNISEX - TESTER" it's the concentration.
+WEAK = re.compile(r"\b(PARFUM|PERFUME|COLOGNE)\s+(?=(?:UNISEX\s+)?(?:-\s*)?(?:\d|TESTER\b|UNPACKED\b))")
 CANONICAL = {"EAU DE PARFUM": "EDP", "EAU DE TOILETTE": "EDT", "EAU DE COLOGNE": "EDC",
-             "EXTRAIT DE PARFUM": "Extrait", "EXTRAIT": "Extrait", "PARFUM": "Parfum", "COLOGNE": "Cologne"}
+             "EXTRAIT DE PARFUM": "Extrait", "EXTRAIT": "Extrait", "PARFUM": "Parfum", "PERFUME": "Parfum",
+             "COLOGNE": "Cologne"}
 
 
 def key(text: str) -> str:

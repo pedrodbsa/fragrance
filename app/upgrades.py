@@ -20,6 +20,10 @@
   recorded-price  listings remember the price their last recorded price change was at, so
                   price changes count from there (today's price to start with).
   small-price-changes  price changes of €5 or less recorded before that rule are deleted.
+  reread-names    the name reader learned "Parfum Unisex", "Parfum - Tester" and "Perfume":
+                  every fragrance's listings are read again, and a fragrance whose listings
+                  all read as a new name is renamed to it, or merged into the fragrance that
+                  already has that name (decisions carry over, as with a merge by hand).
 """
 
 import sqlite3
@@ -28,7 +32,7 @@ from datetime import datetime, timedelta, timezone
 from app import brand_cleanup, brands
 from app.brands import brand_for
 from app.db import SCHEMA, now
-from app.fragrances import find_or_create, identify, key, prune
+from app.fragrances import find_or_create, identify, key, prune, rename
 
 
 def upgrade(conn) -> None:
@@ -42,6 +46,25 @@ def upgrade(conn) -> None:
     once(conn, "forget-wholesale-fragrances", forget_wholesale_fragrances)
     once(conn, "recorded-price", recorded_price)
     once(conn, "small-price-changes", small_price_changes)
+    once(conn, "reread-names", reread_names)
+
+
+def reread_names(conn) -> None:
+    for fragrance in conn.execute("SELECT id, name FROM fragrances").fetchall():
+        # Listings placed by an EAN you added stay put whatever their name says, so they don't count.
+        readings = {identify(l["name"], l["brand"]) for l in conn.execute(
+            """SELECT name, brand FROM listings WHERE fragrance_id = ?
+               AND NOT EXISTS (SELECT 1 FROM fragrance_eans e WHERE e.ean IN (ean, ean2, ean3))""",
+            (fragrance["id"],))}
+        if len(readings) != 1:
+            continue  # nothing to read, or listings you merged that read differently: left as they are
+        name, concentration = readings.pop()
+        already = conn.execute(
+            "SELECT 1 FROM fragrance_names WHERE fragrance_id = ? AND name = ? AND concentration = ?",
+            (fragrance["id"], key(name), concentration or "")).fetchone()
+        if not already:
+            rename(conn, fragrance["id"], name, concentration)
+            print(f"upgrade: {fragrance['name']!r} now reads as {name!r} {concentration or ''}")
 
 
 def small_price_changes(conn) -> None:

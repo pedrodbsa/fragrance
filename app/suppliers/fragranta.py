@@ -31,6 +31,9 @@ PERFUME = re.compile(r"eau de|\bed[pt]\b|\bedc\b|parfum|extrait|cologne", re.I)
 NOT_PERFUME = re.compile(r"deo|deodorant|body spray|body mist|hair mist|shower|after ?shave|lotion|"
                          r"candle|diffuser|sample|vial|miniature", re.I)
 GIFT_SET = re.compile(r"\bset\b", re.I)
+# Brands whose column is shorter than the name the products start with: the Brand column says
+# "Roja", the products "Roja Dove Manhattan …" or "Roja Parfums Danger …". These words go too.
+MORE_BRAND_WORDS = {"Roja": re.compile(r"^(Dove|Parfums)\s+", re.I)}
 
 
 def fetch() -> list[Item]:
@@ -77,6 +80,8 @@ def parse(xlsx: bytes) -> list[Item]:
         brand = str(value("Brand")).strip()
         if name.lower().startswith(brand.lower() + " "):
             name = name[len(brand):].strip()  # the brand has its own column, like the other suppliers
+        if brand in MORE_BRAND_WORDS:
+            name = MORE_BRAND_WORDS[brand].sub("", name)
         if is_set:
             # "Chrome Gift Set Eau de Toilette 100ml + 2x Shower Gel 75ml" -> "Chrome Eau de
             # Toilette 100ml + 2x Shower Gel 75ml Set", so the fragrance is read from the perfume.
