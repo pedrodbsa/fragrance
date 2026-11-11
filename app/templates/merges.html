@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% from "_macros.html" import badges %}
 {% block title %}Merges{% endblock %}
-{% macro side(f, other) %}
-  <div class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}{{ badges(f.status, f.owned, f.audience) }}</div>
+{% macro side(f, other, kept) %}
+  <div class="product-name">{% if kept %}<span class="pill" title="Kept when you merge the ticked pairs: more listings use it">✓ Kept</span> {% endif %}<a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}{{ badges(f.status, f.owned, f.audience) }}</div>
   <div class="small muted">{{ (f.suppliers or "").split(",")|sort|join(", ") }} · {{ f.listings }} listing{{ "s" if f.listings != 1 }}{% if f.example %} · “{{ f.example }}”{% endif %}</div>
   <button class="btn sm" name="action" value="merge:{{ other }}:{{ f.id }}" title="The other one merges into this one">Merge, keep this name</button>
 {% endmacro %}
@@ -10,7 +10,7 @@
 <div class="page-head">
   <div>
     <h1>Merges</h1>
-    <p class="subtitle">Fragrances of the same brand that share an EAN, so they might be the same juice. Merge them, keeping the name you prefer, or say they're different and they won't be suggested again. Suppliers sometimes reuse EANs, so check.</p>
+    <p class="subtitle">Fragrances of the same brand that share an EAN, so they might be the same juice. Merge them, keeping the name you prefer, or say they're different and they won't be suggested again. Suppliers sometimes reuse EANs, so check. To merge many at once, untick the ones that are really different (a flanker, say) and press Merge ticked: each pair keeps the name marked ✓ Kept, the one more listings use.</p>
   </div>
 </div>
 
@@ -18,16 +18,21 @@
 {% set group = pairs|selectattr("same_name", "equalto", same_name)|list %}
 {% if group %}
 <form method="post" action="/merges" class="panel" style="margin-bottom: 20px">
-  <div class="panel-head"><h2>{{ title }}</h2><span class="panel-note">{{ note }} · {{ group|length }}</span></div>
+  <div class="panel-head"><h2>{{ title }}</h2>
+    <div class="toolbar"><span class="panel-note">{{ note }} · {{ group|length }}</span>
+      <label class="check"><input type="checkbox" {{ 'checked' if same_name }} onclick="this.form.querySelectorAll('input[name=ticked]').forEach(b => b.checked = this.checked)"> All</label>
+      <button class="btn sm primary" name="action" value="ticked" title="Each ticked pair becomes one fragrance, under the name marked ✓ Kept">Merge ticked</button></div></div>
   <div class="scroll">
   <table>
-    <thead><tr><th>Brand</th><th>One</th><th>Other</th><th class="hide-sm">Shared EAN</th><th></th></tr></thead>
+    <thead><tr><th></th><th>Brand</th><th>One</th><th>Other</th><th class="hide-sm">Shared EAN</th><th></th></tr></thead>
     <tbody>
     {% for p in group %}
+    {% set keep = keeps[(p.a_id, p.b_id)] %}
     <tr>
+      <td><input type="checkbox" name="ticked" value="{{ p.b_id if keep == p.a_id else p.a_id }}:{{ keep }}" {{ 'checked' if same_name }}></td>
       <td class="muted">{{ p.brand_name }}</td>
-      <td>{{ side(sides[p.a_id], p.b_id) }}</td>
-      <td>{{ side(sides[p.b_id], p.a_id) }}</td>
+      <td>{{ side(sides[p.a_id], p.b_id, keep == p.a_id) }}</td>
+      <td>{{ side(sides[p.b_id], p.a_id, keep == p.b_id) }}</td>
       <td class="muted small hide-sm">{{ p.ean }}</td>
       <td class="num"><button class="btn sm ghost danger" name="action" value="differ:{{ p.a_id }}:{{ p.b_id }}">Not the same</button></td>
     </tr>

@@ -652,20 +652,35 @@ def merges(request: Request):
                    count(l.sku) AS listings, min(l.name) AS example
             FROM fragrances f LEFT JOIN listings l ON l.fragrance_id = f.id
             WHERE f.id IN ({",".join("?" * len(ids))}) GROUP BY f.id""", list(ids))}
-    return templates.TemplateResponse(request, "merges.html", {"pairs": pairs, "sides": sides})
+    # For ticking several at once: the side more listings use keeps its name (the older one on a tie).
+    keeps = {(p["a_id"], p["b_id"]): p["a_id"] if sides[p["a_id"]]["listings"] >= sides[p["b_id"]]["listings"] else p["b_id"]
+             for p in pairs}
+    return templates.TemplateResponse(request, "merges.html", {"pairs": pairs, "sides": sides, "keeps": keeps})
 
 
 @office.post("/merges")
-def merges_post(action: str = Form(...)):
-    """action is 'merge:12:34' to merge fragrance 12 into 34, or 'differ:12:34'."""
-    kind, first, second = action.split(":")
+def merges_post(action: str = Form(...), ticked: list[str] = Form([])):
+    """action is 'merge:12:34' to merge fragrance 12 into 34, 'differ:12:34', or 'ticked' to
+    merge every ticked pair ('12:34' each, 12 into 34)."""
+    kind, *ids = action.split(":")
     conn = connect()
     with conn:
         if kind == "merge":
-            fragrances.merge(conn, int(first), int(second))
+            fragrances.merge(conn, int(ids[0]), int(ids[1]))
+        elif kind == "differ":
+            fragrances.mark_not_same(conn, int(ids[0]), int(ids[1]))
         else:
-            fragrances.mark_not_same(conn, int(first), int(second))
+            for pair in ticked:
+                merge_pair(conn, *map(int, pair.split(":")))
     return RedirectResponse("/merges", status_code=303)
+
+
+def merge_pair(conn, fragrance_id: int, into_id: int) -> None:
+    """One ticked pair. A side an earlier pair already merged away is skipped: the pair comes
+    back on the Merges page with the fragrance it went into."""
+    found = conn.execute("SELECT count(*) FROM fragrances WHERE id IN (?, ?)", (fragrance_id, into_id)).fetchone()[0]
+    if found == 2:
+        fragrances.merge(conn, fragrance_id, into_id)
 
 
 @office.post("/products/{fragrance_id}/brand")
