@@ -829,12 +829,16 @@ def orders_page(request: Request):
     """Your open baskets, then the order you could place at each supplier from your wishlist
     and fillers."""
     conn = connect()
-    open_baskets, plan = baskets.contents(conn), orders.plan(conn)
+    open_baskets = baskets.contents(conn)
+    plan = orders.plan(conn, open_baskets)
     shown = [i["fragrance_id"] for b in open_baskets for i in b["items"]]
     shown += [o["fragrance_id"] for s in plan for o in s["wanted"] + s["fillers"] + s["spare"]]
+    # One panel per supplier: its basket, then what's suggested to add. Baskets first.
+    suggestions = {o["supplier"]: o for o in plan}
+    panels = [{"supplier": b["supplier"], "basket": b, "suggestion": suggestions.pop(b["supplier"], None)} for b in open_baskets]
+    panels += [{"supplier": o["supplier"], "basket": None, "suggestion": o} for o in suggestions.values()]
     return templates.TemplateResponse(request, "orders.html", {
-        "baskets": open_baskets, "orders": plan, "in_basket": baskets.keys(conn),
-        "cheapest": fragrances.cheapest(conn, shown),
+        "panels": panels, "cheapest": fragrances.cheapest(conn, shown),
     })
 
 
