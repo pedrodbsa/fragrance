@@ -198,6 +198,32 @@ def cheapest_only(conn, rows: list[dict]) -> list[dict]:
     return [r for r in rows if r["qty"] > 0 and r["price"] is not None and is_cheapest(r)]
 
 
+def testers_only(rows: list[dict]) -> list[dict]:
+    """Keep testers (and unboxed bottles, which are sold like them): the "… tester" sizes."""
+    return [r for r in rows if r["size_label"].endswith(" tester")]
+
+
+DEAL = 0.20  # a deal: at least this much below what the other suppliers ask on average
+
+
+def deals_only(conn, rows: list[dict]) -> list[dict]:
+    """Keep the in-stock rows priced at least DEAL below the average of the other suppliers'
+    in-stock prices for the same fragrance and size. Each kept row gets its "discount" (0.32
+    for 32% off) and that "average"."""
+    prices = {}  # (fragrance id, size) -> [(supplier, price)] of everything in stock
+    for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
+        prices.setdefault((r["fragrance_id"], r["size_label"]), []).append((r["supplier"], r["price"]))
+    kept = []
+    for r in rows:
+        others = [price for supplier, price in prices.get((r["fragrance_id"], r["size_label"]), [])
+                  if supplier != r["supplier"]]
+        if r["qty"] > 0 and r["price"] is not None and others:
+            average = sum(others) / len(others)
+            if r["price"] <= average * (1 - DEAL):
+                kept.append({**r, "discount": 1 - r["price"] / average, "average": average})
+    return kept
+
+
 IN_STOCK_FIRST = "ORDER BY qty = 0, name"
 
 # Stock's sortable columns: what to order fragrances by. "?sort=price" is lowest first,
@@ -207,6 +233,8 @@ STOCK_SORTS = {
     "name": lambda g: (g["fragrance"], g["brand_name"].lower()),
     "price": lambda g: g["best"],
     "qty": lambda g: g["qty"],
+    # Biggest discount first; only Deals rows have one.
+    "discount": lambda g: max((-r["discount"] for r in g["listings"] if "discount" in r), default=None),
 }
 
 
@@ -220,12 +248,13 @@ def sort_stock(groups: list[dict], sort: str) -> list[dict]:
 @office.get("/stock")
 def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
           in_stock: bool = True, followed: bool = False, brands: str = "default", sort: str = "brand", page: int = 1,
-          audience: str = "", cheapest: bool = False):
+          audience: str = "", cheapest: bool = False, testers: bool = False, deals: bool = False):
     """One row per fragrance. q matches every word in the listing or brand name (accents and
     punctuation ignored), or an exact EAN or SKU. 'brands' picks which: 'following' (followed brands only),
     'default' (followed and Browse; nothing you ignored), 'all' (ignored ones too).
     'followed' narrows to what alerts you. 'cheapest' keeps only the sizes no other supplier
-    sells for less."""
+    sells for less, 'testers' only testers, 'deals' only sizes well below the other suppliers'
+    average price (biggest discount first, unless you sort by a column)."""
     conn = connect()
     words = searchable(q)
     found = conn.execute(
@@ -238,10 +267,16 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     ).fetchall()
     brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'ignore' ORDER BY name").fetchall()
     suppliers = [r[0] for r in conn.execute("SELECT name FROM suppliers ORDER BY name")]
+    if "sort" not in request.query_params and deals:
+        sort = "discount"
     sort = sort if sort.lstrip("-") in STOCK_SORTS else "brand"
     rows = annotate(found)
     if cheapest:
         rows = cheapest_only(conn, rows)
+    if testers:
+        rows = testers_only(rows)
+    if deals:
+        rows = deals_only(conn, rows)
     groups = sort_stock(group(rows), sort)
     # Each header links to the first page sorted by its column, reversed if it's the current one.
     query = {k: v for k, v in request.query_params.items() if k != "page"}
@@ -256,7 +291,7 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
         "page": page, "pages": pages, "page_link": page_link, "first": (page - 1) * PAGE + 1, "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
         "brands_shown": brands, "sort": sort, "sort_links": sort_links, "audience": audience,
-        "cheapest": cheapest,
+        "cheapest": cheapest, "testers": testers, "deals": deals, "deal_percent": round(DEAL * 100),
     })
 
 
