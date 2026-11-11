@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Brands{% endblock %}
+{% block content %}
+{% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
+{% set labels = {"follow": "Following", "browse": "Browsing", "ignore": "Ignored", "new": "To triage"} %}
+<div class="page-head">
+  <div>
+    <h1>Brands</h1>
+    <p class="subtitle">Every brand and what you decided. Open one to rename it, merge it or manage its spellings.</p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <nav class="segmented">
+      <a href="/brands" class="{{ 'active' if not status }}">All</a>
+      {% for k, label in labels.items() %}
+      <a href="/brands?status={{ k }}" class="{{ 'active' if status == k }}">{{ label }} <span class="muted">{{ counts.get(k, 0) }}</span></a>
+      {% endfor %}
+    </nav>
+    <form class="toolbar" method="get">
+      {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+      <input type="search" name="q" value="{{ q }}" placeholder="Search brands">
+    </form>
+  </div>
+  {% if rows %}
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Brand</th><th class="num">In stock</th><th class="hide-sm">Suppliers</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for b in rows %}
+    <tr>
+      <td>
+        <div class="product-name"><a class="quiet" href="/brands/{{ b.id }}">{{ b.name }}</a></div>
+        {% if b.spellings > 1 %}<div class="small muted">{{ b.spellings }} spellings</div>{% endif %}
+      </td>
+      <td class="num">{{ b.in_stock }}</td>
+      <td class="muted hide-sm">{{ (b.suppliers or "").replace(",", ", ") }}</td>
+      <td class="nowrap">
+        <form method="post" action="/brands/{{ b.id }}/status" class="choice">
+          <input type="hidden" name="back" value="{{ back }}">
+          {% for s, icon in (("follow", "⭐ Follow"), ("browse", "👀 Browse"), ("ignore", "🚫 Ignore")) %}
+          <button class="{{ 'on' if b.status == s }}" name="status" value="{{ s }}">{{ icon }}</button>
+          {% endfor %}
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty">No brands match.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name|pretty('') }}{% endblock %}
+{% block content %}
+{% set back = request.url.path %}
+{% set tabs = {"want": "Wishlist", "own": "Collection", "ignore": "Not interested"} %}
+<div class="page-head">
+  <div>
+    <p class="subtitle"><a href="/products?status={{ product.status }}">← {{ tabs[product.status] }}</a></p>
+    <h1>{{ product.name|pretty('') }}{% if product.concentration %} <span class="muted">{{ product.concentration }}</span>{% endif %}</h1>
+    <p class="subtitle">{% if product.brand_id %}<a href="/brands/{{ product.brand_id }}">{{ product.brand_name }}</a>{% else %}Any brand{% endif %}{% if product.note %} · {{ product.note }}{% endif %}</p>
+  </div>
+  <div class="toolbar">
+    <form method="post" action="/products/{{ product.id }}/status" class="choice">
+      <input type="hidden" name="back" value="{{ back }}">
+      {% for k, label in tabs.items() %}<button class="{{ 'on' if product.status == k }}" name="status" value="{{ k }}">{{ label }}</button>{% endfor %}
+    </form>
+    <form method="post" action="/products/{{ product.id }}/delete"><input type="hidden" name="back" value="/products?status={{ product.status }}"><button class="btn sm ghost danger">Remove</button></form>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>Stock</h2><span class="panel-note">Every size and tester of this fragrance, in stock first</span></div>
+  {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists it right now. You'll get an alert when one does{% if product.status != "want" %} if it's on your wishlist{% endif %}.</div>{% endif %}
+</div>
+{% endblock %}

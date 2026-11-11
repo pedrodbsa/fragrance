@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Stock{% endblock %}
+{% block content %}
+{% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
+<div class="page-head">
+  <div>
+    <h1>Stock</h1>
+    <p class="subtitle">Brands you follow or browse, and products you want or own. <span class="star">★</span>alerts you.</p>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-head">
+    <form class="toolbar" method="get">
+      <input type="search" name="q" value="{{ q }}" placeholder="Search name, EAN or SKU">
+      <select name="brand">
+        <option value="">All brands</option>
+        {% for b in brands %}<option value="{{ b.id }}" {% if b.id|string == brand %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+      </select>
+      <select name="supplier">
+        <option value="">All suppliers</option>
+        {% for s in suppliers %}<option {% if s == supplier %}selected{% endif %}>{{ s }}</option>{% endfor %}
+      </select>
+      <!-- hidden first: when the box is ticked, its later "true" wins -->
+      <input type="hidden" name="in_stock" value="false">
+      <label class="check"><input type="checkbox" name="in_stock" value="true" {% if in_stock %}checked{% endif %}> In stock</label>
+      <label class="check"><input type="checkbox" name="followed" value="true" {% if followed %}checked{% endif %}> Alerting only</label>
+      <label class="check" title="Include ignored brands, brands to triage and products you're not interested in"><input type="checkbox" name="everything" value="true" {% if everything %}checked{% endif %}> Show hidden</label>
+      <button class="btn primary" type="submit">Filter</button>
+      {% if q or brand or supplier or not in_stock or followed or everything %}<a class="btn ghost" href="/stock">Clear</a>{% endif %}
+    </form>
+    <span class="panel-note">{% if total > rows|length %}Showing {{ rows|length }} of {{ "{:,}".format(total) }}{% else %}{{ "{:,}".format(total) }} products{% endif %}</span>
+  </div>
+  {% if rows %}
+  {% include "_listings.html" %}
+  {% else %}
+  <div class="empty">Nothing matches these filters. Brands appear here once you follow or browse them in <a href="/triage">Triage</a>.</div>
+  {% endif %}
+</div>
+{% endblock %}

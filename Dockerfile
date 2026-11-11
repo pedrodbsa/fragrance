@@ -23,7 +23,6 @@ ENV PATH="/app/.venv/bin:${PATH}" \
 
 COPY docker/litestream.yml /etc/litestream.yml
 COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY --chmod=0755 docker/run-supplier.sh /usr/local/bin/run-supplier
 
 EXPOSE 8000
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

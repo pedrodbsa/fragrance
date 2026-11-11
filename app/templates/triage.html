@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Triage{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Triage</h1>
+    <p class="subtitle">Brands no one has decided on yet. <b>Follow</b>: shown and alerts you. <b>Browse</b>: shown, no alerts. <b>Ignore</b>: hidden everywhere.</p>
+  </div>
+</div>
+
+{% if rows %}
+<form method="post" action="/triage" class="panel">
+  <div class="panel-head">
+    <div class="toolbar">
+      <label class="check"><input type="checkbox" onclick="document.querySelectorAll('input[name=ids]').forEach(b => b.checked = this.checked)"> All</label>
+      <span class="muted small">With selected:</span>
+      <button class="btn sm" name="action" value="follow:selected">⭐ Follow</button>
+      <button class="btn sm" name="action" value="browse:selected">👀 Browse</button>
+      <button class="btn sm" name="action" value="ignore:selected">🚫 Ignore</button>
+    </div>
+    <span class="panel-note">{{ rows|length }} to triage · most stocked first</span>
+  </div>
+  <div class="scroll">
+  <table>
+    <thead><tr><th></th><th>Brand</th><th class="num">In stock</th><th class="hide-sm">Suppliers</th><th class="hide-sm">Looks like</th><th></th></tr></thead>
+    <tbody>
+    {% for b in rows %}
+    <tr>
+      <td><input type="checkbox" name="ids" value="{{ b.id }}"></td>
+      <td>
+        <div class="product-name"><a class="quiet" href="/brands/{{ b.id }}">{{ b.name }}</a></div>
+        {% if b.example %}<div class="small muted">{{ b.example|pretty(b.name) }}</div>{% endif %}
+      </td>
+      <td class="num">{{ b.in_stock }}</td>
+      <td class="muted hide-sm">{{ (b.suppliers or "").replace(",", ", ") }}</td>
+      <td class="hide-sm">
+        {% for other, name, reason in hints.get(b.id, [])[:2] %}
+        <button class="btn sm" name="action" value="merge:{{ b.id }}:{{ other }}" title="Merge into {{ name }} ({{ reason }})">Same as {{ name }}</button>
+        {% endfor %}
+      </td>
+      <td class="num nowrap">
+        <button class="btn sm ghost" name="action" value="follow:{{ b.id }}" title="Follow">⭐</button>
+        <button class="btn sm ghost" name="action" value="browse:{{ b.id }}" title="Browse">👀</button>
+        <button class="btn sm ghost" name="action" value="ignore:{{ b.id }}" title="Ignore">🚫</button>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</form>
+{% else %}
+<div class="panel"><div class="empty">All brands are triaged. New ones show up here and in the Telegram digest.</div></div>
+{% endif %}
+{% endblock %}

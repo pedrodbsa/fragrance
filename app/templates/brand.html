@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ brand.name }}{% endblock %}
+{% block content %}
+{% set back = request.url.path %}
+<div class="page-head">
+  <div>
+    <p class="subtitle"><a href="/brands">← Brands</a></p>
+    <h1>{{ brand.name }}</h1>
+    <p class="subtitle">{{ brand.in_stock }} in stock{% if brand.suppliers %} at {{ brand.suppliers.replace(",", ", ") }}{% endif %} · <a href="/stock?brand={{ brand.id }}">see stock</a></p>
+  </div>
+  <form method="post" action="/brands/{{ brand.id }}/status" class="choice">
+    <input type="hidden" name="back" value="/brands/{{ brand.id }}">
+    {% for s, icon in (("follow", "⭐ Follow"), ("browse", "👀 Browse"), ("ignore", "🚫 Ignore")) %}
+    <button class="{{ 'on' if brand.status == s }}" name="status" value="{{ s }}">{{ icon }}</button>
+    {% endfor %}
+  </form>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <div class="panel-head"><h2>Spellings</h2><span class="panel-note">How suppliers write this brand</span></div>
+    <table>
+      <tbody>
+      {% for a in aliases %}
+      <tr>
+        <td class="product-name">{{ a.alias }}</td>
+        <td class="num muted">{{ a.products }} products</td>
+        <td class="num">{% if aliases|length > 1 %}<form method="post" action="/brands/split"><input type="hidden" name="alias" value="{{ a.alias }}"><button class="btn sm ghost danger" title="This spelling is a different brand: make it a brand of its own">Split off</button></form>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>Rename</h2></div>
+    <form method="post" action="/brands/{{ brand.id }}/rename" class="toolbar pad">
+      <input type="text" name="name" value="{{ brand.name }}" required>
+      <button class="btn">Save</button>
+    </form>
+    <div class="panel-head"><h2>Merge into another brand</h2></div>
+    <form method="post" action="/brands/{{ brand.id }}/merge" class="toolbar pad">
+      <select name="into" required>
+        <option value="">Choose a brand…</option>
+        {% for o in others %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+      </select>
+      <button class="btn">Merge</button>
+    </form>
+    <p class="help pad">Merging moves these spellings to the other brand, which keeps its own status.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>Products you decided on</h2><span class="panel-note">These win over the brand's status</span></div>
+    {% if decided %}
+    <table><tbody>
+      {% for f in decided %}
+      <tr><td class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}</td>
+          <td class="num"><span class="pill {{ {'want': 'new', 'own': 'restock'}.get(f.status, '') }}">{{ {"want": "Want", "own": "Owned", "ignore": "Not interested"}[f.status] }}</span></td></tr>
+      {% endfor %}
+    </tbody></table>
+    {% else %}
+    <div class="empty">None yet. Use Want / Own / Not interested on the <a href="/stock?brand={{ brand.id }}">Stock</a> page.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel" style="margin-top: 20px">
+  <div class="panel-head"><h2>Stock</h2><span class="panel-note">Every listing of this brand, in stock first</span></div>
+  {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists this brand right now.</div>{% endif %}
+</div>
+{% endblock %}

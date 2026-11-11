@@ -1,14 +1,14 @@
 """Collect one supplier: fetch its current stock and record what changed since the last run.
 
 The first run for a supplier only records the baseline, so it doesn't report its whole
-catalogue as new. Quantity changes update the product but aren't events: they happen
+catalogue as new, and the brands it brings are left for the Triage page instead of Telegram. Quantity changes update the product but aren't events: they happen
 constantly and would drown the ones that matter.
 """
 
 from collections import Counter
 from datetime import datetime, timezone
 
-from app.db import connect
+from app.db import add_brand, connect, unknown_spellings
 from app.item import Item
 from app.suppliers import SUPPLIERS
 
@@ -52,6 +52,10 @@ def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
         if old["qty"] > 0:
             conn.execute("UPDATE products SET qty = 0 WHERE supplier = ? AND sku = ?", (supplier, sku))
             events.append((sku, "soldout", old["qty"], 0))
+
+    # Brands no one has decided on yet wait for triage.
+    for spelling in unknown_spellings(conn):
+        add_brand(conn, spelling, announced=baseline)
 
     conn.executemany(
         "INSERT INTO events (supplier, sku, kind, old_value, new_value, created_at) VALUES (?, ?, ?, ?, ?, ?)",

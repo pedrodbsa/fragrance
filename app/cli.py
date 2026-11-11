@@ -1,26 +1,42 @@
-"""Command line, used by the schedules.
+"""Command line, used by the schedule.
 
-  fragrance collect <supplier>   fetch one supplier and record changes
-  fragrance notify               send pending changes to Telegram
-  fragrance warn <text>          send a plain warning to Telegram (used when a run fails)
+  fragrance run                  collect every supplier, then send one digest (the schedule)
+  fragrance collect <supplier>   fetch one supplier and record changes, no digest
+  fragrance notify               send the digest for whatever is pending
 """
 
 import sys
-from html import escape
+import traceback
 
-from app import telegram
 from app.collect import collect
+from app.db import connect, upgrade
 from app.notify import notify
 from app.suppliers import SUPPLIERS
 
 
+def run() -> None:
+    """A supplier that fails doesn't stop the others; the digest names it and the exit code
+    marks the schedule run as failed in Dokploy."""
+    failed = []
+    for supplier in SUPPLIERS:
+        try:
+            collect(supplier)
+        except Exception:
+            traceback.print_exc()
+            failed.append(supplier)
+    notify(failed)
+    if failed:
+        sys.exit(1)
+
+
 def main() -> None:
+    upgrade(connect())
     match sys.argv[1:]:
+        case ["run"]:
+            run()
         case ["collect", supplier] if supplier in SUPPLIERS:
             collect(supplier)
         case ["notify"]:
-            notify()
-        case ["warn", *words]:
-            telegram.send(f"⚠️ {escape(' '.join(words))}")
+            notify([])
         case _:
-            sys.exit(f"usage: fragrance collect {{{'|'.join(SUPPLIERS)}}} | fragrance notify | fragrance warn <text>")
+            sys.exit(f"usage: fragrance run | fragrance collect {{{'|'.join(SUPPLIERS)}}} | fragrance notify")

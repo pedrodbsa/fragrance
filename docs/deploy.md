@@ -12,15 +12,22 @@ persistent `../files/data` mount, streamed continuously to R2.
 4. **Domains** tab: add a domain for service `fragrance`, port `8000`, HTTPS on.
 5. Deploy. Open the domain and log in with `BACKOFFICE_USER` / `BACKOFFICE_PASSWORD`.
 
-## Schedules
+## Schedule
 
-Add one schedule per supplier against the `fragrance` service:
+One schedule against the `fragrance` service collects every supplier, then sends one digest:
 
 | Command | Cron |
 | --- | --- |
-| `run-supplier nunu` | `0 9,12,21 * * *`, timezone Europe/Madrid (store hours) |
+| `fragrance run` | `0 9,12,21 * * *`, timezone Europe/Madrid (store hours) |
 
-A failed collection sends a ⚠️ message to Telegram; details are in the schedule's log.
+A supplier that fails is named in the digest with ⚠️ and the run shows as failed; details
+are in the schedule's log.
+
+## Telegram buttons
+
+Set `BACKOFFICE_URL=https://grasse.xdecade.com` in the Environment tab. On start, the
+backoffice registers `/telegram` with Telegram so taps on the digest's triage buttons reach
+it (the deploy log shows `telegram: webhook registered`).
 
 ## Backups and recovery
 

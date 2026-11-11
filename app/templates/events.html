@@ -5,8 +5,9 @@
 <div class="page-head">
   <div>
     <h1>Changes</h1>
-    <p class="subtitle">What moved in your suppliers' stock, newest first.</p>
+    <p class="subtitle">What moved in your suppliers' stock, newest first. Ignored brands are left out.</p>
   </div>
+  {% if to_triage %}<a class="btn" href="/triage">{{ to_triage }} brand{{ "s" if to_triage != 1 }} to triage →</a>{% endif %}
 </div>
 
 <div class="stats">
@@ -40,7 +41,7 @@
       </td>
       <td>
         <div class="product-name" title="{{ r.name }}">{{ r.name|pretty(r.brand) }}</div>
-        <div class="product-brand">{{ r.brand }}</div>
+        <div class="product-brand">{{ r.brand_name }}</div>
       </td>
       <td class="mono hide-sm">{{ r.ean or "—" }}</td>
       <td class="num">{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}<span class="muted">—</span>{% endif %}</td>
