@@ -21,14 +21,20 @@
         <option value="">All suppliers</option>
         {% for s in suppliers %}<option {% if s == supplier %}selected{% endif %}>{{ s }}</option>{% endfor %}
       </select>
+      <select name="brands" title="Which brands">
+        {% for k, label in (("following", "Following brands"), ("default", "Following and Browse"), ("all", "All brands, ignored too")) %}<option value="{{ k }}" {{ 'selected' if k == brands_shown }}>{{ label }}</option>{% endfor %}
+      </select>
+      <select name="audience">
+        <option value="">Men, women, unisex</option>
+        {% for k, label in (("man", "Men"), ("woman", "Women"), ("unisex", "Unisex")) %}<option value="{{ k }}" {{ 'selected' if k == audience }}>{{ label }}</option>{% endfor %}
+      </select>
       <!-- hidden first: when the box is ticked, its later "true" wins -->
       <input type="hidden" name="in_stock" value="false">
       <label class="check"><input type="checkbox" name="in_stock" value="true" {% if in_stock %}checked{% endif %}> In stock</label>
       <label class="check"><input type="checkbox" name="followed" value="true" {% if followed %}checked{% endif %}> Alerting only</label>
-      <label class="check" title="Include ignored brands and fragrances"><input type="checkbox" name="everything" value="true" {% if everything %}checked{% endif %}> Show hidden</label>
       <input type="hidden" name="sort" value="{{ sort }}">
       <button class="btn primary" type="submit">Filter</button>
-      {% if q or brand or supplier or not in_stock or followed or everything %}<a class="btn ghost" href="/stock">Clear</a>{% endif %}
+      {% if q or brand or supplier or audience or not in_stock or followed or brands_shown != "default" %}<a class="btn ghost" href="/stock">Clear</a>{% endif %}
     </form>
     <span class="panel-note">{% if pages > 1 %}{{ "{:,}".format(first) }}–{{ "{:,}".format(first + groups|length - 1) }} of {% endif %}{{ "{:,}".format(total) }} fragrances</span>
   </div>

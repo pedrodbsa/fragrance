@@ -18,7 +18,7 @@
   <div class="panel-head">
     <nav class="segmented">
       {% for k, label in tabs.items() %}
-      <a href="/brands{{ '?status=' ~ k if k }}" class="{{ 'active' if status == k }}">{{ label }}{% if k %} <span class="muted">{{ counts.get(k, 0) }}</span>{% endif %}</a>
+      <a href="/brands?{{ {'status': k, 'sort': request.query_params.get('sort', '')}|urlencode }}" class="{{ 'active' if status == k }}">{{ label }}{% if k %} <span class="muted">{{ counts.get(k, 0) }}</span>{% endif %}</a>
       {% endfor %}
     </nav>
     <div class="toolbar">
@@ -28,7 +28,7 @@
       {% for k, label, tip in choices %}<button class="btn sm" name="action" value="{{ k }}:selected" title="{{ tip }}">{{ label }}</button>{% endfor %}
       {% endif %}
       <input type="search" name="q" value="{{ q }}" placeholder="Search brands"
-             onkeydown="if (event.key === 'Enter') { event.preventDefault(); location = '/brands?' + new URLSearchParams({status: '{{ status }}', q: this.value}); }">
+             onkeydown="if (event.key === 'Enter') { event.preventDefault(); location = '/brands?' + new URLSearchParams({status: '{{ status }}', q: this.value, sort: new URLSearchParams(location.search).get('sort') || ''}); }">
     </div>
   </div>
   {% if rows %}

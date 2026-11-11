@@ -23,7 +23,7 @@
     <tr class="{{ 'faded' if g.hidden or g.qty == 0 }}">
       <td data-sort="{{ g.fragrance }}">
         <div class="product-name">{% if g.alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<a class="quiet" href="{{ page }}">{{ g.fragrance|pretty('') }}</a>{% if g.concentration %} <span class="muted">{{ g.concentration }}</span>{% endif %}
-          {{ badges(g.fragrance_status, g.owned) }}</div>
+          {{ badges(g.fragrance_status, g.owned, g.audience) }}</div>
         <div class="product-brand"><a class="quiet" href="/brands/{{ g.brand_id }}">{{ g.brand_name }}</a></div>
       </td>
       <td>

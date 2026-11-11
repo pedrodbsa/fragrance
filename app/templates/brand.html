@@ -51,7 +51,7 @@
     <table><tbody>
       {% for f in decided %}
       <tr><td class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}</td>
-          <td class="num">{{ badges(f.status, f.owned) }}</td></tr>
+          <td class="num">{{ badges(f.status, f.owned, f.audience) }}</td></tr>
       {% endfor %}
     </tbody></table>
     {% else %}

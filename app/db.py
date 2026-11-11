@@ -11,7 +11,8 @@ Tables:
   fragrances        the catalogue: every fragrance (the juice: brand + name + concentration),
                     whether or not a supplier lists it now, with your decisions about it:
                     its list (wishlist | filler | ignore | default), whether it's in your
-                    collection (owned), and the size you'd buy (app/fragrances.py).
+                    collection (owned), the size you'd buy, and who it's for (audience:
+                    from suppliers, correctable on its page) (app/fragrances.py).
   fragrance_names   how listings name a fragrance: the name and concentration read from a
                     supplier's product name -> the fragrance it is. Merging two fragrances
                     points one's names at the other, so later listings land right too.
@@ -67,6 +68,7 @@ CREATE TABLE IF NOT EXISTS fragrances (
     status        TEXT NOT NULL DEFAULT 'default',  -- wishlist | filler | ignore | default
     owned         INTEGER NOT NULL DEFAULT 0,       -- in your collection
     size          TEXT,               -- size you'd buy, as shown in Stock ("100 ml", "100 ml tester")
+    audience      TEXT,               -- man | woman | unisex: the first supplier to say, or you
     note          TEXT,
     created_at    TEXT NOT NULL
 );
@@ -133,7 +135,7 @@ CREATE TABLE IF NOT EXISTS upgrades (
 -- A fragrance on a list decides for itself; one on no list ('default') follows its brand.
 CREATE VIEW IF NOT EXISTS catalog AS
 SELECT l.*, f.brand_id, b.name AS brand_name, b.status AS brand_status,
-       f.name AS fragrance, f.concentration, f.status AS fragrance_status, f.owned, f.size AS buy_size,
+       f.name AS fragrance, f.concentration, f.status AS fragrance_status, f.owned, f.size AS buy_size, f.audience,
        CASE WHEN f.status != 'default' THEN f.status = 'wishlist' ELSE b.status = 'follow' END AS alerting,
        CASE WHEN f.status != 'default' THEN f.status = 'ignore' ELSE b.status = 'ignore' END AS hidden
 FROM listings l

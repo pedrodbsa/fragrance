@@ -10,7 +10,8 @@ sets are kept, and only what's in stock.
 Each product looks like this (NAME has no brand and no size):
   <PRODUCT><ID>204855</ID><TYPE>Perfume</TYPE><MANUFACTURER>24 perfumes and colognes</MANUFACTURER>
     <NAME>Gold EDT</NAME><SIZE>50ml</SIZE><EANS><EAN>3760048937030</EAN></EANS>
-    <PRICE>15.42</PRICE><STOCK>4</STOCK></PRODUCT>
+    <SEX>U</SEX><PRICE>15.42</PRICE><STOCK>4</STOCK></PRODUCT>
+SEX is who it's for: M (men), W (women), U (unisex).
 """
 
 import os
@@ -22,6 +23,7 @@ import httpx
 from app.item import Item
 
 KEPT_TYPES = {"Perfume", "Tester", "Gift Set"}
+AUDIENCES = {"M": "man", "W": "woman", "U": "unisex"}  # their SEX field
 
 
 def fetch_wholesale_fragrances() -> list[Item]:
@@ -65,5 +67,6 @@ def parse(xml: bytes) -> list[Item]:
             qty=qty,
             price=float(product.findtext("PRICE")),
             flagged_new=False,
+            audience=AUDIENCES.get(product.findtext("SEX")),
         ))
     return items

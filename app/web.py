@@ -189,17 +189,19 @@ def sort_stock(groups: list[dict], sort: str) -> list[dict]:
 
 @office.get("/stock")
 def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
-          in_stock: bool = True, followed: bool = False, everything: bool = False, sort: str = "brand", page: int = 1):
-    """Everything that isn't ignored, one row per fragrance. 'followed' narrows to what alerts
-    you; 'everything' adds what's ignored."""
+          in_stock: bool = True, followed: bool = False, brands: str = "default", sort: str = "brand", page: int = 1,
+          audience: str = ""):
+    """One row per fragrance. 'brands' picks which: 'following' (followed brands only),
+    'default' (followed and Browse; nothing you ignored), 'all' (ignored ones too).
+    'followed' narrows to what alerts you."""
     conn = connect()
     found = conn.execute(
         """SELECT * FROM catalog
            WHERE (? = '' OR name LIKE '%' || ? || '%' OR ean = ? OR ean2 = ? OR ean3 = ? OR sku = ?)
              AND (? = '' OR brand_id = ?) AND (? = '' OR supplier = ?) AND (NOT ? OR qty > 0)
-             AND (? OR NOT hidden) AND (NOT ? OR alerting)
+             AND (? = 'all' OR NOT hidden) AND (? != 'following' OR brand_status = 'follow') AND (NOT ? OR alerting) AND (? = '' OR audience = ?)
            ORDER BY brand_name, fragrance, concentration""",
-        (q, q, q, q, q, q, brand, brand, supplier, supplier, in_stock, everything, followed),
+        (q, q, q, q, q, q, brand, brand, supplier, supplier, in_stock, brands, brands, followed, audience, audience),
     ).fetchall()
     brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'ignore' ORDER BY name").fetchall()
     suppliers = [r[0] for r in conn.execute("SELECT name FROM suppliers ORDER BY name")]
@@ -217,7 +219,7 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
         "groups": groups[(page - 1) * PAGE:page * PAGE], "total": len(groups),
         "page": page, "pages": pages, "page_link": page_link, "first": (page - 1) * PAGE + 1, "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
-        "everything": everything, "sort": sort, "sort_links": sort_links,
+        "brands_shown": brands, "sort": sort, "sort_links": sort_links, "audience": audience,
     })
 
 
@@ -523,7 +525,7 @@ def merges(request: Request):
     ids = {i for p in pairs for i in (p["a_id"], p["b_id"])}
     # Each side's name, list, and which suppliers list it under what name.
     sides = {r["id"]: r for r in conn.execute(
-        f"""SELECT f.id, f.name, f.concentration, f.status, f.owned, group_concat(DISTINCT l.supplier) AS suppliers,
+        f"""SELECT f.id, f.name, f.concentration, f.status, f.owned, f.audience, group_concat(DISTINCT l.supplier) AS suppliers,
                    count(l.sku) AS listings, min(l.name) AS example
             FROM fragrances f LEFT JOIN listings l ON l.fragrance_id = f.id
             WHERE f.id IN ({",".join("?" * len(ids))}) GROUP BY f.id""", list(ids))}
@@ -541,6 +543,15 @@ def merges_post(action: str = Form(...)):
         else:
             fragrances.mark_not_same(conn, int(first), int(second))
     return RedirectResponse("/merges", status_code=303)
+
+
+@office.post("/products/{fragrance_id}/audience")
+def product_audience(fragrance_id: int, audience: str = Form("")):
+    """Who it's for, when the suppliers got it wrong or didn't say. Empty: unknown."""
+    conn = connect()
+    with conn:
+        fragrances.set_audience(conn, fragrance_id, audience or None)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/eans")

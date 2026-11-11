@@ -56,6 +56,36 @@ def identify(name: str, brand: str) -> tuple[str, str | None]:
     return text, None
 
 
+AUDIENCE_WORDS = [  # who a fragrance is for, when a supplier's name says it
+    ("unisex", re.compile(r"\bUNISEX\b")),
+    ("woman", re.compile(r"\b(WOMAN|WOMEN|FEMME|HER|DONNA|MUJER|LADY|LADIES)\b")),
+    ("man", re.compile(r"\b(MAN|MEN|HOMME|HIM|UOMO|HOMBRE)\b")),
+]
+AUDIENCES = ("man", "woman", "unisex")
+
+
+def read_audience(name: str) -> str | None:
+    """"AMOUAGE BEACH HUT MAN EDP 100 ML" -> "man"; None when the name doesn't say."""
+    text = name.upper()
+    for audience, pattern in AUDIENCE_WORDS:
+        if pattern.search(text):
+            return audience
+    return None
+
+
+def learn_audience(conn, fragrance_id: int, audience: str | None) -> None:
+    """A supplier says who a fragrance is for: kept unless it's known already."""
+    if audience:
+        conn.execute("UPDATE fragrances SET audience = ? WHERE id = ? AND audience IS NULL", (audience, fragrance_id))
+
+
+def set_audience(conn, fragrance_id: int, audience: str | None) -> None:
+    """You say who it's for (None: unknown)."""
+    if audience not in AUDIENCES + (None,):
+        raise ValueError(f"unknown audience {audience!r}")
+    conn.execute("UPDATE fragrances SET audience = ? WHERE id = ?", (audience, fragrance_id))
+
+
 TESTER = re.compile(r"\b(TESTER|TST|TSTR)\b")
 GIFT_SET = re.compile(r"\b(SET|KIT|COFFRET|ESTUCHE)\b|\+")  # a gift set shows as its own "size"
 AMOUNT = re.compile(r"(\d+(?:[.,]\d+)?)\s*(ML|GR|G|OZ)\b")
@@ -144,8 +174,9 @@ def merge(conn, fragrance_id: int, into_id: int) -> None:
     conn.execute(
         """UPDATE fragrances SET
              status = CASE WHEN status = 'default' THEN ? ELSE status END,
-             owned = max(owned, ?), size = coalesce(size, ?), note = coalesce(note, ?)
-           WHERE id = ?""", (source["status"], source["owned"], source["size"], source["note"], into_id))
+             owned = max(owned, ?), size = coalesce(size, ?), note = coalesce(note, ?),
+             audience = coalesce(audience, ?)
+           WHERE id = ?""", (source["status"], source["owned"], source["size"], source["note"], source["audience"], into_id))
     conn.execute("UPDATE fragrance_names SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))
     conn.execute("UPDATE listings SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))
     conn.execute("UPDATE fragrance_eans SET fragrance_id = ? WHERE fragrance_id = ?", (into_id, fragrance_id))

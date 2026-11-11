@@ -4,6 +4,8 @@
                   on every page load) becomes listings pointing to a fragrance catalogue. Your
                   fragrance decisions and merges carry over.
   brand-cleanup-1 brand names tidied and duplicate spellings merged (app/brand_cleanup.py).
+  audience        fragrances remember who they're for (man | woman | unisex); filled in by
+                  the next collection.
   brand-reviewed  brands remember whether you've chosen for them yet. Followed and ignored
                   ones count as chosen, and so do default ones older than 30 days (the old
                   New brands page no longer showed them).
@@ -22,6 +24,16 @@ def upgrade(conn) -> None:
         once(conn, "listings", to_listings)
     once(conn, "brand-cleanup-1", brand_cleanup.apply)
     once(conn, "brand-reviewed", brand_reviewed)
+    once(conn, "audience", audience)
+
+
+def audience(conn) -> None:
+    if "audience" not in {c["name"] for c in conn.execute("PRAGMA table_info(fragrances)")}:
+        conn.execute("ALTER TABLE fragrances ADD COLUMN audience TEXT")
+    conn.execute("DROP VIEW IF EXISTS catalog")  # recreated with the new column
+    for statement in statements(SCHEMA):
+        if "CREATE VIEW" in statement:
+            conn.execute(statement)
 
 
 def brand_reviewed(conn) -> None:

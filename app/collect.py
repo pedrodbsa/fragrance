@@ -10,7 +10,7 @@ from collections import Counter
 from datetime import datetime, timezone
 
 from app.db import brand_for, collected, connect
-from app.fragrances import assign, by_ean
+from app.fragrances import assign, by_ean, learn_audience, read_audience
 from app.item import Item
 from app.suppliers import SUPPLIERS
 
@@ -56,6 +56,7 @@ def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
             fragrance_id = by_ean(conn, (item.ean, item.ean2, item.ean3)) or assign(conn, brand_id, item.name, item.brand)
         conn.execute(UPSERT, (supplier, item.sku, item.name, item.brand, item.ean, item.ean2, item.ean3,
                               item.qty, item.price, item.flagged_new, now, now, fragrance_id))
+        learn_audience(conn, fragrance_id, item.audience or read_audience(item.name))
 
     # Whatever we knew about but the supplier no longer lists has sold out.
     for sku, old in known.items():

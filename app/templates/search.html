@@ -42,7 +42,7 @@
     {% for f in fragrances %}
     <tr class="{{ 'faded' if not f.offers }}">
       <td data-sort="{{ f.name }}">
-        <div class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}{{ badges(f.status, f.owned) }}</div>
+        <div class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}{{ badges(f.status, f.owned, f.audience) }}</div>
         <div class="product-brand"><a class="quiet" href="/brands/{{ f.brand_id }}">{{ f.brand_name }}</a></div>
       </td>
       <td class="num" data-sort="{{ f.best if f.best is not none }}">{% if f.best is not none %}€{{ "%.2f"|format(f.best) }}{% else %}<span class="pill">{{ "Sold out" if f.offers is not none else "Not listed" }}</span>{% endif %}</td>

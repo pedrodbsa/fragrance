@@ -14,3 +14,4 @@ class Item:
     qty: int
     price: float
     flagged_new: bool
+    audience: str | None = None  # man | woman | unisex, when the supplier says; else read from the name

@@ -2,7 +2,7 @@
 {% from "_macros.html" import badges %}
 {% block title %}Merges{% endblock %}
 {% macro side(f, other) %}
-  <div class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}{{ badges(f.status, f.owned) }}</div>
+  <div class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}{{ badges(f.status, f.owned, f.audience) }}</div>
   <div class="small muted">{{ (f.suppliers or "").split(",")|sort|join(", ") }} · {{ f.listings }} listing{{ "s" if f.listings != 1 }}{% if f.example %} · “{{ f.example }}”{% endif %}</div>
   <button class="btn sm" name="action" value="merge:{{ other }}:{{ f.id }}" title="The other one merges into this one">Merge, keep this name</button>
 {% endmacro %}

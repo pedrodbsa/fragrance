@@ -27,7 +27,7 @@ automatically from supplier data.
 |---|---|---|---|
 | **Follow** | brands you collect (Amouage) | Yes | New products and restocks of every fragrance of the brand |
 | **Browse** (the default) | brands worth looking at, without alerts | Yes | Never |
-| **Ignore** | brands you'll never want | No (only with "Show hidden") | Never |
+| **Ignore** | brands you'll never want | No (only with Stock's "All brands") | Never |
 
 ## Fragrances: your lists
 
@@ -38,7 +38,7 @@ is often topped up with fragrances you don't mind owning: those are the fillers.
 |---|---|---|
 | **Wishlist** | Yes | New listings, back in stock, cheaper, whatever the brand's status |
 | **Filler** | Yes | Never, even if the brand is followed |
-| **Ignore** | No (only with "Show hidden") | Never |
+| **Ignore** | No (only with Stock's "All brands") | Never |
 | No list | Yes | The brand's status applies |
 
 - A fragrance's list wins over its brand: leave Memo alone but wishlist Ithaque; follow
@@ -105,6 +105,11 @@ a "shares an EAN" hint. Merges are remembered for every supplier and can be spli
 EANs never merge anything on their own: Nunu reuses some EANs for different fragrances
 (Carios and Delina share one).
 
+**Who it's for.** Each fragrance is marked Men, Women or Unisex when a supplier says: the
+wholesale shops' catalogue has a field for it, and Nunu's names sometimes do ("… MAN EDP",
+"POUR HOMME", "FOR HER"). The first supplier to say wins; correct it on the product page. Stock
+filters by it. Fragrances only Nunu lists are mostly unknown until step 2's parsing.
+
 **EANs.** The product page lists every EAN of the fragrance (which supplier and size has it)
 and lets you add more. A listing with an EAN you added belongs to that fragrance, whatever its
 name says: listings already there move over, and new ones land there from then on. Removing an
@@ -161,7 +166,7 @@ the credit lasts a long time even on the most capable model.
 ## Product types
 
 - **Non-fragrance** (body lotion, shower gel, deodorant, cosmetics) is hidden by default, using
-  the parser's classification. A "show hidden" toggle in Stock reveals it.
+  the parser's classification. Stock's "All brands" choice reveals it.
 - **Testers** are shown normally and marked with a Tester badge.
 - Gift sets and minis are shown, each with its own badge.
 
@@ -195,7 +200,7 @@ Brands on default, fillers and fragrances on no list never appear in the digest.
 - **Changes**: what moved, without hidden brands and fragrances (wishlist fragrances of
   ignored brands are shown).
 - **Stock**: one row per fragrance (brand + name + concentration) with its sizes and testers
-  and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, in stock, alerting only, show hidden. Grouping uses the
+  and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, which brands (following; following and Browse; all, ignored too), men / women / unisex, in stock, alerting only. Grouping uses the
   fragrance name read from listings, not EANs, so different EANs per size don't matter.
 - **Product page**: every listing of one fragrance by size, and a price history chart (one
   line per size and supplier, rebuilt from recorded price changes).

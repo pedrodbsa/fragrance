@@ -34,7 +34,8 @@
 {% endmacro %}
 
 {# Badges for a fragrance: its list, and In collection. #}
-{% macro badges(status, owned) %}
+{% macro badges(status, owned, audience=None) %}
+{%- if audience %} <span class="muted small" title="Who it's for">{{ {"man": "Men", "woman": "Women", "unisex": "Unisex"}[audience] }}</span>{% endif -%}
 {%- if status == "wishlist" %} <span class="pill new">Wishlist</span>{% elif status == "filler" %} <span class="pill">Filler</span>{% elif status == "ignore" %} <span class="pill">Ignored</span>{% endif -%}
 {%- if owned %} <span class="pill restock">In collection</span>{% endif -%}
 {% endmacro %}

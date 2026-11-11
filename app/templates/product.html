@@ -7,15 +7,22 @@
   <div>
     <p class="subtitle"><a href="/brands/{{ product.brand_id }}">← {{ product.brand_name }}</a></p>
     <h1>{{ product.name|pretty('') }}{% if product.concentration %} <span class="muted">{{ product.concentration }}</span>{% endif %}</h1>
-    <p class="subtitle">{{ badges(product.status, product.owned) }}{% if product.status == "default" %} On no list: the brand's status applies ({{ "following" if product.brand_status == "follow" else "ignored" if product.brand_status == "ignore" else "no alerts" }}).{% endif %}</p>
+    <p class="subtitle">{{ badges(product.status, product.owned, product.audience) }}{% if product.status == "default" %} On no list: the brand's status applies ({{ "following" if product.brand_status == "follow" else "ignored" if product.brand_status == "ignore" else "no alerts" }}).{% endif %}</p>
     {% if product.note %}<p class="subtitle">{{ product.note }}</p>{% endif %}
     <details class="subtitle">
-      <summary class="small muted">Correct name or concentration</summary>
+      <summary class="small muted">Correct name, concentration or who it's for</summary>
       <form method="post" action="/products/{{ product.id }}/rename" class="toolbar" style="margin-top: 8px">
         <input type="text" name="name" value="{{ product.name|pretty('') }}" required>
         <select name="concentration"><option value="">No concentration</option>{% for c in concentrations %}<option {{ 'selected' if c == product.concentration }}>{{ c }}</option>{% endfor %}</select>
         <button class="btn">Save</button>
         <span class="small muted">If that fragrance exists already, this one merges into it.</span>
+      </form>
+      <form method="post" action="/products/{{ product.id }}/audience" class="toolbar" style="margin-top: 8px">
+        <label class="small muted" for="audience">For</label>
+        <select id="audience" name="audience" onchange="this.form.submit()">
+          <option value="">Unknown</option>
+          {% for k, label in (("man", "Men"), ("woman", "Women"), ("unisex", "Unisex")) %}<option value="{{ k }}" {{ 'selected' if k == product.audience }}>{{ label }}</option>{% endfor %}
+        </select>
       </form>
     </details>
   </div>

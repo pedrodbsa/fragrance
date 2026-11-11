@@ -43,7 +43,7 @@
     {% for r in rows %}
     <tr>
       <td data-sort="{{ r.name }}">
-        <div class="product-name"><a class="quiet" href="/products/{{ r.id }}">{{ r.name|pretty('') }}</a>{% if r.concentration %} <span class="muted">{{ r.concentration }}</span>{% endif %}{{ badges(r.status, r.owned) }}</div>
+        <div class="product-name"><a class="quiet" href="/products/{{ r.id }}">{{ r.name|pretty('') }}</a>{% if r.concentration %} <span class="muted">{{ r.concentration }}</span>{% endif %}{{ badges(r.status, r.owned, r.audience) }}</div>
         <div class="product-brand"><a class="quiet" href="/brands/{{ r.brand_id }}">{{ r.brand_name }}</a></div>
       </td>
       <td data-sort="{{ r.offers|map(attribute='price')|reject('none')|min }}">
