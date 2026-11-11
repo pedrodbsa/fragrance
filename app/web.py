@@ -860,13 +860,14 @@ def orders_page(request: Request):
     plan = orders.plan(conn, open_baskets)
     lines = [i for b in open_baskets for i in b["items"]]
     lines += [o for s in plan for o in s["wanted"] + s["fillers"] + s["spare"]]
-    deals = {(r["supplier"], r["sku"]): r for r in deals_only(conn, lines)}
+    # Each line against the next cheapest supplier: its deal, or how much dearer or cheaper.
+    compared = {(r["supplier"], r["sku"]): r for r in mark_deals(conn, mark_rivals(conn, lines))}
     # One panel per supplier: its basket, then what's suggested to add. Baskets first.
     suggestions = {o["supplier"]: o for o in plan}
     panels = [{"supplier": b["supplier"], "basket": b, "suggestion": suggestions.pop(b["supplier"], None)} for b in open_baskets]
     panels += [{"supplier": o["supplier"], "basket": None, "suggestion": o} for o in suggestions.values()]
     return templates.TemplateResponse(request, "orders.html", {
-        "panels": panels, "cheapest": fragrances.cheapest(conn, [r["fragrance_id"] for r in lines]), "deals": deals,
+        "panels": panels, "cheapest": fragrances.cheapest(conn, [r["fragrance_id"] for r in lines]), "compared": compared,
     })
 
 

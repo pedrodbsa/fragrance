@@ -47,6 +47,15 @@
 {% if r and r.discount is defined %}<span class="pill hot" title="A deal: the next cheapest supplier asks €{{ "%.2f"|format(r.rival) }}">🔥 −{{ (r.discount * 100)|round|int }}%</span>{% endif %}
 {%- endmacro %}
 
+{# A listing's price against the next cheapest supplier (a row from web.mark_rivals): a 🔥
+   deal, else the % it's dearer (red) or cheaper (green). Nothing when no one else has it. #}
+{% macro vs_rival(r) -%}
+{% if r and r.discount is defined %}{{ hot(r) }}
+{%- elif r and r.rival and r.price is not none and r.qty > 0 %}{% set delta = r.price - r.rival %}
+<span class="vs {{ 'up' if delta > 0 else 'down' if delta < 0 }}" title="The next cheapest supplier asks €{{ "%.2f"|format(r.rival) }}: €{{ "%.2f"|format(delta|abs) }} {{ 'more' if delta > 0 else 'less' }} here">{{ "+" if delta > 0 else "−" if delta < 0 else "±" }}{{ (delta|abs / r.rival * 100)|round|int }}%</span>
+{%- endif %}
+{%- endmacro %}
+
 {% macro best(is_cheapest) -%}
 {% if is_cheapest %}<div class="small best" title="The lowest price any supplier has for this size right now">Cheapest</div>{% endif %}
 {%- endmacro %}
