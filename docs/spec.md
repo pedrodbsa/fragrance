@@ -213,6 +213,9 @@ Sections, in this order:
 
 Brands on default, fillers and fragrances on no list never appear in the digest. You see them in the backoffice.
 
+Price moves under 1% aren't recorded as changes (a shop repricing everything by a few cents
+would flood the Changes page); the listing still shows the new price.
+
 ## Backoffice pages
 
 - **Changes**: what moved, without hidden brands and fragrances (wishlist fragrances of

@@ -1,8 +1,9 @@
-"""wholesale-fragrances.eu and fragrances-wholesale.eu: one company, two shops with their own
-prices, so each is a supplier of its own. Both publish their whole catalogue as one XML file:
+"""fragrances-wholesale.eu publishes its whole catalogue as one XML file:
   /generator/catalog/xml?token=…
-Env: SUPPLIER_WHOLESALE_FRAGRANCES_TOKEN, SUPPLIER_FRAGRANCES_WHOLESALE_TOKEN (the same value
-if one token works for both).
+Env: SUPPLIER_FRAGRANCES_WHOLESALE_TOKEN.
+
+Its sister shop wholesale-fragrances.eu lists the same products from the same stock, about
+0.8% dearer, so it isn't collected (dropped on 2026-11-11).
 
 The catalogue holds about 36,000 products, mostly cosmetics. Only perfumes, testers and gift
 sets are kept, and only what's in stock.
@@ -26,11 +27,7 @@ KEPT_TYPES = {"Perfume", "Tester", "Gift Set"}
 AUDIENCES = {"M": "man", "W": "woman", "U": "unisex"}  # their SEX field
 
 
-def fetch_wholesale_fragrances() -> list[Item]:
-    return parse(download("https://www.wholesale-fragrances.eu", os.environ["SUPPLIER_WHOLESALE_FRAGRANCES_TOKEN"]))
-
-
-def fetch_fragrances_wholesale() -> list[Item]:
+def fetch() -> list[Item]:
     return parse(download("https://www.fragrances-wholesale.eu", os.environ["SUPPLIER_FRAGRANCES_WHOLESALE_TOKEN"]))
 
 

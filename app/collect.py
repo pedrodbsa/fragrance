@@ -71,13 +71,19 @@ def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
     return events
 
 
+# Price moves smaller than this share of the price aren't events: a shop repricing everything
+# by a few cents would otherwise fill the Changes page. The listing still shows the new price.
+MIN_PRICE_MOVE = 0.01  # 1%
+
+
 def changes(old, item: Item) -> list[tuple]:
     """Events between a product's last known state and its current listing, as (kind, old, new)."""
     found = []
     if old["qty"] == 0 and item.qty > 0:
         found.append(("restock", 0, item.qty))
-    if old["price"] is not None and item.price < old["price"]:
+    moved = old["price"] is not None and abs(item.price - old["price"]) >= old["price"] * MIN_PRICE_MOVE
+    if moved and item.price < old["price"]:
         found.append(("price_drop", old["price"], item.price))
-    if old["price"] is not None and item.price > old["price"]:
+    if moved and item.price > old["price"]:
         found.append(("price_up", old["price"], item.price))
     return found

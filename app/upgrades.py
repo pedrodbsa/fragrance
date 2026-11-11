@@ -9,6 +9,8 @@
   brand-reviewed  brands remember whether you've chosen for them yet. Followed and ignored
                   ones count as chosen, and so do default ones older than 30 days (the old
                   New brands page no longer showed them).
+  drop-wholesale-fragrances  that shop is no longer collected (fragrances-wholesale has the
+                  same products, cheaper): its listings count as sold out, quietly.
 """
 
 import sqlite3
@@ -25,6 +27,11 @@ def upgrade(conn) -> None:
     once(conn, "brand-cleanup-1", brand_cleanup.apply)
     once(conn, "brand-reviewed", brand_reviewed)
     once(conn, "audience", audience)
+    once(conn, "drop-wholesale-fragrances", drop_wholesale_fragrances)
+
+
+def drop_wholesale_fragrances(conn) -> None:
+    conn.execute("UPDATE listings SET qty = 0 WHERE supplier = 'wholesale-fragrances'")
 
 
 def audience(conn) -> None:

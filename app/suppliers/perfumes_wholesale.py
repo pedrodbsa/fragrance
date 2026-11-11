@@ -23,6 +23,7 @@ both are dropped from the name, since they have their own fields):
 
 import os
 import re
+import time
 import xml.etree.ElementTree as ET
 
 import httpx
@@ -46,6 +47,11 @@ def fetch() -> list[Item]:
 
 def download(what: str, url: str) -> bytes:
     response = httpx.get(url, timeout=300, follow_redirects=True)
+    if response.status_code == 429:
+        # "Too many requests": they limit how often the feeds are downloaded. Wait as long as
+        # they ask (a minute if they don't say) and try once more.
+        time.sleep(int(response.headers.get("Retry-After", "60")))
+        response = httpx.get(url, timeout=300, follow_redirects=True)
     if response.status_code != 200:
         # Said without the URL: it carries the hash, and errors show on the Suppliers page.
         raise RuntimeError(f"perfumes-wholesale {what} feed: HTTP {response.status_code}")

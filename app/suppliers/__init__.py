@@ -1,11 +1,10 @@
 """One module per supplier. Each exposes a fetch() -> list[Item] with the supplier's current
 in-stock items; anything missing from the list is treated as sold out."""
 
-from app.suppliers import nunu, perfumes_wholesale, wholesale_fragrances
+from app.suppliers import fragrances_wholesale, nunu, perfumes_wholesale
 
 SUPPLIERS = {
     "nunu": nunu.fetch,
-    "wholesale-fragrances": wholesale_fragrances.fetch_wholesale_fragrances,
-    "fragrances-wholesale": wholesale_fragrances.fetch_fragrances_wholesale,
+    "fragrances-wholesale": fragrances_wholesale.fetch,
     "perfumes-wholesale": perfumes_wholesale.fetch,
 }
