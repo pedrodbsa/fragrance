@@ -334,6 +334,14 @@ def brands_post(action: str = Form(...), ids: list[int] = Form([]), back: str = 
     return back_to(back, "/brands")
 
 
+@office.post("/brands/add")
+def brand_add(name: str = Form(...), status: str = Form(...)):
+    conn = connect()
+    with conn:
+        brand_id = brands.add(conn, name, status)
+    return RedirectResponse(f"/brands/{brand_id}", status_code=303)
+
+
 @office.get("/brands/{brand_id}")
 def brand_detail(request: Request, brand_id: int):
     conn = connect()

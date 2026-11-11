@@ -100,6 +100,10 @@ EAN manufacturer prefixes were tried and dropped: they identify the licence hold
 (Armani, Lancôme and Valentino share one), not the brand.
 
 The Brands page manages aliases by hand too: merging two brands, splitting one apart, renaming.
+You can also add a brand yourself (Brands page, "Add a brand"), to follow or ignore it before
+any supplier lists it. If you have it already under another spelling, that brand gets the
+status instead. A supplier listing it later under the same name lands on it; under another
+spelling it shows in the New tab with a "Same as" suggestion.
 
 ## Products page
 

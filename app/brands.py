@@ -26,6 +26,19 @@ def set_status(conn, brand_id: int, status: str) -> None:
                  (status, now(), brand_id))
 
 
+def add(conn, name: str, status: str) -> int:
+    """A brand you add yourself, e.g. to follow it before any supplier lists it. If you have it
+    already, however it's spelled ("Hermes Parfums" for Hermès), that one gets the status
+    instead. Returns its id. A supplier listing it under the same name lands on it; under
+    another spelling it shows in the New tab with a "Same as" suggestion."""
+    wanted = key(name)
+    known = conn.execute("SELECT brand_id, alias FROM brand_aliases UNION SELECT id, name FROM brands").fetchall()
+    found = next((row["brand_id"] for row in known if key(row["alias"]) == wanted), None)
+    brand_id = found or add_brand(conn, name.strip(), announced=True)
+    set_status(conn, brand_id, status)
+    return brand_id
+
+
 def rename(conn, brand_id: int, name: str) -> None:
     conn.execute("UPDATE brands SET name = ? WHERE id = ?", (name.strip(), brand_id))
 
