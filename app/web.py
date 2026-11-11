@@ -180,14 +180,27 @@ def price_history(conn, rows: list[dict]) -> list[dict]:
     return series
 
 
+def in_stock_prices(conn, rows: list[dict]) -> dict:
+    """What every supplier asks for the fragrances in rows, in stock: (fragrance id, size) ->
+    [(supplier, price)]. Reads only those fragrances' listings, so a page showing a few
+    fragrances doesn't read the whole catalogue."""
+    ids = list({r["fragrance_id"] for r in rows})
+    prices = {}
+    for at in range(0, len(ids), 500):  # SQLite takes a limited number of ? at once
+        chunk = ids[at:at + 500]
+        for r in conn.execute(f"""SELECT fragrance_id, supplier, name, price FROM listings
+                                  WHERE qty > 0 AND price IS NOT NULL
+                                  AND fragrance_id IN ({",".join("?" * len(chunk))})""", chunk):
+            prices.setdefault((r["fragrance_id"], variant(r["name"])[1]), []).append((r["supplier"], r["price"]))
+    return prices
+
+
 def cheapest_only(conn, rows: list[dict]) -> list[dict]:
     """Keep the rows that are the lowest in-stock price for their fragrance and size across
     every supplier, tester or not (a tie counts as cheapest). With a supplier filter, that's
     where that supplier is the cheapest."""
-    lowest = {}  # (fragrance id, size) -> lowest in-stock price at any supplier
-    for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
-        size = (r["fragrance_id"], r["size_label"])
-        lowest[size] = min(lowest.get(size, r["price"]), r["price"])
+    lowest = {size: min(price for _, price in offers)  # (fragrance id, size) -> lowest in-stock price
+              for size, offers in in_stock_prices(conn, rows).items()}
     return [r for r in rows if r["qty"] > 0 and r["price"] is not None
             and r["price"] <= lowest[(r["fragrance_id"], r["size_label"])]]
 
@@ -217,9 +230,7 @@ def mark_deals(conn, rows: list[dict]) -> list[dict]:
     """The rows, those that are a deal with their "discount" (0.32 for 32% off) and the
     "rival" price it's measured from: in stock and priced at least DEAL below the lowest
     in-stock price another supplier asks for the same fragrance and size."""
-    prices = {}  # (fragrance id, size) -> [(supplier, price)] of everything in stock
-    for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
-        prices.setdefault((r["fragrance_id"], r["size_label"]), []).append((r["supplier"], r["price"]))
+    prices = in_stock_prices(conn, rows)
     marked = []
     for r in rows:
         others = [price for supplier, price in prices.get((r["fragrance_id"], r["size_label"]), [])
@@ -240,9 +251,7 @@ def mark_rivals(conn, rows: list[dict]) -> list[dict]:
     """The rows (one supplier's), each with "rival": the lowest in-stock price another
     supplier asks for the same fragrance and size (None if no one else has it), and
     "cheapest": no one else asks less."""
-    rivals = {}  # (fragrance id, size) -> [(supplier, price)] of everything in stock
-    for r in annotate(conn.execute("SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL")):
-        rivals.setdefault((r["fragrance_id"], r["size_label"]), []).append((r["supplier"], r["price"]))
+    rivals = in_stock_prices(conn, rows)
     marked = []
     for r in rows:
         others = [p for s, p in rivals.get((r["fragrance_id"], r["size_label"]), []) if s != r["supplier"]]
