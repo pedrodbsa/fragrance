@@ -38,7 +38,7 @@
   {% if rows %}
   <div class="scroll">
   <table class="sortable">
-    <thead><tr><th></th><th>Brand</th><th class="num">In stock</th><th class="num" title="Cheapest to dearest listing in stock, any size">Prices</th><th class="hide-sm">Suppliers</th>
+    <thead><tr><th></th><th>Brand</th><th class="num">In stock</th><th class="num" title="Cheapest listing in stock, any size">From</th><th class="num" title="Dearest listing in stock, any size">To</th><th class="hide-sm">Suppliers</th>
       {% if status == "new" %}<th class="hide-sm">First seen</th><th class="hide-sm" data-nosort>Looks like</th>{% endif %}<th></th></tr></thead>
     <tbody>
     {% for b in rows %}
@@ -50,7 +50,9 @@
         {% elif b.spellings > 1 %}<div class="small muted">{{ b.spellings }} spellings</div>{% endif %}
       </td>
       <td class="num">{{ b.in_stock }}</td>
-      <td class="num nowrap" data-sort="{{ b.low if b.low is not none }}">{% if b.low is not none %}€{{ "%.0f"|format(b.low) }}{% if b.high|round > b.low|round %}–€{{ "%.0f"|format(b.high) }}{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>
+      {% for price in (b.low, b.high) %}
+      <td class="num nowrap" data-sort="{{ price if price is not none }}">{% if price is not none %}€{{ "%.0f"|format(price) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+      {% endfor %}
       <td class="muted hide-sm">{{ (b.suppliers or "").split(",")|sort|join(", ") }}</td>
       {% if status == "new" %}
       <td class="nowrap muted hide-sm" data-sort="{{ b.created_at }}">{{ b.created_at|local }}</td>
