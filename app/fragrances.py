@@ -267,8 +267,8 @@ def merge(conn, fragrance_id: int, into_id: int) -> None:
     conn.execute("DELETE FROM fragrances WHERE id = ?", (fragrance_id,))
 
 
-# Same brand, at least one EAN in common, not marked as different. Same name first: those are
-# usually suppliers disagreeing about the concentration.
+# Same brand, at least one EAN in common, not marked as different, brand not ignored. Same name
+# first: those are usually suppliers disagreeing about the concentration.
 SUGGESTIONS = """
 WITH codes AS (
     SELECT fragrance_id, ean FROM listings WHERE ean != ''
@@ -284,6 +284,7 @@ JOIN fragrances fa ON fa.id = p.a_id
 JOIN fragrances fb ON fb.id = p.b_id
 JOIN brands br ON br.id = fa.brand_id
 WHERE fa.brand_id = fb.brand_id
+  AND br.status != 'ignore'
   AND NOT EXISTS (SELECT 1 FROM not_same n WHERE n.fragrance_id = p.a_id AND n.other_id = p.b_id)
 ORDER BY same_name DESC, br.name, fa.name
 """
