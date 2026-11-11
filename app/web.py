@@ -169,10 +169,21 @@ def price_history(conn, rows: list[dict]) -> list[dict]:
 
 IN_STOCK_FIRST = "ORDER BY qty = 0, name"
 
+# Stock's sort choices: label, what to order fragrances by, and whether highest comes first.
+# Sold-out fragrances (no price) go last when sorting by price.
+STOCK_SORTS = {
+    "brand": ("Brand", lambda g: (g["brand_name"].lower(), g["fragrance"], g["concentration"] or ""), False),
+    "name": ("Name", lambda g: (g["fragrance"], g["brand_name"].lower()), False),
+    "price": ("Price, low to high", lambda g: (g["best"] is None, g["best"] or 0), False),
+    "price_desc": ("Price, high to low", lambda g: (g["best"] is not None, g["best"] or 0), True),
+    "qty": ("Most in stock", lambda g: g["qty"], True),
+    "newest": ("Newest first", lambda g: min(l["first_seen"] for l in g["listings"]), True),
+}
+
 
 @office.get("/stock")
 def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
-          in_stock: bool = True, followed: bool = False, everything: bool = False):
+          in_stock: bool = True, followed: bool = False, everything: bool = False, sort: str = "brand"):
     """Everything that isn't ignored, one row per fragrance. 'followed' narrows to what alerts
     you; 'everything' adds what's ignored."""
     conn = connect()
@@ -186,11 +197,13 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     ).fetchall()
     brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'ignore' ORDER BY name").fetchall()
     suppliers = [r[0] for r in conn.execute("SELECT name FROM suppliers ORDER BY name")]
-    groups = group(annotate(found))
+    sort = sort if sort in STOCK_SORTS else "brand"
+    _, order, highest_first = STOCK_SORTS[sort]
+    groups = sorted(group(annotate(found)), key=order, reverse=highest_first)
     return templates.TemplateResponse(request, "stock.html", {
         "groups": groups[:PAGE], "total": len(groups), "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
-        "everything": everything,
+        "everything": everything, "sort": sort, "sorts": STOCK_SORTS,
     })
 
 
@@ -198,7 +211,8 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
 
 BRAND_ROWS = """
 WITH stock AS (  -- per brand, worked out in one pass over the listings
-    SELECT brand_id, sum(qty > 0) AS in_stock, group_concat(DISTINCT supplier) AS suppliers
+    SELECT brand_id, sum(qty > 0) AS in_stock, group_concat(DISTINCT supplier) AS suppliers,
+           min(CASE WHEN qty > 0 THEN price END) AS low, max(CASE WHEN qty > 0 THEN price END) AS high
     FROM catalog GROUP BY brand_id
 ), examples AS (  -- each brand's most expensive product in stock
     SELECT brand_id, name AS example FROM (
@@ -207,7 +221,7 @@ WITH stock AS (  -- per brand, worked out in one pass over the listings
 ), spellings AS (
     SELECT brand_id, count(*) AS spellings FROM brand_aliases GROUP BY brand_id
 )
-SELECT b.*, coalesce(s.in_stock, 0) AS in_stock, s.suppliers, e.example, coalesce(n.spellings, 0) AS spellings
+SELECT b.*, coalesce(s.in_stock, 0) AS in_stock, s.suppliers, s.low, s.high, e.example, coalesce(n.spellings, 0) AS spellings
 FROM brands b
 LEFT JOIN stock s ON s.brand_id = b.id
 LEFT JOIN examples e ON e.brand_id = b.id

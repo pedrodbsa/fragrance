@@ -29,12 +29,12 @@
   </div>
   {% if rows %}
   <div class="scroll">
-  <table>
+  <table class="sortable">
     <thead><tr><th class="hide-sm">When</th><th>Change</th><th>Product</th><th class="hide-sm">EAN</th><th class="num">Price</th><th class="num">Qty</th><th class="hide-sm">Supplier</th></tr></thead>
     <tbody>
     {% for r in rows %}
     <tr>
-      <td class="nowrap muted hide-sm">{{ r.created_at|local }}</td>
+      <td class="nowrap muted hide-sm" data-sort="{{ r.created_at }}">{{ r.created_at|local }}</td>
       <td class="nowrap">
         <span class="pill {{ r.kind }}">{{ labels[r.kind] }}</span>
         {% if r.kind in ("price_drop", "price_up") %}<span class="delta"><s>€{{ "%.2f"|format(r.old_value) }}</s></span>{% endif %}

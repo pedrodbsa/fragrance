@@ -202,6 +202,10 @@ Brands on default, fillers and fragrances on no list never appear in the digest.
 - **Orders**: the order you could place at each supplier.
 - **Suppliers**: collection health and minimum order values.
 
+Tables sort by clicking a column header (again to reverse). Stock, which shows the first 200
+fragrances of thousands, has a Sort choice instead: brand, name, price either way, most in
+stock, newest first.
+
 The old Rules page is gone: brand watch rules became Follow, EAN and keyword watches went on
 the wishlist; mute and supplier rules were dropped (default covers them).
 

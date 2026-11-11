@@ -256,3 +256,9 @@ tr.faded .sizes { opacity: 0.7; }
 .mov { width: 110px; }
 .order-total { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
 tr.off { opacity: 0.55; }
+
+/* Sortable table headers (static/sort.js) */
+th.sorter { cursor: pointer; user-select: none; }
+th.sorter:hover { color: var(--text); }
+th[data-dir="asc"]::after { content: " ▲"; }
+th[data-dir="desc"]::after { content: " ▼"; }

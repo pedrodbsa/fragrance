@@ -11,7 +11,7 @@
 
 <div class="panel">
   <div class="scroll">
-  <table>
+  <table class="sortable">
     <thead><tr><th>Supplier</th><th>Collection</th><th class="hide-sm">Last worked</th><th class="num">In stock</th><th>Minimum order</th></tr></thead>
     <tbody>
     {% for s in rows %}
@@ -22,9 +22,9 @@
         <span class="pill {{ pill }}">{{ label }}</span>
         {% if s.error %}<div class="small muted" title="{{ s.error }}">{{ s.last_run|local }}: {{ s.error|truncate(120) }}</div>{% endif %}
       </td>
-      <td class="nowrap muted hide-sm">{{ s.last_ok|local if s.last_ok else "—" }}</td>
+      <td class="nowrap muted hide-sm" data-sort="{{ s.last_ok or '' }}">{{ s.last_ok|local if s.last_ok else "—" }}</td>
       <td class="num">{{ "{:,}".format(s.in_stock or 0) }}</td>
-      <td>
+      <td data-sort="{{ s.mov if s.mov is not none }}">
         <form method="post" action="/suppliers/{{ s.name }}/mov" class="toolbar">
           <input class="mov" type="text" inputmode="decimal" name="mov" value="{{ '%.2f'|format(s.mov) if s.mov is not none else '' }}" placeholder="€ none">
           <button class="btn sm">Save</button>

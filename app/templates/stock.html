@@ -26,6 +26,9 @@
       <label class="check"><input type="checkbox" name="in_stock" value="true" {% if in_stock %}checked{% endif %}> In stock</label>
       <label class="check"><input type="checkbox" name="followed" value="true" {% if followed %}checked{% endif %}> Alerting only</label>
       <label class="check" title="Include ignored brands and fragrances"><input type="checkbox" name="everything" value="true" {% if everything %}checked{% endif %}> Show hidden</label>
+      <select name="sort" onchange="this.form.submit()" title="Sort">
+        {% for k, (label, _, _) in sorts.items() %}<option value="{{ k }}" {{ 'selected' if k == sort }}>Sort: {{ label }}</option>{% endfor %}
+      </select>
       <button class="btn primary" type="submit">Filter</button>
       {% if q or brand or supplier or not in_stock or followed or everything %}<a class="btn ghost" href="/stock">Clear</a>{% endif %}
     </form>
