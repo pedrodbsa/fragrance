@@ -60,6 +60,28 @@ def add(conn, name: str, status: str) -> int:
     return brand_id
 
 
+def delete(conn, brand_id: int) -> None:
+    """Forget a brand nothing is in stock from: its spellings, its fragrances (your lists and
+    notes for them included) and its sold-out listings with their history. If a supplier lists
+    it again, it comes back as a new brand. Brands with stock can't be deleted, since the next
+    sync would bring them straight back: ignore them instead."""
+    fragrance_ids = "SELECT id FROM fragrances WHERE brand_id = :brand"
+    listings = f"SELECT supplier, sku FROM listings WHERE fragrance_id IN ({fragrance_ids})"
+    if conn.execute(f"SELECT 1 FROM listings WHERE qty > 0 AND fragrance_id IN ({fragrance_ids})", {"brand": brand_id}).fetchone():
+        raise ValueError("this brand has stock: ignore it instead")
+    for statement in (
+            f"DELETE FROM events WHERE (supplier, sku) IN ({listings})",
+            f"DELETE FROM basket WHERE (supplier, sku) IN ({listings})",
+            f"DELETE FROM listings WHERE fragrance_id IN ({fragrance_ids})",
+            f"DELETE FROM fragrance_eans WHERE fragrance_id IN ({fragrance_ids})",
+            f"DELETE FROM not_same WHERE fragrance_id IN ({fragrance_ids}) OR other_id IN ({fragrance_ids})",
+            "DELETE FROM fragrance_names WHERE brand_id = :brand",
+            "DELETE FROM fragrances WHERE brand_id = :brand",
+            "DELETE FROM brand_aliases WHERE brand_id = :brand",
+            "DELETE FROM brands WHERE id = :brand"):
+        conn.execute(statement, {"brand": brand_id})
+
+
 def rename(conn, brand_id: int, name: str) -> None:
     conn.execute("UPDATE brands SET name = ? WHERE id = ?", (name.strip(), brand_id))
 

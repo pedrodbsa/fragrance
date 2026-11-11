@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS listings (
     ean3         TEXT,
     qty          INTEGER NOT NULL,
     price        REAL,
+    recorded_price REAL,              -- the price at the last recorded price change (or when first seen)
     flagged_new  INTEGER NOT NULL DEFAULT 0,  -- the supplier's own "new" marker
     first_seen   TEXT NOT NULL,
     last_seen    TEXT NOT NULL,

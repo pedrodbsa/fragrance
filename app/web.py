@@ -101,23 +101,25 @@ def back_to(back: str, fallback: str) -> RedirectResponse:
 # --- Changes and stock ---------------------------------------------------------------------
 
 @office.get("/")
-def events(request: Request, kind: str = ""):
+def events(request: Request, kind: str = "", brands: str = ""):
+    """Recent changes; kind picks one type, brands='following' only followed brands' changes."""
     conn = connect()
+    shown = "NOT c.hidden AND (? != 'following' OR c.brand_status = 'follow')"
     recent = conn.execute(
-        """SELECT e.*, c.name, c.brand, c.brand_name, c.fragrance_id, c.ean, c.price, c.qty
+        f"""SELECT e.*, c.name, c.brand, c.brand_name, c.fragrance_id, c.ean, c.price, c.qty
            FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
-           WHERE NOT c.hidden AND (? = '' OR e.kind = ?) ORDER BY e.id DESC LIMIT ?""",
-        (kind, kind, PAGE),
+           WHERE {shown} AND (? = '' OR e.kind = ?) ORDER BY e.id DESC LIMIT ?""",
+        (brands, kind, kind, PAGE),
     ).fetchall()
     since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds")
     last_day = dict(conn.execute(
-        """SELECT e.kind, count(*) FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
-           WHERE e.created_at >= ? AND NOT c.hidden GROUP BY e.kind""", (since,)).fetchall())
+        f"""SELECT e.kind, count(*) FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
+           WHERE e.created_at >= ? AND {shown} GROUP BY e.kind""", (since, brands)).fetchall())
     in_stock, suppliers = conn.execute(
         "SELECT count(*), count(DISTINCT supplier) FROM catalog WHERE qty > 0 AND NOT hidden").fetchone()
     new_brands = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]
     return templates.TemplateResponse(request, "events.html", {
-        "rows": recent, "kind": kind, "last_day": last_day, "in_stock": in_stock,
+        "rows": recent, "kind": kind, "brands": brands, "last_day": last_day, "in_stock": in_stock,
         "suppliers": suppliers, "new_brands": new_brands,
     })
 
@@ -378,6 +380,14 @@ def brand_rename(brand_id: int, name: str = Form(...)):
     return RedirectResponse(f"/brands/{brand_id}", status_code=303)
 
 
+@office.post("/brands/{brand_id}/delete")
+def brand_delete(brand_id: int):
+    conn = connect()
+    with conn:
+        brands.delete(conn, brand_id)
+    return RedirectResponse("/brands", status_code=303)
+
+
 @office.post("/brands/{brand_id}/merge")
 def brand_merge(brand_id: int, into: int = Form(...)):
     conn = connect()
@@ -591,6 +601,24 @@ def product_ean_add(fragrance_id: int, ean: str = Form(...)):
     with conn:
         fragrances.add_ean(conn, fragrance_id, ean)
     return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+
+
+@office.post("/products/{fragrance_id}/eans/move")
+def product_ean_move(fragrance_id: int, ean: str = Form(...), to: str = Form(...),
+                     name: str = Form(""), concentration: str = Form("")):
+    """Listings with this EAN aren't this fragrance: they go to another of the brand's
+    fragrances (to=its id), or to a new one (to='new', with a name), now and in later syncs."""
+    conn = connect()
+    with conn:
+        if to == "new":
+            if not name.strip():
+                raise HTTPException(400, "a new fragrance needs a name")
+            brand_id = conn.execute("SELECT brand_id FROM fragrances WHERE id = ?", (fragrance_id,)).fetchone()["brand_id"]
+            target = fragrances.find_or_create(conn, brand_id, name, concentration or None)
+        else:
+            target = int(to)
+        fragrances.add_ean(conn, target, ean)
+    return RedirectResponse(f"/products/{target}", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/eans/remove")

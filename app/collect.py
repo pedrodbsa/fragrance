@@ -16,12 +16,13 @@ from app.item import Item
 from app.suppliers import SUPPLIERS
 
 UPSERT = """
-INSERT INTO listings (supplier, sku, name, brand, ean, ean2, ean3, qty, price, flagged_new, first_seen, last_seen, fragrance_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO listings (supplier, sku, name, brand, ean, ean2, ean3, qty, price, flagged_new, first_seen, last_seen, fragrance_id, recorded_price)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (supplier, sku) DO UPDATE SET
   name = excluded.name, brand = excluded.brand, ean = excluded.ean, ean2 = excluded.ean2,
   ean3 = excluded.ean3, qty = excluded.qty, price = excluded.price,
-  flagged_new = excluded.flagged_new, last_seen = excluded.last_seen, fragrance_id = excluded.fragrance_id
+  flagged_new = excluded.flagged_new, last_seen = excluded.last_seen, fragrance_id = excluded.fragrance_id,
+  recorded_price = excluded.recorded_price
 """
 
 
@@ -46,8 +47,12 @@ def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
         old = known.pop(item.sku, None)
         if old is None and not baseline:
             events.append((item.sku, "new", None, item.price))
-        if old is not None:
-            events += [(item.sku, *change) for change in changes(old, item)]
+        found = changes(old, item) if old is not None else []
+        events += [(item.sku, *change) for change in found]
+        # Price changes are measured from the last recorded price: today's when a change was
+        # just recorded or the listing is new, otherwise the one kept before.
+        price_changed = any(kind in ("price_drop", "price_up") for kind, *_ in found)
+        recorded = item.price if old is None or price_changed else (old["recorded_price"] or item.price)
         # Which fragrance it is gets worked out once, and again only if the supplier renames it.
         if old is not None and (old["name"], old["brand"]) == (item.name, item.brand):
             fragrance_id = old["fragrance_id"]
@@ -56,7 +61,7 @@ def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
             # An EAN you added to a fragrance decides; otherwise the name is read.
             fragrance_id = by_ean(conn, (item.ean, item.ean2, item.ean3)) or assign(conn, brand_id, item.name, item.brand)
         conn.execute(UPSERT, (supplier, item.sku, item.name, item.brand, item.ean, item.ean2, item.ean3,
-                              item.qty, item.price, item.flagged_new, now, now, fragrance_id))
+                              item.qty, item.price, item.flagged_new, now, now, fragrance_id, recorded))
         learn_audience(conn, fragrance_id, item.audience or read_audience(item.name))
 
     # Whatever we knew about but the supplier no longer lists has sold out.
@@ -72,9 +77,10 @@ def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
     return events
 
 
-# Price moves smaller than this share of the price aren't events: a shop repricing everything
-# by a few cents would otherwise fill the Changes page. The listing still shows the new price.
-MIN_PRICE_MOVE = 0.01  # 1%
+# A price change is recorded only once the price is more than this many euros away from the
+# last recorded price (or the price when first seen), so small daily drifts add up until they
+# count, and repricings by a few cents don't fill the Changes page. Stock always shows today's price.
+MIN_PRICE_MOVE = 5.0  # euros
 
 
 def changes(old, item: Item) -> list[tuple]:
@@ -82,9 +88,9 @@ def changes(old, item: Item) -> list[tuple]:
     found = []
     if old["qty"] == 0 and item.qty > 0:
         found.append(("restock", 0, item.qty))
-    moved = old["price"] is not None and abs(item.price - old["price"]) >= old["price"] * MIN_PRICE_MOVE
-    if moved and item.price < old["price"]:
-        found.append(("price_drop", old["price"], item.price))
-    if moved and item.price > old["price"]:
-        found.append(("price_up", old["price"], item.price))
+    recorded = old["recorded_price"]
+    if recorded is not None and item.price < recorded - MIN_PRICE_MOVE:
+        found.append(("price_drop", recorded, item.price))
+    if recorded is not None and item.price > recorded + MIN_PRICE_MOVE:
+        found.append(("price_up", recorded, item.price))
     return found

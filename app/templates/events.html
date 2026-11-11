@@ -20,11 +20,18 @@
 <div class="panel">
   <div class="panel-head">
     <nav class="segmented">
-      <a href="/" class="{{ 'active' if not kind }}">All</a>
+      <a href="/?{{ {'brands': brands}|urlencode }}" class="{{ 'active' if not kind }}">All</a>
       {% for k, label in labels.items() %}
-      <a href="/?kind={{ k }}" class="{{ 'active' if kind == k }}">{{ label }}</a>
+      <a href="/?{{ {'kind': k, 'brands': brands}|urlencode }}" class="{{ 'active' if kind == k }}">{{ label }}</a>
       {% endfor %}
     </nav>
+    <form method="get" action="/" class="toolbar">
+      <input type="hidden" name="kind" value="{{ kind }}">
+      <select name="brands" onchange="this.form.submit()" title="Which brands' changes to show">
+        <option value="">All brands</option>
+        <option value="following" {{ 'selected' if brands == 'following' }}>Following brands</option>
+      </select>
+    </form>
     <span class="panel-note">Latest {{ rows|length }}</span>
   </div>
   {% if rows %}

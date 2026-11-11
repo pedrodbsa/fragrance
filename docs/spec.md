@@ -105,6 +105,8 @@ EAN manufacturer prefixes were tried and dropped: they identify the licence hold
 (Armani, Lancôme and Valentino share one), not the brand.
 
 The Brands page manages aliases by hand too: merging two brands, splitting one apart, renaming.
+A brand nothing is in stock from can be deleted on its page, with its fragrances and sold-out
+listings; one with stock can't (the next sync would bring it back), so ignore it instead.
 You can also add a brand yourself (Brands page, "Add a brand"), to follow or ignore it before
 any supplier lists it. If you have it already under another spelling, that brand gets the
 status instead. A supplier listing it later under the same name lands on it; under another
@@ -132,7 +134,9 @@ filters by it. Fragrances only Nunu lists are mostly unknown until step 2's pars
 **EANs.** The product page lists every EAN of the fragrance (which supplier and size has it)
 and lets you add more. A listing with an EAN you added belongs to that fragrance, whatever its
 name says: listings already there move over, and new ones land there from then on. Removing an
-added EAN stops that; listings already attached stay.
+added EAN stops that; listings already attached stay. When an EAN on the page belongs to a different
+product ("Not this fragrance?"), move it to another of the brand's fragrances or to a new one
+you name: its listings go there, and later ones with that EAN land there too.
 
 **Merges page.** Every pair of fragrances of the same brand that shares an EAN, for triage:
 same name with a different concentration first (usually suppliers disagreeing about the
@@ -218,13 +222,14 @@ Sections, in this order:
 
 Brands on default, fillers and fragrances on no list never appear in the digest. You see them in the backoffice.
 
-Price moves under 1% aren't recorded as changes (a shop repricing everything by a few cents
-would flood the Changes page); the listing still shows the new price.
+A price change is recorded only when the price is more than €5 away from the last recorded
+price (or the price when first seen). Small daily moves add up: five €1.10 drops make one
+"€X → €X−5.50" change. Repricings by a few cents never show. Stock always shows today's price.
 
 ## Backoffice pages
 
 - **Changes**: what moved, without hidden brands and fragrances (wishlist fragrances of
-  ignored brands are shown).
+  ignored brands are shown). Filters: type of change, and all brands or following brands only.
 - **Stock**: one row per fragrance (brand + name + concentration) with its sizes and testers
   and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, which brands (following; following and Browse; all, ignored too), men / women / unisex, in stock, alerting only. Grouping uses the
   fragrance name read from listings, not EANs, so different EANs per size don't matter.

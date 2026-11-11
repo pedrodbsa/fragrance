@@ -17,6 +17,8 @@
   forget-wholesale-fragrances  and then everything it left is deleted: its listings, their
                   recorded changes and price history, basket items, and its Suppliers row.
                   Fragrances only it listed go too, unless you put them on a list or own them.
+  recorded-price  listings remember the price their last recorded price change was at, so
+                  price changes count from there (today's price to start with).
 """
 
 import sqlite3
@@ -37,6 +39,13 @@ def upgrade(conn) -> None:
     once(conn, "drop-wholesale-fragrances", drop_wholesale_fragrances)
     once(conn, "same-name-brands", same_name_brands)
     once(conn, "forget-wholesale-fragrances", forget_wholesale_fragrances)
+    once(conn, "recorded-price", recorded_price)
+
+
+def recorded_price(conn) -> None:
+    if "recorded_price" not in {c["name"] for c in conn.execute("PRAGMA table_info(listings)")}:
+        conn.execute("ALTER TABLE listings ADD COLUMN recorded_price REAL")
+    conn.execute("UPDATE listings SET recorded_price = price")
 
 
 def forget_wholesale_fragrances(conn) -> None:

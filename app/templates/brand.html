@@ -43,6 +43,16 @@
       <button class="btn">Merge</button>
     </form>
     <p class="help pad">Merging moves these spellings and fragrance decisions to the other brand, which keeps its own status.</p>
+    <div class="panel-head"><h2>Delete</h2></div>
+    {% if brand.in_stock %}
+    <p class="help pad">Suppliers have it in stock, so the next sync would bring it back. Ignore it instead to hide it everywhere.</p>
+    {% else %}
+    <form method="post" action="/brands/{{ brand.id }}/delete" class="toolbar pad"
+          onsubmit='return confirm({{ ("Delete " ~ brand.name ~ ", its fragrances and your lists for them? This can’t be undone.")|tojson }})'>
+      <button class="btn danger">Delete this brand</button>
+      <span class="small muted">Its fragrances and sold-out listings go too. If a supplier lists it again, it comes back as a new brand.</span>
+    </form>
+    {% endif %}
   </div>
 
   <div class="panel">
