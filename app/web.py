@@ -100,27 +100,37 @@ def back_to(back: str, fallback: str) -> RedirectResponse:
 
 # --- Changes and stock ---------------------------------------------------------------------
 
+# The Changes page's tabs: which kinds of change each shows ("" = all).
+CHANGE_TABS = {"": "", "arrivals": "new,restock", "new": "new", "restock": "restock",
+               "price_drop": "price_drop", "price_up": "price_up", "soldout": "soldout"}
+
+
 @office.get("/")
-def events(request: Request, kind: str = "", brands: str = ""):
-    """Recent changes; kind picks one type, brands='following' only followed brands' changes."""
+def events(request: Request, kind: str = "", brands: str = "", supplier: str = ""):
+    """Recent changes. kind picks a tab ('arrivals': new or back in stock), brands='following'
+    only followed brands, supplier one supplier."""
     conn = connect()
-    shown = "NOT c.hidden AND (? != 'following' OR c.brand_status = 'follow')"
+    shown = """NOT c.hidden AND (? != 'following' OR c.brand_status = 'follow')
+               AND (? = '' OR e.supplier = ?)"""
+    filters = (brands, supplier, supplier)
+    kinds = CHANGE_TABS.get(kind, kind)
     recent = conn.execute(
         f"""SELECT e.*, c.name, c.brand, c.brand_name, c.fragrance_id, c.ean, c.price, c.qty
            FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
-           WHERE {shown} AND (? = '' OR e.kind = ?) ORDER BY e.id DESC LIMIT ?""",
-        (brands, kind, kind, PAGE),
+           WHERE {shown} AND (? = '' OR instr(',' || ? || ',', ',' || e.kind || ',') > 0)
+           ORDER BY e.id DESC LIMIT ?""",
+        (*filters, kinds, kinds, PAGE),
     ).fetchall()
     since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds")
     last_day = dict(conn.execute(
         f"""SELECT e.kind, count(*) FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
-           WHERE e.created_at >= ? AND {shown} GROUP BY e.kind""", (since, brands)).fetchall())
+           WHERE e.created_at >= ? AND {shown} GROUP BY e.kind""", (since, *filters)).fetchall())
     in_stock, suppliers = conn.execute(
         "SELECT count(*), count(DISTINCT supplier) FROM catalog WHERE qty > 0 AND NOT hidden").fetchone()
     new_brands = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]
     return templates.TemplateResponse(request, "events.html", {
-        "rows": recent, "kind": kind, "brands": brands, "last_day": last_day, "in_stock": in_stock,
-        "suppliers": suppliers, "new_brands": new_brands,
+        "rows": recent, "kind": kind, "brands": brands, "supplier": supplier, "last_day": last_day,
+        "in_stock": in_stock, "suppliers": suppliers, "new_brands": new_brands, "supplier_names": sorted(SUPPLIERS),
     })
 
 

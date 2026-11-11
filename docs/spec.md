@@ -229,7 +229,8 @@ price (or the price when first seen). Small daily moves add up: five €1.10 dro
 ## Backoffice pages
 
 - **Changes**: what moved, without hidden brands and fragrances (wishlist fragrances of
-  ignored brands are shown). Filters: type of change, and all brands or following brands only.
+  ignored brands are shown). Filters: type of change (including "New or back in stock"), supplier, and all brands or
+  following brands only. The Suppliers page links to each supplier's changes, price drops and arrivals.
 - **Stock**: one row per fragrance (brand + name + concentration) with its sizes and testers
   and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, which brands (following; following and Browse; all, ignored too), men / women / unisex, in stock, alerting only. Grouping uses the
   fragrance name read from listings, not EANs, so different EANs per size don't matter.

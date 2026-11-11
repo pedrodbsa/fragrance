@@ -17,7 +17,7 @@
     {% for s in rows %}
     {% set pill, label = health[s.health] %}
     <tr>
-      <td class="product-name">{{ s.name }}</td>
+      <td class="product-name">{{ s.name }}<div class="small"><a href="/?supplier={{ s.name }}">changes</a> · <a href="/?{{ {'supplier': s.name, 'kind': 'price_drop'}|urlencode }}">price drops</a> · <a href="/?{{ {'supplier': s.name, 'kind': 'arrivals'}|urlencode }}">new or back</a></div></td>
       <td>
         <span class="pill {{ pill }}">{{ label }}</span>
         {% if s.error %}<div class="small muted" title="{{ s.error }}">{{ s.last_run|local }}: {{ s.error|truncate(120) }}</div>{% endif %}

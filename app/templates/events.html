@@ -20,13 +20,16 @@
 <div class="panel">
   <div class="panel-head">
     <nav class="segmented">
-      <a href="/?{{ {'brands': brands}|urlencode }}" class="{{ 'active' if not kind }}">All</a>
-      {% for k, label in labels.items() %}
-      <a href="/?{{ {'kind': k, 'brands': brands}|urlencode }}" class="{{ 'active' if kind == k }}">{{ label }}</a>
+      {% for k, label in [("", "All"), ("arrivals", "New or back in stock")] + labels.items()|list %}
+      <a href="/?{{ {'kind': k, 'brands': brands, 'supplier': supplier}|urlencode }}" class="{{ 'active' if kind == k }}">{{ label }}</a>
       {% endfor %}
     </nav>
     <form method="get" action="/" class="toolbar">
       <input type="hidden" name="kind" value="{{ kind }}">
+      <select name="supplier" onchange="this.form.submit()" title="Which supplier's changes to show">
+        <option value="">All suppliers</option>
+        {% for s in supplier_names %}<option {{ 'selected' if s == supplier }}>{{ s }}</option>{% endfor %}
+      </select>
       <select name="brands" onchange="this.form.submit()" title="Which brands' changes to show">
         <option value="">All brands</option>
         <option value="following" {{ 'selected' if brands == 'following' }}>Following brands</option>
