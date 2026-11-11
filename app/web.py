@@ -555,8 +555,8 @@ def ean_list(conn, fragrance_id: int, rows) -> list[dict]:
 
 def merge_options(conn, product, rows) -> dict:
     """For the product page's "same juice" panel: other names merged into this fragrance,
-    the brand's other fragrances to merge in, and those sharing an EAN with it (a hint only:
-    suppliers sometimes reuse an EAN for a different fragrance)."""
+    the brand's other fragrances to move this one into, and listings filed elsewhere that may
+    be this fragrance (see candidates)."""
     merged = conn.execute(
         "SELECT * FROM fragrance_names WHERE fragrance_id = ? AND NOT (name = ? AND concentration = ?) ORDER BY name",
         (product["id"], key(product["name"]), product["concentration"] or "")).fetchall()
@@ -564,15 +564,31 @@ def merge_options(conn, product, rows) -> dict:
         """SELECT f.*, count(l.sku) AS listings FROM fragrances f JOIN listings l ON l.fragrance_id = f.id
            WHERE f.brand_id = ? AND f.id != ? GROUP BY f.id ORDER BY f.name, f.concentration""",
         (product["brand_id"], product["id"])).fetchall()
+    return {"merged": merged, "others": others, "candidates": candidates(conn, product, rows)}
+
+
+def candidates(conn, product, rows) -> list[dict]:
+    """The brand's listings on another fragrance that may be this one: they share an EAN with
+    it (suppliers sometimes reuse one, so check), or one name holds all the other's words
+    ("Danger" and "Danger Pour Homme"). Fragrances you said aren't this one are left out."""
     eans = {e for r in rows for e in (r["ean"], r["ean2"], r["ean3"]) if e}
-    sharing = {l["fragrance_id"] for l in conn.execute(
-        "SELECT fragrance_id, ean, ean2, ean3 FROM catalog WHERE brand_id = ? AND fragrance_id != ?",
-        (product["brand_id"], product["id"])) if eans & {l["ean"], l["ean2"], l["ean3"]}}
+    eans |= {e["ean"] for e in conn.execute("SELECT ean FROM fragrance_eans WHERE fragrance_id = ?", (product["id"],))}
+    words = set(key(product["name"]).split())
     rejected = {r[0] for r in conn.execute(  # pairs you said aren't the same
         "SELECT other_id FROM not_same WHERE fragrance_id = ? UNION SELECT fragrance_id FROM not_same WHERE other_id = ?",
         (product["id"], product["id"]))}
-    shared = [o for o in others if o["id"] in sharing - rejected]
-    return {"merged": merged, "others": others, "shared": shared}
+    found = []
+    for l in annotate(conn.execute("SELECT * FROM catalog WHERE brand_id = ? AND fragrance_id != ?",
+                                   (product["brand_id"], product["id"]))):
+        if l["fragrance_id"] in rejected:
+            continue
+        theirs = set(key(l["fragrance"]).split())
+        if eans & {l["ean"], l["ean2"], l["ean3"]}:
+            found.append({**l, "why": "Same EAN"})
+        elif words <= theirs or theirs <= words:
+            found.append({**l, "why": "Similar name"})
+    # Same EAN first, then by the fragrance they're on, in stock first.
+    return sorted(found, key=lambda l: (l["why"] != "Same EAN", l["fragrance"], l["qty"] == 0, l["size"]))
 
 
 @office.post("/products/{fragrance_id}/status")
@@ -712,6 +728,15 @@ def listing_detach(supplier: str = Form(...), sku: str = Form(...)):
     conn = connect()
     with conn:
         fragrance_id = fragrances.detach(conn, supplier, sku)
+    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+
+
+@office.post("/products/{fragrance_id}/attach")
+def product_attach(fragrance_id: int, supplier: str = Form(...), sku: str = Form(...)):
+    """A listing filed under another fragrance is this one: bring it here."""
+    conn = connect()
+    with conn:
+        fragrances.attach(conn, supplier, sku, fragrance_id)
     return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
 
 

@@ -164,6 +164,17 @@ def detach(conn, supplier: str, sku: str) -> int:
     return fragrance_id
 
 
+def attach(conn, supplier: str, sku: str, fragrance_id: int) -> None:
+    """This listing is this fragrance. With an EAN, the EAN is matched here, so every listing
+    with it (any supplier, now and later) comes too. Without one, the listing moves alone and
+    stays until the supplier renames it."""
+    listing = conn.execute("SELECT * FROM listings WHERE supplier = ? AND sku = ?", (supplier, sku)).fetchone()
+    conn.execute("UPDATE listings SET fragrance_id = ? WHERE supplier = ? AND sku = ?", (fragrance_id, supplier, sku))
+    if listing["ean"]:
+        add_ean(conn, fragrance_id, listing["ean"])
+    prune(conn)  # the fragrance it came from, if that left it empty and undecided
+
+
 def by_ean(conn, eans) -> int | None:
     """The fragrance you added one of these EANs to, if any."""
     for ean in eans:
