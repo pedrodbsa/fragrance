@@ -11,10 +11,14 @@
     <h1>Brands</h1>
     <p class="subtitle"><b>Follow</b> the brands you collect: their new products and restocks alert you. <b>Browse</b> keeps a brand in Stock without alerts. <b>Ignore</b> hides it everywhere. A fragrance on your wishlist alerts whatever its brand. New brands wait in the New tab until you choose.</p>
   </div>
-  <form method="post" action="/brands/add" class="toolbar" title="To follow or ignore a brand before any supplier lists it">
-    <input type="text" name="name" placeholder="Add a brand" required>
-    {% for k, label, tip in choices %}<button class="btn sm" name="status" value="{{ k }}" title="{{ tip }}">{{ label }}</button>{% endfor %}
-  </form>
+  {# Tucked away: adding a brand is rare, and the box was easy to mistake for search. #}
+  <details>
+    <summary class="small muted">Add a brand no supplier lists yet</summary>
+    <form method="post" action="/brands/add" class="toolbar" style="margin-top: 6px" title="To follow or ignore a brand before any supplier lists it">
+      <input type="text" name="name" placeholder="New brand name" required>
+      {% for k, label, tip in choices %}<button class="btn sm" name="status" value="{{ k }}" title="{{ tip }}">{{ label }}</button>{% endfor %}
+    </form>
+  </details>
 </div>
 
 <form method="post" action="/brands" class="panel">
