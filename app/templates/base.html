@@ -3,32 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Fragrance tracker</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
-  <style>
-    body > main, body > header { max-width: 1400px; }
-    table { font-size: 0.85rem; }
-    td form { display: inline; margin: 0; }
-    td button { padding: 0.15rem 0.5rem; font-size: 0.75rem; margin: 0 0.2rem 0 0; width: auto; }
-    .filters { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
-    .filters > * { width: auto; margin: 0; }
-    .tag { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 0.3rem; background: var(--pico-secondary-background); color: var(--pico-secondary-inverse); }
-    .new { background: #2e7d32; } .restock { background: #1565c0; } .price_drop { background: #ef6c00; }
-    .soldout { background: #616161; } .price_up { background: #8e24aa; }
-  </style>
+  <title>{% block title %}Grasse{% endblock %} · Fragrance tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650&display=swap">
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header class="container">
-    <nav>
-      <ul><li><strong>🧴 Fragrance tracker</strong></li></ul>
-      <ul>
-        <li><a href="/">Changes</a></li>
-        <li><a href="/products">Stock</a></li>
-        <li><a href="/rules">Rules</a></li>
-      </ul>
-    </nav>
+  {% set path = request.url.path %}
+  <header class="topbar">
+    <div class="wrap">
+      <a class="logo" href="/"><span class="logo-mark">✦</span><span>Grasse</span></a>
+      <nav class="tabs">
+        <a href="/" class="{{ 'active' if path == '/' }}">Changes</a>
+        <a href="/products" class="{{ 'active' if path.startswith('/products') }}">Stock</a>
+        <a href="/rules" class="{{ 'active' if path.startswith('/rules') }}">Rules</a>
+      </nav>
+    </div>
   </header>
-  <main class="container">
+  <main class="wrap">
     {% block content %}{% endblock %}
   </main>
 </body>
