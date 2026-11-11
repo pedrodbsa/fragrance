@@ -119,42 +119,9 @@ def millilitres(name: str) -> float | None:
     return amount * 29.5735 if found.group(2) == "OZ" else amount
 
 
-def best_per_ml(conn, fragrance_ids) -> dict[int, float]:
-    """Each fragrance's lowest in-stock price per ml, across every supplier and size."""
-    ids = list(set(fragrance_ids))
-    best = {}
-    for at in range(0, len(ids), 500):  # SQLite takes a limited number of ? at once
-        chunk = ids[at:at + 500]
-        for r in conn.execute(f"""SELECT fragrance_id, name, price FROM listings
-                                  WHERE qty > 0 AND price IS NOT NULL
-                                  AND fragrance_id IN ({",".join("?" * len(chunk))})""", chunk):
-            ml = millilitres(r["name"])
-            if ml:
-                best[r["fragrance_id"]] = min(best.get(r["fragrance_id"], r["price"] / ml), r["price"] / ml)
-    return best
-
-
 def condition(name: str) -> str:
     """ "Tester" for a tester or an unboxed bottle (suppliers name both "... Tester"), else "New"."""
     return "Tester" if TESTER.search(name.upper()) else "New"
-
-
-def cheapest(conn, fragrance_ids) -> set[tuple[str, str]]:
-    """(supplier, sku) of the listings that are the lowest price in stock for their fragrance
-    and size (ties all count), including a size only one supplier has in stock."""
-    ids = list(set(fragrance_ids))
-    offers = {}  # (fragrance id, size) -> [(price, supplier, sku)]
-    for at in range(0, len(ids), 500):  # SQLite takes a limited number of ? at once
-        chunk = ids[at:at + 500]
-        for r in conn.execute(f"""SELECT fragrance_id, supplier, sku, name, price FROM listings
-                                  WHERE qty > 0 AND price IS NOT NULL
-                                  AND fragrance_id IN ({",".join("?" * len(chunk))})""", chunk):
-            offers.setdefault((r["fragrance_id"], variant(r["name"])[1]), []).append((r["price"], r["supplier"], r["sku"]))
-    best = set()
-    for found in offers.values():
-        low = min(price for price, _, _ in found)
-        best |= {(supplier, sku) for price, supplier, sku in found if price == low}
-    return best
 
 
 def find_or_create(conn, brand_id: int, name: str, concentration: str | None) -> int:

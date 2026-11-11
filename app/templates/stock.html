@@ -26,8 +26,8 @@
       </select>
       <select name="price" title="Only the sizes priced well">
         <option value="">Any price</option>
-        <option value="deals" {{ 'selected' if price == "deals" }} title="At least {{ deal_percent }}% below the next cheapest supplier, biggest discount first">🔥 Deals only</option>
-        {% if supplier %}<option value="cheapest" {{ 'selected' if price == "cheapest" }} title="No other supplier sells the size for less">👑 Where it's the cheapest</option>{% endif %}
+        <option value="deals" {{ 'selected' if price == "deals" }} title="A price per ml at least {{ deal_percent }}% below the next best listing's, biggest discount first">🔥 Deals only</option>
+        <option value="cheapest" {{ 'selected' if price == "cheapest" }} title="Each fragrance's best price per ml, any supplier and size">👑 Best €/ml only</option>
       </select>
       <select name="condition">
         <option value="">New and testers</option>

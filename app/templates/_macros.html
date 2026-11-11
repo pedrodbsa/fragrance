@@ -41,32 +41,24 @@
 {% endmacro %}
 
 
-{# Marks a listing that's the lowest price in stock for its fragrance and size across suppliers. #}
-{# 🔥 on a listing that's a deal (a row from web.mark_deals / deals_only), nothing otherwise. #}
-{% macro hot(r) -%}
-{% if r and r.discount is defined %}<span class="pill hot" title="A deal: the next cheapest supplier asks €{{ "%.2f"|format(r.rival) }}">🔥 −{{ (r.discount * 100)|round|int }}%</span>{% endif %}
+{# What a listing is compared by (a row from web.compare): "€0.54/ml", or its price when its
+   ml can't be told. #}
+{% macro unit(r, value) -%}
+{{ "€%.2f"|format(value) }}{{ "/ml" if r.per_ml }}
 {%- endmacro %}
 
-{# Under a price: how it compares with the next cheapest supplier (a row from web.mark_rivals
-   and mark_deals), coloured like Stock's size chips: red 🔥 a deal, green 👑 the cheapest,
-   blue 🦄 no one else has it, red % dearer. #}
-{% macro standing(r) -%}
-{% if r and r.price is not none and r.qty > 0 %}
+{# A price and its price per ml, then a tag for how it compares with the fragrance's other
+   listings, any supplier and size, by price per ml (a row from web.compare), coloured like
+   Stock's size chips: red 🔥 a deal, green 👑 the best, blue 🦄 the only listing, red % dearer. #}
+{% macro price(r) -%}
+{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}<span class="muted">—</span>{% endif %}
+{%- if r|per_ml %} <span class="small muted">{{ r|per_ml }}</span>{% endif %}
+{%- if r.unit is defined %}
 {%- set state = "deal" if r.discount is defined else "cheapest" if r.cheapest and r.rival else "only" if r.cheapest else "dearer" %}
-<div><span class="standing {{ state }}" title="{% if r.rival %}The next cheapest supplier asks €{{ "%.2f"|format(r.rival) }}{% else %}No other supplier has this size in stock{% endif %}">
+<div><span class="standing {{ state }}" title="{% if r.rival %}The next best: {{ unit(r, r.rival) }}, {{ r.rival_at }}{% else %}Its only listing in stock{% endif %}">
   {{- {"deal": "🔥 ", "cheapest": "👑 ", "only": "🦄"}.get(state, "") }}
-  {%- if r.rival %}{% set delta = r.price - r.rival %}{{ "+" if delta > 0 else "−" if delta < 0 else "±" }}{{ (delta|abs / r.rival * 100)|round|int }}%{% endif %}</span></div>
+  {%- if r.rival %}{% set delta = r.unit - r.rival %}{{ "+" if delta > 0 else "−" if delta < 0 else "±" }}{{ (delta|abs / r.rival * 100)|round|int }}%{% endif %}</span></div>
 {%- endif %}
-{%- endmacro %}
-
-{# Under a size: its price per ml, 💧 and highlighted when it's the fragrance's best (a row
-   from web.mark_value). #}
-{% macro per_ml_line(r) -%}
-{% if r|per_ml %}<div class="small {{ 'value' if r.best_value else 'muted' }}"{% if r.best_value %} title="The most perfume for the money: this fragrance's lowest price per ml, across every supplier and size"{% endif %}>{{ "💧 " if r.best_value }}{{ r|per_ml }}</div>{% endif %}
-{%- endmacro %}
-
-{% macro best(is_cheapest) -%}
-{% if is_cheapest %}<div class="small best" title="The lowest price any supplier has for this size right now">Cheapest</div>{% endif %}
 {%- endmacro %}
 
 {# The listings with this EAN go to another of the brand's fragrances, or to a new one, now and

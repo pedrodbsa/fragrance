@@ -234,9 +234,10 @@ tr.faded .product-name, tr.faded .num { color: var(--muted); }
 .size:hover { border-color: var(--accent); text-decoration: none; }
 .size.out { opacity: 0.55; }
 .size.elsewhere { opacity: 0.45; border-style: dashed; } /* Stock with a supplier picked: sizes only other suppliers have */
-/* …and how each size compares with the next cheapest supplier (web.mark_deals, mark_rivals) */
+/* Each size against the fragrance's other listings by price per ml (web.compare) */
 .size.deal { background: #df1b41; border-color: transparent; color: #fff; }
-.size.deal b, .size.deal .delta { color: #fff; }
+.size.deal b, .size.deal .delta, .size.deal .per-ml { color: #fff; }
+.size .per-ml { font-size: 11px; opacity: 0.75; }
 .size.cheapest { background: var(--green-bg); border-color: transparent; color: var(--green-fg); }
 .size.only { background: var(--blue-bg); border-color: transparent; color: var(--blue-fg); }
 .size.cheapest b, .size.only b { color: inherit; }
@@ -287,12 +288,8 @@ tbody tr:has(input[name=ids]:checked) { background: var(--accent-soft); }
 .was.down { color: var(--green-fg); }
 
 /* The lowest price any supplier has for that size: green cell with a small "Cheapest" note. */
-td:has(> .best) { background: var(--green-bg); }
-.best { color: var(--green-fg); font-weight: 600; }
 
-/* A deal: well below what the other suppliers ask (web.mark_deals) */
-.pill.hot { background: #df1b41; color: #fff; font-weight: 600; padding: 0 6px; line-height: 18px; }
-/* Under a price on Orders: how it compares with the next cheapest supplier (macro standing) */
+/* Under a price: how it compares with the fragrance's other listings by €/ml (macro price) */
 .standing { display: inline-block; margin-top: 2px; padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 18px; }
 .standing.deal { background: #df1b41; color: #fff; }
 .standing.cheapest { background: var(--green-bg); color: var(--green-fg); }
@@ -312,7 +309,6 @@ table.lines .c-act { width: 48px; }
 .copy { border: 0; background: none; padding: 2px; margin-left: 2px; cursor: pointer; color: var(--muted); vertical-align: -2px; border-radius: 4px; }
 .copy:hover { color: var(--accent); background: var(--accent-soft); }
 .copy.copied { color: var(--green-fg); }
-.value { color: var(--blue-fg); font-weight: 600; } /* 💧 a fragrance's best price per ml */
 /* Orders: a fragrance's name says which list it's on (wishlist gold, filler purple) */
 .product-name a.wishlist { color: var(--amber-fg); }
 .product-name a.filler { color: var(--purple-fg); }

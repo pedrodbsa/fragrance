@@ -104,17 +104,6 @@ def per_ml(listing) -> str:
 templates.env.filters["per_ml"] = per_ml
 
 
-def mark_value(conn, rows: list[dict]) -> list[dict]:
-    """Sets "best_value" on each row (in place) that's its fragrance's lowest price per ml in
-    stock, across every supplier and size: the most perfume for the money (💧)."""
-    best = fragrances.best_per_ml(conn, [r["fragrance_id"] for r in rows])
-    for r in rows:
-        ml = fragrances.millilitres(r["name"])
-        r["best_value"] = bool(ml and r["qty"] > 0 and r["price"] is not None
-                               and r["price"] / ml <= best.get(r["fragrance_id"], 0) + 1e-9)
-    return rows
-
-
 def back_to(back: str, fallback: str) -> RedirectResponse:
     """Return to the page a form was posted from (only paths on this site)."""
     safe = back.startswith("/") and not back.startswith("//")
@@ -203,29 +192,54 @@ def price_history(conn, rows: list[dict]) -> list[dict]:
     return series
 
 
-def in_stock_prices(conn, rows: list[dict]) -> dict:
-    """What every supplier asks for the fragrances in rows, in stock: (fragrance id, size) ->
-    [(supplier, price)]. Reads only those fragrances' listings, so a page showing a few
-    fragrances doesn't read the whole catalogue."""
+DEAL = 0.20  # a deal: a price per ml at least this much below the next best listing's
+
+
+def unit_price(r) -> tuple[str | None, float]:
+    """What a listing is compared by: its price per ml, against every size of its fragrance
+    ((None, €/ml)); or, when its ml can't be told (a gift set, a size in grams), its price
+    against the same size only ((size, €))."""
+    ml = fragrances.millilitres(r["name"])
+    return (None, r["price"] / ml) if ml else (r["size_label"], r["price"])
+
+
+def offers(conn, rows: list[dict]) -> dict:
+    """Every in-stock listing of the fragrances in rows, grouped the way they're compared:
+    (fragrance id, None or size) -> [(supplier, sku, unit price, "180 ml at nunu")]. Reads only
+    those fragrances' listings, so a page showing a few doesn't read the whole catalogue."""
     ids = list({r["fragrance_id"] for r in rows})
-    prices = {}
+    found = {}
     for at in range(0, len(ids), 500):  # SQLite takes a limited number of ? at once
         chunk = ids[at:at + 500]
-        for r in conn.execute(f"""SELECT fragrance_id, supplier, name, price FROM listings
-                                  WHERE qty > 0 AND price IS NOT NULL
-                                  AND fragrance_id IN ({",".join("?" * len(chunk))})""", chunk):
-            prices.setdefault((r["fragrance_id"], variant(r["name"])[1]), []).append((r["supplier"], r["price"]))
-    return prices
+        for r in annotate(conn.execute(f"""SELECT fragrance_id, supplier, sku, name, price FROM listings
+                                           WHERE qty > 0 AND price IS NOT NULL
+                                           AND fragrance_id IN ({",".join("?" * len(chunk))})""", chunk)):
+            size, unit = unit_price(r)
+            found.setdefault((r["fragrance_id"], size), []).append(
+                (r["supplier"], r["sku"], unit, f"{r['size_label']} at {r['supplier']}"))
+    return found
 
 
-def cheapest_only(conn, rows: list[dict]) -> list[dict]:
-    """Keep the rows that are the lowest in-stock price for their fragrance and size across
-    every supplier, tester or not (a tie counts as cheapest). With a supplier filter, that's
-    where that supplier is the cheapest."""
-    lowest = {size: min(price for _, price in offers)  # (fragrance id, size) -> lowest in-stock price
-              for size, offers in in_stock_prices(conn, rows).items()}
-    return [r for r in rows if r["qty"] > 0 and r["price"] is not None
-            and r["price"] <= lowest[(r["fragrance_id"], r["size_label"])]]
+def compare(conn, rows: list[dict]) -> list[dict]:
+    """The rows, each in stock one with how it compares with the fragrance's other in-stock
+    listings, any supplier and any size, by price per ml (the most perfume for the money):
+    "unit" its €/ml (or price, see unit_price), "rival" the next best listing's and "rival_at"
+    which that is ("180 ml at nunu"), "cheapest" when none is better, and "discount" (0.32 for
+    32%) when it's a deal: at least DEAL below the next best."""
+    found = offers(conn, rows)
+    marked = []
+    for r in rows:
+        if r["qty"] > 0 and r["price"] is not None:
+            size, unit = unit_price(r)
+            others = [o for o in found.get((r["fragrance_id"], size), []) if (o[0], o[1]) != (r["supplier"], r["sku"])]
+            best = min(others, key=lambda o: o[2], default=None)
+            rival = best[2] if best else None
+            r = {**r, "unit": unit, "per_ml": size is None, "rival": rival, "rival_at": best[3] if best else None,
+                 "cheapest": rival is None or unit <= rival}
+            if rival and unit <= rival * (1 - DEAL):
+                r["discount"] = 1 - unit / rival
+        marked.append(r)
+    return marked
 
 
 def add_elsewhere(conn, groups: list[dict], supplier: str) -> list[dict]:
@@ -233,55 +247,18 @@ def add_elsewhere(conn, groups: list[dict], supplier: str) -> list[dict]:
     suppliers do, the cheapest of each marked "elsewhere", so you can compare sizes before
     picking (a smaller bottle only a few euros cheaper than a bigger one)."""
     ids = [g["fragrance_id"] for g in groups]
-    offers = {}  # (fragrance id, size) -> the cheapest in-stock listing at another supplier
+    cheapest = {}  # (fragrance id, size) -> the cheapest in-stock listing at another supplier
     if ids:
         found = conn.execute(f"""SELECT * FROM catalog WHERE qty > 0 AND price IS NOT NULL AND supplier != ?
                                  AND fragrance_id IN ({",".join("?" * len(ids))})""", (supplier, *ids))
         for r in sorted(annotate(found), key=lambda r: r["price"]):
-            offers.setdefault((r["fragrance_id"], r["size_label"]), {**r, "elsewhere": True})
+            cheapest.setdefault((r["fragrance_id"], r["size_label"]), {**r, "elsewhere": True})
+    extra = compare(conn, list(cheapest.values()))
     for g in groups:
         own = {r["size_label"] for r in g["sizes"]}
-        extra = [o for (fid, size), o in offers.items() if fid == g["fragrance_id"] and size not in own]
-        g["sizes"] = sorted(g["sizes"] + extra, key=lambda r: (r["size"], r["size_label"]))
+        mine = [o for o in extra if o["fragrance_id"] == g["fragrance_id"] and o["size_label"] not in own]
+        g["sizes"] = sorted(g["sizes"] + mine, key=lambda r: (r["size"], r["size_label"]))
     return groups
-
-
-DEAL = 0.20  # a deal: at least this much below the next cheapest supplier
-
-
-def mark_deals(conn, rows: list[dict]) -> list[dict]:
-    """The rows, those that are a deal with their "discount" (0.32 for 32% off) and the
-    "rival" price it's measured from: in stock and priced at least DEAL below the lowest
-    in-stock price another supplier asks for the same fragrance and size."""
-    prices = in_stock_prices(conn, rows)
-    marked = []
-    for r in rows:
-        others = [price for supplier, price in prices.get((r["fragrance_id"], r["size_label"]), [])
-                  if supplier != r["supplier"]]
-        rival = min(others, default=None)
-        if r["qty"] > 0 and r["price"] is not None and rival and r["price"] <= rival * (1 - DEAL):
-            r = {**r, "discount": 1 - r["price"] / rival, "rival": rival}
-        marked.append(r)
-    return marked
-
-
-def deals_only(conn, rows: list[dict]) -> list[dict]:
-    """Keep the rows that are a deal (see mark_deals)."""
-    return [r for r in mark_deals(conn, rows) if "discount" in r]
-
-
-def mark_rivals(conn, rows: list[dict]) -> list[dict]:
-    """The rows (one supplier's), each with "rival": the lowest in-stock price another
-    supplier asks for the same fragrance and size (None if no one else has it), and
-    "cheapest": no one else asks less."""
-    rivals = in_stock_prices(conn, rows)
-    marked = []
-    for r in rows:
-        others = [p for s, p in rivals.get((r["fragrance_id"], r["size_label"]), []) if s != r["supplier"]]
-        rival = min(others, default=None)
-        marked.append({**r, "rival": rival, "cheapest": r["qty"] > 0 and r["price"] is not None
-                       and (rival is None or r["price"] <= rival)})
-    return marked
 
 
 IN_STOCK_FIRST = "ORDER BY qty = 0, name"
@@ -312,9 +289,9 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     """One row per fragrance. q matches every word in the listing or brand name (accents and
     punctuation ignored), or an exact EAN or SKU. 'brands' picks which: 'following' (followed brands only),
     'default' (followed and Browse; nothing you ignored), 'all' (ignored ones too).
-    'followed' narrows to what alerts you. 'price' keeps only the sizes no other supplier sells
-    for less ('cheapest', for a supplier picked), or only deals, well below the next cheapest
-    supplier ('deals', biggest discount first unless you sort by a column). 'condition' keeps
+    'followed' narrows to what alerts you. 'price' keeps only each fragrance's best price per ml
+    ('cheapest'), or only deals, well below the next best ('deals', biggest discount first
+    unless you sort by a column); see compare. 'condition' keeps
     only New or only Tester listings."""
     conn = connect()
     words = searchable(q)
@@ -333,15 +310,13 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
         sort = "discount"
     sort = sort if sort.lstrip("-") in STOCK_SORTS else "brand"
     rows = annotate(found)
-    if price == "cheapest":
-        rows = cheapest_only(conn, rows)
     if condition:
         rows = [r for r in rows if r["condition"] == condition]
-    # Deals show everywhere (🔥); where it's the cheapest only with one supplier picked, as
-    # without one every size shown is already the cheapest.
-    rows = deals_only(conn, rows) if deals else mark_deals(conn, rows)
-    if supplier:
-        rows = mark_rivals(conn, rows)
+    rows = compare(conn, rows)
+    if price == "cheapest":
+        rows = [r for r in rows if r.get("cheapest")]
+    if deals:
+        rows = [r for r in rows if "discount" in r]
     groups = sort_stock(group(rows), sort)
     # Each header links to the first page sorted by its column, reversed if it's the current one.
     query = {k: v for k, v in request.query_params.items() if k != "page"}
@@ -354,7 +329,6 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     shown = groups[(page - 1) * PAGE:page * PAGE]
     if supplier and not price:  # with a supplier, other sizes are added greyed, unless filtered by price
         shown = add_elsewhere(conn, shown, supplier)
-    mark_value(conn, [r for g in shown for r in g["sizes"]])
     return templates.TemplateResponse(request, "stock.html", {
         "groups": shown, "total": len(groups),
         "page": page, "pages": pages, "page_link": page_link, "first": (page - 1) * PAGE + 1, "brands": brand_list, "suppliers": suppliers,
@@ -592,14 +566,13 @@ def product_detail(request: Request, fragrance_id: int):
     if product is None:
         raise HTTPException(404, "product not found")
     listings = conn.execute("SELECT * FROM catalog WHERE fragrance_id = ?", (fragrance_id,)).fetchall()
-    rows = sorted(mark_value(conn, mark_deals(conn, annotate(listings))), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
+    rows = sorted(compare(conn, annotate(listings)), key=lambda r: (r["size"], r["size_label"], r["qty"] == 0, r["price"] or 0))
     for r in rows:  # how each listing's name reads, for "Use this name"
         name, concentration = fragrances.identify(r["name"], r["brand"])
         r["reads_as"] = (" ".join(name.upper().split()), concentration)
     return templates.TemplateResponse(request, "product.html", {
         "product": product, "rows": rows, "history": price_history(conn, rows), "concentrations": CONCENTRATIONS,
         "eans": ean_list(conn, fragrance_id, rows), "in_basket": baskets.keys(conn),
-        "cheapest": fragrances.cheapest(conn, [fragrance_id]),
         "all_brands": conn.execute("SELECT id, name FROM brands ORDER BY name").fetchall(),
         **merge_options(conn, product, rows),
     })
@@ -886,8 +859,8 @@ def orders_page(request: Request):
     plan = orders.plan(conn, open_baskets)
     lines = [i for b in open_baskets for i in b["items"]]
     lines += [o for s in plan for o in s["wanted"] + s["fillers"] + s["spare"]]
-    # Each line against the next cheapest supplier: its deal, or how much dearer or cheaper.
-    compared = {(r["supplier"], r["sku"]): r for r in mark_value(conn, mark_deals(conn, mark_rivals(conn, lines)))}
+    # Each line against the fragrance's other listings, by price per ml (see compare).
+    compared = {(r["supplier"], r["sku"]): r for r in compare(conn, lines)}
     # One panel per supplier: its basket, then what's suggested to add. Baskets first.
     suggestions = {o["supplier"]: o for o in plan}
     panels = [{"supplier": b["supplier"], "basket": b, "suggestion": suggestions.pop(b["supplier"], None)} for b in open_baskets]

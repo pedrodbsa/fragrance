@@ -22,22 +22,23 @@
     {% set page = "/products/" ~ g.fragrance_id %}
     <tr class="{{ 'faded' if g.hidden or g.qty == 0 }}">
       <td data-sort="{{ g.fragrance }}">
-        <div class="product-name">{% if g.sizes|selectattr("discount", "defined")|list %}<span title="One of its sizes is a deal: 20% or more below the next cheapest supplier">🔥</span> {% endif %}{% if g.alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<a class="quiet" href="{{ page }}">{{ g.fragrance|pretty('') }}</a>{% if g.concentration %} <span class="muted">{{ g.concentration }}</span>{% endif %}
+        <div class="product-name">{% if g.sizes|selectattr("discount", "defined")|list %}<span title="One of its sizes is a deal: 20% or more below the next best price per ml">🔥</span> {% endif %}{% if g.alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<a class="quiet" href="{{ page }}">{{ g.fragrance|pretty('') }}</a>{% if g.concentration %} <span class="muted">{{ g.concentration }}</span>{% endif %}
           {{ badges(g.fragrance_status, g.owned, g.audience) }}</div>
         <div class="product-brand"><a class="quiet" href="/brands/{{ g.brand_id }}">{{ g.brand_name }}</a></div>
       </td>
       <td>
         <div class="sizes">
         {% for r in g.sizes %}
-          {#- The chip's colour says how it compares with the next cheapest supplier: red 🔥 a deal,
-              green 👑 the cheapest, blue 🦄 no one else has the size; then the % difference
-              after the price, green cheaper, red dearer. Without a supplier picked, only deals. #}
+          {#- The chip's colour says how it compares with the fragrance's other listings, any
+              supplier and size, by price per ml (web.compare): red 🔥 a deal, green 👑 the best,
+              blue 🦄 the only listing; then its €/ml and the % against the next best, green
+              cheaper, red dearer. #}
           {%- set state = "deal" if r.discount is defined else "cheapest" if r.cheapest and r.rival else "only" if r.cheapest else "" %}
-          {%- set delta = r.price - r.rival if r.rival and r.price is not none and r.qty > 0 else none %}
-          <a class="size {{ 'out' if r.qty == 0 }} {{ state }} {{ 'elsewhere' if r.elsewhere }}" href="{{ page }}" title="{% if r.elsewhere %}Not at {{ supplier }}: the cheapest elsewhere, {% endif %}{{ r.name }} · {{ r.condition }}{% if r|per_ml %} · {{ r|per_ml }}{% endif %} · {{ r.qty }} at {{ r.supplier }}{% if state == 'only' %} · no other supplier has this size{% endif %}{% if delta is not none %} · the next cheapest supplier asks €{{ "%.2f"|format(r.rival) }}{% endif %}">
+          {%- set delta = r.unit - r.rival if r.rival else none %}
+          <a class="size {{ 'out' if r.qty == 0 }} {{ state }} {{ 'elsewhere' if r.elsewhere }}" href="{{ page }}" title="{% if r.elsewhere %}Not at {{ supplier }}: the cheapest elsewhere, {% endif %}{{ r.name }} · {{ r.condition }} · {{ r.qty }} at {{ r.supplier }}{% if state == 'only' %} · its only listing in stock{% endif %}{% if r.rival %} · the next best: {{ "€%.2f"|format(r.rival) }}{{ "/ml" if r.per_ml }}, {{ r.rival_at }}{% endif %}">
             {{- {"deal": "🔥 ", "cheapest": "👑 ", "only": "🦄 "}.get(state, "") }}{{ r.size_label }} <b>{% if r.price is not none %}€{{ "%.2f"|format(r.price) }}{% else %}—{% endif %}</b>
-            {%- if delta is not none %} <span class="delta {{ 'up' if delta > 0 else 'down' if delta < 0 }}">{{ "+" if delta > 0 else "−" if delta < 0 else "±" }}{{ (delta|abs / r.rival * 100)|round|int }}%</span>{% endif %}
-            {%- if r.best_value %} <span class="value" title="The most perfume for the money: this fragrance's lowest price per ml ({{ r|per_ml }}), across every supplier and size">💧</span>{% endif %}</a>
+            {%- if r|per_ml %} <span class="per-ml">{{ r|per_ml }}</span>{% endif %}
+            {%- if delta is not none %} <span class="delta {{ 'up' if delta > 0 else 'down' if delta < 0 }}">{{ "+" if delta > 0 else "−" if delta < 0 else "±" }}{{ (delta|abs / r.rival * 100)|round|int }}%</span>{% endif %}</a>
         {% endfor %}
         </div>
       </td>
