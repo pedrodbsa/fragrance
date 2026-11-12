@@ -716,7 +716,7 @@ def product_rename(fragrance_id: int, name: str = Form(...), concentration: str 
     conn = connect()
     with conn:
         fragrance_id = fragrances.rename(conn, fragrance_id, name, concentration or None)
-    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+    return RedirectResponse(f"/products/{fragrance_id}?tab=manage", status_code=303)
 
 
 @office.get("/merges")
@@ -768,7 +768,7 @@ def product_brand(fragrance_id: int, brand_id: int = Form(...)):
     conn = connect()
     with conn:
         fragrance_id = fragrances.move_to_brand(conn, fragrance_id, brand_id)
-    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+    return RedirectResponse(f"/products/{fragrance_id}?tab=manage", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/audience")
@@ -777,7 +777,7 @@ def product_audience(fragrance_id: int, audience: str = Form("")):
     conn = connect()
     with conn:
         fragrances.set_audience(conn, fragrance_id, audience or None)
-    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+    return RedirectResponse(f"/products/{fragrance_id}?tab=manage", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/eans")
