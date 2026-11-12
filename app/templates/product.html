@@ -40,18 +40,13 @@
   </div>
 </div>
 
-{% if history %}
-<div class="panel" style="margin-bottom: 20px">
-  <div class="panel-head">
-    <h2>Price history</h2>
-    <span class="panel-note">Lowest seen: €{{ "%.2f"|format(history|map(attribute="low")|min) }}</span>
-  </div>
-  <div class="chart" id="price-chart"></div>
-  <script type="application/json" id="price-data">{{ history|tojson }}</script>
-  <script src="/static/chart.js"></script>
-</div>
-{% endif %}
 
+<nav class="segmented" style="margin-bottom: 20px">
+  <a href="/products/{{ product.id }}" class="{{ 'active' if tab != 'manage' }}">Overview</a>
+  <a href="/products/{{ product.id }}?tab=manage" class="{{ 'active' if tab == 'manage' }}" title="EANs and listings that may be this fragrance">Manage{% if candidates %} <span class="pill warn" title="Listings elsewhere that may be this fragrance">{{ candidates|length }}</span>{% endif %}</a>
+</nav>
+
+{% if tab != "manage" %}
 <div class="panel">
   <div class="panel-head"><h2>Stock</h2>
     {% if product.status in ("wishlist", "filler") %}
@@ -68,6 +63,18 @@
   </div>
   {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists it right now. {% if product.status == "wishlist" %}You'll get an alert when one does.{% else %}Put it on your wishlist to get an alert when one does.{% endif %}</div>{% endif %}
 </div>
+
+{% if history %}
+<div class="panel" style="margin-top: 20px">
+  <div class="panel-head">
+    <h2>Price history</h2>
+    <span class="panel-note">Lowest seen: €{{ "%.2f"|format(history|map(attribute="low")|min) }}</span>
+  </div>
+  <div class="chart" id="price-chart"></div>
+  <script type="application/json" id="price-data">{{ history|tojson }}</script>
+  <script src="/static/chart.js"></script>
+</div>
+{% endif %}
 
 {% set labels = {"new": "New", "restock": "Back in stock", "price_drop": "Price drop", "price_up": "Price up", "soldout": "Sold out"} %}
 <div class="panel" style="margin-top: 20px" id="history">
@@ -106,7 +113,8 @@
   {% endif %}
 </div>
 
-<div class="panel" style="margin-top: 20px">
+{% else %}
+<div class="panel">
   <div class="panel-head"><h2>EANs</h2><span class="panel-note">Listings with a matched EAN are attached here, now and when they appear later, whatever their name says</span></div>
   <div class="pad">
     {% for e in eans %}
@@ -185,4 +193,5 @@
     </form>
   </div>
 </div>
+{% endif %}
 {% endblock %}

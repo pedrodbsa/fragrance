@@ -575,9 +575,9 @@ def product_add(brand_id: int = Form(...), name: str = Form(...), concentration:
 
 
 @office.get("/products/{fragrance_id}")
-def product_detail(request: Request, fragrance_id: int, history_page: int = 1):
-    """Any fragrance: every listing of it by size, its price history, what happened at each
-    supplier (a page at a time), and merging."""
+def product_detail(request: Request, fragrance_id: int, history_page: int = 1, tab: str = ""):
+    """Any fragrance. Overview: every listing of it by size, its price history and what happened
+    at each supplier (a page at a time). tab='manage': its EANs and merging."""
     conn = connect()
     product = conn.execute(f"{PRODUCT} WHERE f.id = ?", (fragrance_id,)).fetchone()
     if product is None:
@@ -588,7 +588,7 @@ def product_detail(request: Request, fragrance_id: int, history_page: int = 1):
         name, concentration = fragrances.identify(r["name"], r["brand"])
         r["reads_as"] = (" ".join(name.upper().split()), concentration)
     return templates.TemplateResponse(request, "product.html", {
-        "product": product, "rows": rows, "history": price_history(conn, rows), "concentrations": CONCENTRATIONS,
+        "product": product, "rows": rows, "history": price_history(conn, rows), "tab": tab, "concentrations": CONCENTRATIONS,
         "eans": ean_list(conn, fragrance_id, rows), "in_basket": baskets.keys(conn),
         **supplier_history(conn, request, fragrance_id, history_page),
         "all_brands": conn.execute("SELECT id, name FROM brands ORDER BY name").fetchall(),
@@ -789,7 +789,7 @@ def product_ean_add(fragrance_id: int, ean: str = Form(...)):
     conn = connect()
     with conn:
         fragrances.add_ean(conn, fragrance_id, ean)
-    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+    return RedirectResponse(f"/products/{fragrance_id}?tab=manage", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/eans/move")
@@ -815,7 +815,7 @@ def product_ean_remove(fragrance_id: int, ean: str = Form(...)):
     conn = connect()
     with conn:
         fragrances.remove_ean(conn, ean)
-    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+    return RedirectResponse(f"/products/{fragrance_id}?tab=manage", status_code=303)
 
 
 @office.post("/listings/detach")
@@ -833,7 +833,7 @@ def product_attach(fragrance_id: int, supplier: str = Form(...), sku: str = Form
     conn = connect()
     with conn:
         fragrances.attach(conn, supplier, sku, fragrance_id)
-    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+    return RedirectResponse(f"/products/{fragrance_id}?tab=manage", status_code=303)
 
 
 @office.post("/products/{fragrance_id}/split")
@@ -842,7 +842,7 @@ def product_split(fragrance_id: int, name: str = Form(...), concentration: str =
     conn = connect()
     with conn:
         fragrances.split(conn, fragrance_id, name, concentration)
-    return RedirectResponse(f"/products/{fragrance_id}", status_code=303)
+    return RedirectResponse(f"/products/{fragrance_id}?tab=manage", status_code=303)
 
 
 # --- Suppliers and orders --------------------------------------------------------------------
