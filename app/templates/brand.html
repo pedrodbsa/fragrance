@@ -12,6 +12,33 @@
   {{ brand_switch("/brands/" ~ brand.id ~ "/status", brand.status, back) }}
 </div>
 
+<nav class="segmented" style="margin-bottom: 20px">
+  <a href="/brands/{{ brand.id }}" class="{{ 'active' if tab != 'manage' }}">Overview</a>
+  <a href="/brands/{{ brand.id }}?tab=manage" class="{{ 'active' if tab == 'manage' }}" title="Spellings, renaming, merging and deleting">Manage</a>
+</nav>
+
+{% if tab != "manage" %}
+<div class="panel" style="margin-bottom: 20px">
+  <div class="panel-head"><h2>Stock</h2><span class="panel-note">Every fragrance of this brand, sizes grouped</span>
+    {% if groups %}<input type="search" placeholder="Filter by name" data-filter="#brand-stock" aria-label="Filter fragrances by name">{% endif %}</div>
+  {% if groups %}<div id="brand-stock">{% with one_brand = true %}{% include "_fragrances.html" %}{% endwith %}</div>{% else %}<div class="empty">No supplier lists this brand right now.</div>{% endif %}
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>Fragrances you decided on</h2><span class="panel-note">A fragrance's list wins over the brand</span></div>
+  {% if decided %}
+  <table><tbody>
+    {% for f in decided %}
+    <tr><td class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}</td>
+        <td class="num">{{ badges(f.status, f.owned, f.audience) }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+  {% else %}
+  <div class="empty">None yet. Put a fragrance on a list or in your collection from the stock list above.</div>
+  {% endif %}
+</div>
+
+{% else %}
 <div class="grid-2">
   <div class="panel">
     <div class="panel-head"><h2>Spellings</h2><span class="panel-note">How suppliers write this brand</span></div>
@@ -54,25 +81,6 @@
     </form>
     {% endif %}
   </div>
-
-  <div class="panel">
-    <div class="panel-head"><h2>Fragrances you decided on</h2><span class="panel-note">A fragrance's list wins over the brand</span></div>
-    {% if decided %}
-    <table><tbody>
-      {% for f in decided %}
-      <tr><td class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}</td>
-          <td class="num">{{ badges(f.status, f.owned, f.audience) }}</td></tr>
-      {% endfor %}
-    </tbody></table>
-    {% else %}
-    <div class="empty">None yet. Put a fragrance on a list or in your collection from the stock list below.</div>
-    {% endif %}
-  </div>
 </div>
-
-<div class="panel" style="margin-top: 20px">
-  <div class="panel-head"><h2>Stock</h2><span class="panel-note">Every fragrance of this brand, sizes grouped</span>
-    {% if groups %}<input type="search" placeholder="Filter by name" data-filter="#brand-stock" aria-label="Filter fragrances by name">{% endif %}</div>
-  {% if groups %}<div id="brand-stock">{% with one_brand = true %}{% include "_fragrances.html" %}{% endwith %}</div>{% else %}<div class="empty">No supplier lists this brand right now.</div>{% endif %}
-</div>
+{% endif %}
 {% endblock %}

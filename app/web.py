@@ -473,7 +473,9 @@ def brand_add(name: str = Form(...), status: str = Form(...)):
 
 
 @office.get("/brands/{brand_id}")
-def brand_detail(request: Request, brand_id: int):
+def brand_detail(request: Request, brand_id: int, tab: str = ""):
+    """A brand. Overview: its stock and the fragrances you decided on. tab='manage': its
+    spellings, renaming, merging and deleting."""
     conn = connect()
     brand = conn.execute(BRAND_ROWS + " WHERE b.id = ?", (brand_id,)).fetchone()
     if brand is None:
@@ -489,7 +491,7 @@ def brand_detail(request: Request, brand_id: int):
     # By name, A to Z, sold-out ones included in their place (a column header re-sorts).
     groups = sorted(group(annotate(listings)), key=lambda g: (fold(g["fragrance"]), g["concentration"] or ""))
     return templates.TemplateResponse(request, "brand.html", {
-        "brand": brand, "aliases": aliases, "others": others, "decided": decided,
+        "brand": brand, "aliases": aliases, "others": others, "decided": decided, "tab": tab,
         "groups": groups, "pictures": fragrances.pictures(conn, [g["fragrance_id"] for g in groups]),
     })
 
@@ -507,7 +509,7 @@ def brand_rename(brand_id: int, name: str = Form(...)):
     conn = connect()
     with conn:
         brands.rename(conn, brand_id, name)
-    return RedirectResponse(f"/brands/{brand_id}", status_code=303)
+    return RedirectResponse(f"/brands/{brand_id}?tab=manage", status_code=303)
 
 
 @office.post("/brands/{brand_id}/delete")
