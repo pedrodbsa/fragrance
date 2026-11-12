@@ -21,6 +21,11 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   reach a minimum order; no alerts), *ignored*, or on no list, where the brand's status
   applies. A fragrance's list wins over its brand's. Supplier
   spellings of a brand are merged through aliases, with suggestions in the Brands page's New tab.
+- **Changes** (the backoffice's first page) is about fragrances, not listings: new (no
+  supplier had it before), back in stock or sold out across all suppliers, and moves of more
+  than €5 in the cheapest price of a size. It's rebuilt from the events each time it opens
+  (`app/changes.py`), so nothing extra is stored. Each change opens to show every supplier
+  at that moment; a fragrance's page has its full per-supplier history.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
   suppliers, basket items that sold out, came back or changed price, followed brands' new products and restocks, wishlist fragrances (new, back in
   stock, cheaper), and new brands with Follow / Ignore buttons. Order suggestions stay on the
@@ -39,6 +44,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 | --- | --- |
 | `app/suppliers/<name>.py` | One per supplier: `fetch()` returns its in-stock items |
 | `app/collect.py` | Compares a fetch with the database, records events |
+| `app/changes.py` | Product-level changes for the Changes page, rebuilt from the events |
 | `app/notify.py` | Builds and sends the digest |
 | `app/orders.py` | Order suggestions: wishlist plus fillers up to each supplier's minimum |
 | `app/baskets.py` | Your open basket per supplier, kept until you place the order |

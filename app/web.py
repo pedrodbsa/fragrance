@@ -23,7 +23,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app import baskets, brands, orders, telegram
+from app import baskets, brands, changes, orders, telegram
 from app.cli import attempt
 from app.db import connect, fold
 from app.upgrades import upgrade
@@ -116,33 +116,42 @@ def back_to(back: str, fallback: str) -> RedirectResponse:
 # The Changes page's tabs: which kinds of change each shows ("" = all).
 CHANGE_TABS = {"": "", "arrivals": "new,restock", "new": "new", "restock": "restock",
                "price_drop": "price_drop", "price_up": "price_up", "soldout": "soldout"}
+CHANGES_PAGE = 100
 
 
 @office.get("/")
-def events(request: Request, kind: str = "", brands: str = "", supplier: str = ""):
-    """Recent changes. kind picks a tab ('arrivals': new or back in stock), brands='following'
-    only followed brands, supplier one supplier."""
+def events(request: Request, kind: str = "", brands: str = "", supplier: str = "", page: int = 1):
+    """Product changes (app/changes.py), newest first, a page at a time. kind picks a tab
+    ('arrivals': new or back in stock), brands='following' only followed brands, supplier the
+    changes one supplier's runs caused."""
     conn = connect()
-    shown = """NOT c.hidden AND (? != 'following' OR c.brand_status = 'follow')
-               AND (? = '' OR e.supplier = ?)"""
-    filters = (brands, supplier, supplier)
-    kinds = CHANGE_TABS.get(kind, kind)
-    recent = conn.execute(
-        f"""SELECT e.*, c.name, c.brand, c.brand_name, c.fragrance_id, c.ean, c.price, c.qty
-           FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
-           WHERE {shown} AND (? = '' OR instr(',' || ? || ',', ',' || e.kind || ',') > 0)
-           ORDER BY e.id DESC LIMIT ?""",
-        (*filters, kinds, kinds, PAGE),
-    ).fetchall()
+    # Each fragrance's name and whether it's hidden or followed, the way the catalog view says.
+    products = {r["id"]: r for r in conn.execute(
+        """SELECT f.id, f.name, f.concentration, f.status, b.name AS brand_name,
+                  CASE WHEN f.status != 'default' THEN f.status = 'ignore' ELSE b.status = 'ignore' END AS hidden,
+                  b.status = 'follow' AS following
+           FROM fragrances f JOIN brands b ON b.id = f.brand_id""")}
+    shown = [{**c, "product": products[c["fragrance_id"]]} for c in changes.replay(conn)
+             if c["fragrance_id"] in products and not products[c["fragrance_id"]]["hidden"]
+             and (brands != "following" or products[c["fragrance_id"]]["following"])
+             and (not supplier or c["supplier"] == supplier)]
     since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds")
-    last_day = dict(conn.execute(
-        f"""SELECT e.kind, count(*) FROM events e JOIN catalog c ON c.supplier = e.supplier AND c.sku = e.sku
-           WHERE e.created_at >= ? AND {shown} GROUP BY e.kind""", (since, *filters)).fetchall())
+    last_day = defaultdict(int)
+    for c in shown:
+        if c["created_at"] >= since:
+            last_day[c["kind"]] += 1
+    kinds = CHANGE_TABS.get(kind, kind).split(",")
+    rows = [c for c in shown if not kind or c["kind"] in kinds]
+    pages = max(1, -(-len(rows) // CHANGES_PAGE))
+    page = min(max(page, 1), pages)
+    page_link = lambda n: "/?" + urlencode({"kind": kind, "brands": brands, "supplier": supplier, "page": n})
     in_stock, suppliers = conn.execute(
         "SELECT count(*), count(DISTINCT supplier) FROM catalog WHERE qty > 0 AND NOT hidden").fetchone()
     new_brands = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]
     return templates.TemplateResponse(request, "events.html", {
-        "rows": recent, "kind": kind, "brands": brands, "supplier": supplier, "last_day": last_day,
+        "rows": rows[(page - 1) * CHANGES_PAGE:page * CHANGES_PAGE], "total": len(rows),
+        "page": page, "pages": pages, "page_link": page_link,
+        "kind": kind, "brands": brands, "supplier": supplier, "last_day": last_day,
         "in_stock": in_stock, "suppliers": suppliers, "new_brands": new_brands, "supplier_names": sorted(SUPPLIERS),
     })
 
@@ -560,8 +569,9 @@ def product_add(brand_id: int = Form(...), name: str = Form(...), concentration:
 
 
 @office.get("/products/{fragrance_id}")
-def product_detail(request: Request, fragrance_id: int):
-    """Any fragrance: every listing of it by size, its price history, and merging."""
+def product_detail(request: Request, fragrance_id: int, history_page: int = 1):
+    """Any fragrance: every listing of it by size, its price history, what happened at each
+    supplier (a page at a time), and merging."""
     conn = connect()
     product = conn.execute(f"{PRODUCT} WHERE f.id = ?", (fragrance_id,)).fetchone()
     if product is None:
@@ -574,9 +584,29 @@ def product_detail(request: Request, fragrance_id: int):
     return templates.TemplateResponse(request, "product.html", {
         "product": product, "rows": rows, "history": price_history(conn, rows), "concentrations": CONCENTRATIONS,
         "eans": ean_list(conn, fragrance_id, rows), "in_basket": baskets.keys(conn),
+        **supplier_history(conn, request, fragrance_id, history_page),
         "all_brands": conn.execute("SELECT id, name FROM brands ORDER BY name").fetchall(),
         **merge_options(conn, product, rows),
     })
+
+
+HISTORY_PAGE = 50
+
+
+def supplier_history(conn, request: Request, fragrance_id: int, page: int) -> dict:
+    """Every supplier event of a fragrance's listings, newest first, a page at a time."""
+    total = conn.execute(
+        """SELECT count(*) FROM events e JOIN listings l ON l.supplier = e.supplier AND l.sku = e.sku
+           WHERE l.fragrance_id = ?""", (fragrance_id,)).fetchone()[0]
+    pages = max(1, -(-total // HISTORY_PAGE))
+    page = min(max(page, 1), pages)
+    events = conn.execute(
+        """SELECT e.*, l.name, l.brand FROM events e JOIN listings l ON l.supplier = e.supplier AND l.sku = e.sku
+           WHERE l.fragrance_id = ? ORDER BY e.id DESC LIMIT ? OFFSET ?""",
+        (fragrance_id, HISTORY_PAGE, (page - 1) * HISTORY_PAGE)).fetchall()
+    link = lambda n: str(request.url.include_query_params(history_page=n)) + "#history"
+    return {"events": [{**e, "size_label": variant(e["name"])[1]} for e in events], "events_total": total,
+            "history_page": page, "history_pages": pages, "history_link": link}
 
 
 def ean_list(conn, fragrance_id: int, rows) -> list[dict]:

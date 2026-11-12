@@ -69,6 +69,43 @@
   {% if rows %}{% include "_listings.html" %}{% else %}<div class="empty">No supplier lists it right now. {% if product.status == "wishlist" %}You'll get an alert when one does.{% else %}Put it on your wishlist to get an alert when one does.{% endif %}</div>{% endif %}
 </div>
 
+{% set labels = {"new": "New", "restock": "Back in stock", "price_drop": "Price drop", "price_up": "Price up", "soldout": "Sold out"} %}
+<div class="panel" style="margin-top: 20px" id="history">
+  <div class="panel-head"><h2>History</h2><span class="panel-note">What happened at each supplier, newest first · {{ "{:,}".format(events_total) }} change{{ "s" if events_total != 1 }}</span></div>
+  {% if events %}
+  <div class="scroll">
+  <table>
+    <thead><tr><th>When</th><th>Supplier</th><th>Size</th><th>Change</th><th class="num">Price / qty</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+    <tr>
+      <td class="nowrap muted">{{ e.created_at|local }}</td>
+      <td>{{ e.supplier }}</td>
+      <td title="{{ e.name }}">{{ e.size_label }}</td>
+      <td><span class="pill {{ e.kind }}">{{ labels[e.kind] }}</span></td>
+      <td class="num nowrap">
+        {% if e.kind in ("price_drop", "price_up") %}<span class="delta"><s>€{{ "%.2f"|format(e.old_value) }}</s></span> €{{ "%.2f"|format(e.new_value) }}
+        {% elif e.kind == "new" and e.new_value is not none %}€{{ "%.2f"|format(e.new_value) }}
+        {% elif e.kind == "restock" %}{{ e.new_value|int }} in stock
+        {% elif e.kind == "soldout" %}<span class="muted">{{ e.old_value|int }} → 0</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if history_pages > 1 %}
+  <div class="pager">
+    {% if history_page > 1 %}<a class="btn sm" href="{{ history_link(history_page - 1) }}">← Newer</a>{% endif %}
+    <span class="muted small">Page {{ history_page }} of {{ history_pages }}</span>
+    {% if history_page < history_pages %}<a class="btn sm" href="{{ history_link(history_page + 1) }}">Older →</a>{% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty">Nothing has changed at any supplier since this fragrance was first seen.</div>
+  {% endif %}
+</div>
+
 <div class="panel" style="margin-top: 20px">
   <div class="panel-head"><h2>EANs</h2><span class="panel-note">Listings with a matched EAN are attached here, now and when they appear later, whatever their name says</span></div>
   <div class="pad">

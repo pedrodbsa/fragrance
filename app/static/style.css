@@ -312,3 +312,7 @@ table.lines .c-act { width: 48px; }
 /* Orders and Stock: a fragrance's name says which list it's on (wishlist gold, filler purple) */
 .product-name a.wishlist { color: var(--amber-fg); }
 .product-name a.filler { color: var(--purple-fg); }
+
+/* Changes page: where a fragrance stood at every supplier right after a change */
+table.breakdown { margin-top: 6px; font-size: 12px; }
+table.breakdown td { padding: 2px 8px 2px 0; border: 0; white-space: nowrap; }
