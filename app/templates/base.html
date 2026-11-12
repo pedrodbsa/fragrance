@@ -15,16 +15,16 @@
     <div class="wrap">
       <a class="logo" href="/"><span class="logo-mark">✦</span><span>Grasse</span></a>
       <nav class="tabs">
-        <a href="/" class="{{ 'active' if path == '/' }}">Feed</a>
-        <a href="/stock" class="{{ 'active' if path.startswith('/stock') }}">Stock</a>
-        <a href="/brands" class="{{ 'active' if path.startswith('/brands') }}">Brands</a>
-        <a href="/products" class="{{ 'active' if path.startswith(('/products', '/merges')) }}">Products</a>
-        <a href="/suppliers" class="{{ 'active' if path.startswith('/suppliers') }}">Suppliers</a>
+        <a href="/" class="{{ 'active' if path == '/' }}" title="Feed"><span class="icon">📰</span><span class="label">Feed</span></a>
+        <a href="/stock" class="{{ 'active' if path.startswith('/stock') }}" title="Stock"><span class="icon">📦</span><span class="label">Stock</span></a>
+        <a href="/brands" class="{{ 'active' if path.startswith('/brands') }}" title="Brands"><span class="icon">🏷️</span><span class="label">Brands</span></a>
+        <a href="/products" class="{{ 'active' if path.startswith(('/products', '/merges')) }}" title="Products"><span class="icon">🧴</span><span class="label">Products</span></a>
+        <a href="/suppliers" class="{{ 'active' if path.startswith('/suppliers') }}" title="Suppliers"><span class="icon">🚚</span><span class="label">Suppliers</span></a>
       </nav>
       <form class="quick-search" method="get" action="/search">
         <input type="search" name="q" value="{{ request.query_params.get('q', '') if path == '/search' }}" placeholder="Brand, fragrance or EAN" aria-label="Search">
       </form>
-      <nav class="tabs"><a href="/orders" class="{{ 'active' if path.startswith('/orders') }}">Orders</a></nav>
+      <nav class="tabs end"><a href="/orders" class="{{ 'active' if path.startswith('/orders') }}" title="Orders"><span class="icon">🧺</span><span class="label">Orders</span></a></nav>
     </div>
   </header>
   <main class="wrap">

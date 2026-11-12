@@ -86,7 +86,8 @@ a:hover { text-decoration: underline; }
 }
 .tabs a:hover { color: var(--text); text-decoration: none; }
 .tabs a.active { color: var(--accent); border-bottom-color: var(--accent); }
-.quick-search { margin-left: auto; }
+.tabs a .icon { margin-right: 6px; }
+.tabs.end { margin-left: auto; }  /* Orders, on the right of the header */
 .quick-search input[type=search] { min-width: 0; width: 220px; }
 
 /* Page */
@@ -216,8 +217,12 @@ tr:hover .row-actions, .row-actions:focus-within { opacity: 1; }
   input[type=search] { min-width: 0; flex: 1 1 100%; }
   .hide-sm { display: none; }
   td, th { padding-left: 12px; padding-right: 12px; }
-  .tabs a { padding: 0 8px; white-space: nowrap; }
-  .quick-search input[type=search] { width: 110px; flex: none; }
+  .tabs { gap: 0; flex: none; }  /* every icon stays visible; the search box takes what is left */
+  .tabs a { padding: 0 7px; white-space: nowrap; }
+  .tabs a .label { display: none; }  /* icons only on a phone; the name shows on hover */
+  .tabs a .icon { margin-right: 0; font-size: 17px; }
+  .quick-search { flex: 1; min-width: 0; }
+  .quick-search input[type=search] { width: 100%; }
   .btn.sm { padding: 0 5px; }
 }
 
