@@ -2,7 +2,7 @@
 {% from "_macros.html" import badges %}
 {% block title %}Search{% endblock %}
 {% block content %}
-{% set labels = {"follow": "⭐ Following", "ignore": "🚫 Ignored", "default": "👀 Browse"} %}
+{% set labels = {"favourite": "⭐ Favourite", "follow": "👀 Following", "none": "🚫 Unfollowed"} %}
 <div class="page-head">
   <div>
     <h1>“{{ q }}”</h1>
@@ -18,7 +18,7 @@
     <thead><tr><th>Brand</th><th class="num">In stock</th><th class="num">Prices</th><th class="hide-sm">Suppliers</th><th>Status</th></tr></thead>
     <tbody>
     {% for b in brands %}
-    <tr class="{{ 'faded' if b.status == 'ignore' }}">
+    <tr class="{{ 'faded' if b.status == 'none' }}">
       <td class="product-name" data-sort="{{ b.name }}"><a class="quiet" href="/brands/{{ b.id }}">{{ b.name }}</a></td>
       <td class="num">{{ b.in_stock }}</td>
       <td class="num nowrap" data-sort="{{ b.low if b.low is not none }}">{% if b.low is not none %}€{{ "%.0f"|format(b.low) }}{% if b.high|round > b.low|round %}–€{{ "%.0f"|format(b.high) }}{% endif %}{% else %}<span class="muted">—</span>{% endif %}</td>

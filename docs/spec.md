@@ -21,13 +21,13 @@ purchases (personal use, no resale).
 You make decisions about brands and fragrances. Variants and listings are filled in
 automatically from supplier data.
 
-## Brands: Follow, Browse, or Ignore
+## Brands: Favourite, Follow, or Unfollow
 
-| Choice | For | Shown in Stock | Alerts |
+| Tier | For | Shown in Stock | Alerts |
 |---|---|---|---|
-| **Follow** | brands you collect (Amouage) | Yes | New products and restocks of every fragrance of the brand |
-| **Browse** (the default) | brands worth looking at, without alerts | Yes | Never |
-| **Ignore** | brands you'll never want | No (only with Stock's "All brands") | Never |
+| **Favourite** | brands you collect (Amouage) | Yes | New products and restocks of every fragrance of the brand |
+| **Follow** (where new brands start) | brands worth looking at, without alerts | Yes | Never |
+| None (**Unfollow**) | brands you don't want | No (only with Stock's "All brands") | Never |
 
 ## Fragrances: your lists
 
@@ -37,11 +37,11 @@ is often topped up with fragrances you don't mind owning: those are the fillers.
 | List | Shown in Stock | Alerts |
 |---|---|---|
 | **Wishlist** | Yes | New listings, back in stock, cheaper, whatever the brand's status |
-| **Filler** | Yes | Never, even if the brand is followed |
+| **Filler** | Yes | Never, even if the brand is a favourite |
 | **Ignore** | No (only with Stock's "All brands") | Never |
 | No list | Yes | The brand's status applies |
 
-- A fragrance's list wins over its brand: leave Memo alone but wishlist Ithaque; follow
+- A fragrance's list wins over its brand: leave Memo alone but wishlist Ithaque; favourite
   Amouage but ignore Outlands or mark Mandarino di Sicilia as a filler.
 - The wishlist works before any supplier lists a fragrance: the first listing alerts you.
 - Separately, **In collection** marks fragrances you own. It doesn't change alerts: own Beach
@@ -74,17 +74,18 @@ Ticking and unticking lines recomputes the total, to try other baskets; the tick
 can then go into the supplier's basket.
 
 Suggestions aren't sent to Telegram: the digest is only for what needs your attention
-(baskets, the wishlist, followed brands, new brands).
+(baskets, the wishlist, favourite brands, new brands).
 
 ## New brands
 
-Every new brand starts on Browse (shown, no alerts), so nothing urgently needs triage.
+Every new brand starts on Follow (shown, no alerts) until you review it, so nothing urgently
+needs triage.
 
-- **Telegram**: the digest mentions new brands with **Follow / Ignore** buttons. Not tapping
-  keeps Browse.
+- **Telegram**: the digest mentions new brands with **Favourite / Unfollow** buttons. Not
+  tapping keeps Follow.
 - **Brands page, New tab**: brands you haven't chosen for yet, newest first, with merge
-  suggestions. Tick them and choose Follow, Browse or Ignore in bulk; choosing Browse
-  counts too, and takes the brand out of the tab.
+  suggestions. Choose Favourite, Follow or Unfollow for each; choosing Follow counts too,
+  and takes the brand out of the tab.
 - A supplier's first run adds its brands quietly; they appear in the New tab.
 
 **Same name, same brand.** A spelling seen for the first time joins the brand with the same
@@ -106,8 +107,8 @@ EAN manufacturer prefixes were tried and dropped: they identify the licence hold
 
 The Brands page manages aliases by hand too: merging two brands, splitting one apart, renaming.
 A brand nothing is in stock from can be deleted on its page, with its fragrances and sold-out
-listings; one with stock can't (the next sync would bring it back), so ignore it instead.
-You can also add a brand yourself (Brands page, "Add a brand"), to follow or ignore it before
+listings; one with stock can't (the next sync would bring it back), so unfollow it instead.
+You can also add a brand yourself (Brands page, "Add a brand"), to favourite or unfollow it before
 any supplier lists it. If you have it already under another spelling, that brand gets the
 status instead. A supplier listing it later under the same name lands on it; under another
 spelling it shows in the New tab with a "Same as" suggestion.
@@ -171,7 +172,7 @@ cover 50 ml, 100 ml and testers, including EANs that appear later.
   - **Low stock**: alerts when the quantity falls below a number you set.
 - You can optionally narrow it to a single size.
 
-Followed brands alert on new products and restocks for all their fragrances. Price-drop and
+Favourite brands alert on new products and restocks for all their fragrances. Price-drop and
 low-stock alerts are only set per fragrance.
 
 **Fragrance aliases.** If a listing is attached to the wrong fragrance or misread, you fix it in
@@ -220,11 +221,11 @@ Listings with the same EAN are grouped into one Stock row:
 Sections, in this order:
 
 1. **🧺 Baskets**: basket items that sold out, came back, or changed price (up or down).
-2. **⭐ Followed**: new listings, restocks, price drops and low stock for followed brands and
-   wishlist fragrances, with the best-price and lowest-ever notes.
-3. **🆕 New brands**: each brand with Follow / Ignore buttons and any merge suggestion.
+2. **⭐ Wishlist and favourites**: new listings, restocks, price drops and low stock for
+   favourite brands and wishlist fragrances, with the best-price and lowest-ever notes.
+3. **🆕 New brands**: each brand with Favourite / Unfollow buttons and any merge suggestion.
 
-Brands on default, fillers and fragrances on no list never appear in the digest. You see them in the backoffice.
+Followed brands, fillers and fragrances on no list never appear in the digest. You see them in the backoffice.
 
 A price change is recorded only when the price is more than €5 away from the last recorded
 price (or the price when first seen). Small daily moves add up: five €1.10 drops make one
@@ -233,14 +234,14 @@ price (or the price when first seen). Small daily moves add up: five €1.10 dro
 ## Backoffice pages
 
 - **Changes**: what moved, without hidden brands and fragrances (wishlist fragrances of
-  ignored brands are shown). Filters: type of change (including "New or back in stock"), supplier, and all brands or
-  following brands only. The Suppliers page links to each supplier's changes, price drops and arrivals.
+  unfollowed brands are shown). Filters: type of change (including "New or back in stock"), supplier, and all brands or
+  favourite brands only. The Suppliers page links to each supplier's changes, price drops and arrivals.
 - **Stock**: one row per fragrance (brand + name + concentration) with its sizes and testers
-  and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, which brands (following; following and Browse; all, ignored too), men / women / unisex, in stock, alerting only, cheapest only (sizes no other supplier sells for less; with a supplier picked, where that supplier is cheapest). Grouping uses the
+  and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, which brands (favourites; favourites and followed; all, unfollowed too), men / women / unisex, in stock, alerting only, cheapest only (sizes no other supplier sells for less; with a supplier picked, where that supplier is cheapest). Grouping uses the
   fragrance name read from listings, not EANs, so different EANs per size don't matter.
 - **Product page**: every listing of one fragrance by size, and a price history chart (one
   line per size and supplier, rebuilt from recorded price changes).
-- **Brands**: every brand with its status, bulk Follow / Browse / Ignore, and a New tab for
+- **Brands**: every brand with its status, Favourite / Follow / Unfollow, and a New tab for
   brands you haven't chosen for yet (with merge suggestions). A brand's page: rename, merge,
   spellings, and the fragrance decisions made for it.
 - **Products**: your fragrance lists: Wishlist, Fillers, Collection, Ignored.
@@ -255,8 +256,8 @@ price (or the price when first seen). Small daily moves add up: five €1.10 dro
 Tables sort by clicking a column header (again to reverse). Stock does the same across all
 its fragrances (by name, brand, price, quantity), shown in pages of 200 with Previous / Next.
 
-The old Rules page is gone: brand watch rules became Follow, EAN and keyword watches went on
-the wishlist; mute and supplier rules were dropped (default covers them).
+The old Rules page is gone: brand watch rules became Favourite, EAN and keyword watches went on
+the wishlist; mute and supplier rules were dropped (Follow covers them).
 
 ## Later: your collection
 

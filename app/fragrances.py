@@ -2,11 +2,11 @@
 and your decisions about each.
 
 A fragrance goes on one of your lists, or on none ('default'). Its list wins over its brand's
-status: leave Memo on default but wishlist Ithaque, or follow Amouage but ignore Outlands.
+status: leave Memo on default but wishlist Ithaque, or favourite Amouage but ignore Outlands.
   wishlist  what you want to buy: alerts when it's new, back in stock or cheaper
   filler    you wouldn't mind owning it, e.g. to reach a supplier's minimum order; never alerts
   ignore    hidden everywhere, never alerts
-  default   the brand's status applies (brands are follow | ignore | default)
+  default   the brand's status applies (brands are favourite | follow | none)
 Separately, `owned` puts a fragrance in your collection. It doesn't change alerts.
 
 A listing is matched once, when it first appears, by reading the fragrance name out of the
@@ -264,7 +264,7 @@ def merge(conn, fragrance_id: int, into_id: int) -> None:
     conn.execute("DELETE FROM fragrances WHERE id = ?", (fragrance_id,))
 
 
-# Same brand, at least one EAN in common, not marked as different, brand not ignored. Same name
+# Same brand, at least one EAN in common, not marked as different, brand not unfollowed. Same name
 # first: those are usually suppliers disagreeing about the concentration.
 SUGGESTIONS = """
 WITH codes AS (
@@ -281,7 +281,7 @@ JOIN fragrances fa ON fa.id = p.a_id
 JOIN fragrances fb ON fb.id = p.b_id
 JOIN brands br ON br.id = fa.brand_id
 WHERE fa.brand_id = fb.brand_id
-  AND br.status != 'ignore'
+  AND br.status != 'none'
   AND NOT EXISTS (SELECT 1 FROM not_same n WHERE n.fragrance_id = p.a_id AND n.other_id = p.b_id)
 ORDER BY same_name DESC, br.name, fa.name
 """

@@ -3,8 +3,8 @@
 Tables:
   suppliers         one row per supplier: its minimum order value (set on the Suppliers
                     page) and how its last collection went.
-  brands            one row per real brand, with your decision about it: follow | ignore |
-                    default, shown as Browse (app/brands.py). announced_at is set once a new
+  brands            one row per real brand, with your decision about it: favourite |
+                    follow | none (unfollowed) (app/brands.py). announced_at is set once a new
                     brand has been offered in the digest; reviewed_at once you've chosen.
   brand_aliases     every supplier spelling of a brand ("YSL", "YVES SAINT LAURENT"), so
                     listings from all suppliers land on the same brand.
@@ -53,10 +53,10 @@ CREATE TABLE IF NOT EXISTS suppliers (
 CREATE TABLE IF NOT EXISTS brands (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,  -- ids never reused: old Telegram buttons stay safe
     name         TEXT NOT NULL,
-    status       TEXT NOT NULL DEFAULT 'default',  -- follow | ignore | default
+    status       TEXT NOT NULL DEFAULT 'follow',  -- favourite | follow | none
     created_at   TEXT NOT NULL,
     announced_at TEXT,
-    reviewed_at  TEXT                -- when you first chose Follow, Browse or Ignore; NULL = new
+    reviewed_at  TEXT                -- when you first chose Favourite, Follow or Unfollow; NULL = new
 );
 
 CREATE TABLE IF NOT EXISTS brand_aliases (
@@ -150,8 +150,8 @@ CREATE TABLE IF NOT EXISTS upgrades (
 CREATE VIEW IF NOT EXISTS catalog AS
 SELECT l.*, f.brand_id, b.name AS brand_name, b.status AS brand_status,
        f.name AS fragrance, f.concentration, f.status AS fragrance_status, f.owned, f.size AS buy_size, f.audience,
-       CASE WHEN f.status != 'default' THEN f.status = 'wishlist' ELSE b.status = 'follow' END AS alerting,
-       CASE WHEN f.status != 'default' THEN f.status = 'ignore' ELSE b.status = 'ignore' END AS hidden
+       CASE WHEN f.status != 'default' THEN f.status = 'wishlist' ELSE b.status = 'favourite' END AS alerting,
+       CASE WHEN f.status != 'default' THEN f.status = 'ignore' ELSE b.status = 'none' END AS hidden
 FROM listings l
 JOIN fragrances f ON f.id = l.fragrance_id
 JOIN brands b ON b.id = f.brand_id;
@@ -182,13 +182,13 @@ def connect() -> sqlite3.Connection:
 
 
 def add_brand(conn, spelling: str, announced: bool) -> int:
-    """Create a brand from a supplier spelling, on default. Returns its id.
+    """Create a brand from a supplier spelling, on Follow. Returns its id.
 
     announced=True leaves it out of the digest, for bulk arrivals (a supplier's first run).
     """
     stamp = now()
     brand_id = conn.execute(
-        "INSERT INTO brands (name, status, created_at, announced_at) VALUES (?, 'default', ?, ?)",
+        "INSERT INTO brands (name, status, created_at, announced_at) VALUES (?, 'follow', ?, ?)",
         (spelling, stamp, stamp if announced else None),
     ).lastrowid
     conn.execute("INSERT INTO brand_aliases (alias, brand_id) VALUES (?, ?)", (spelling, brand_id))

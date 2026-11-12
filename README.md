@@ -1,23 +1,23 @@
 # Fragrance tracker
 
-Watches B2B suppliers' perfume stock and sends you a Telegram digest when brands you follow
-get new products or restocks, fragrances you follow appear or get cheaper, or new brands
+Watches B2B suppliers' perfume stock and sends you a Telegram digest when your favourite brands
+get new products or restocks, wishlist fragrances appear or get cheaper, or new brands
 show up. The full plan is in docs/spec.md.
 
 ## How it works
 
 ```
 Dokploy schedule ─▶ fragrance run ─▶ collect each supplier ─▶ SQLite (listings, fragrances, brands, events)
-                                 └─▶ one digest ─▶ Telegram ─▶ Follow / Ignore buttons ─▶ backoffice /telegram
-backoffice (https://…) ◀─ you: follow / ignore brands and fragrances, stock, collection
+                                 └─▶ one digest ─▶ Telegram ─▶ Favourite / Unfollow buttons ─▶ backoffice /telegram
+backoffice (https://…) ◀─ you: brand tiers, fragrance lists, stock, collection
 Litestream ─▶ R2 (continuous backup; restored automatically on a fresh server)
 ```
 
 - **collect** fetches a supplier's full in-stock list, compares it with what's stored, and
   records events: `new`, `restock`, `price_drop`, `price_up`, `soldout`. A supplier's first
   run only stores the starting point. Quantity changes are stored but aren't events.
-- **Brands** are *followed* (alerts), *ignored* (hidden) or on *Browse*, the default (shown,
-  no alerts). **Fragrances** go on the *wishlist* (alerts), the *fillers* (fine to own, e.g. to
+- **Brands** are *favourites* (shown, alerts), *followed* (shown, no alerts; where new
+  brands start) or *unfollowed* (hidden). **Fragrances** go on the *wishlist* (alerts), the *fillers* (fine to own, e.g. to
   reach a minimum order; no alerts), *ignored*, or on no list, where the brand's status
   applies. A fragrance's list wins over its brand's. Supplier
   spellings of a brand are merged through aliases, with suggestions in the Brands page's New tab.
@@ -27,8 +27,8 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   (`app/changes.py`), so nothing extra is stored. Each change opens to show every supplier
   at that moment; a fragrance's page has its full per-supplier history.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
-  suppliers, basket items that sold out, came back or changed price, followed brands' new products and restocks, wishlist fragrances (new, back in
-  stock, cheaper), and new brands with Follow / Ignore buttons. Order suggestions stay on the
+  suppliers, basket items that sold out, came back or changed price, favourite brands' new products and restocks, wishlist fragrances (new, back in
+  stock, cheaper), and new brands with Favourite / Unfollow buttons. Order suggestions stay on the
   Orders page.
 - **Products** lists the wishlist, fillers, ignored fragrances and your collection (owned, which
   doesn't change alerts).

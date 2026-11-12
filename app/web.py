@@ -1,4 +1,4 @@
-"""Backoffice: browse stock and changes, follow or ignore brands and single fragrances, and
+"""Backoffice: browse stock and changes, choose a tier for brands and a list for single fragrances, and
 keep your collection.
 Also receives Telegram button taps on /telegram.
 
@@ -127,18 +127,18 @@ CHANGE_TABS = {"": "", "arrivals": "new,restock", "new": "new", "restock": "rest
 def events(request: Request, kind: str = "", brands: str = "", supplier: str = "", day: str = ""):
     """Product changes (app/changes.py), newest first, one day per page (day: YYYY-MM-DD in the
     server's timezone; the latest day with changes when not given). kind picks a tab
-    ('arrivals': new or back in stock), brands='following' only followed brands, supplier the
+    ('arrivals': new or back in stock), brands='favourite' only favourite brands, supplier the
     changes one supplier's runs caused."""
     conn = connect()
-    # Each fragrance's name and whether it's hidden or followed, the way the catalog view says.
+    # Each fragrance's name and whether it's hidden or a favourite brand's, the way the catalog view says.
     products = {r["id"]: r for r in conn.execute(
         """SELECT f.id, f.name, f.concentration, f.status, b.name AS brand_name,
-                  CASE WHEN f.status != 'default' THEN f.status = 'ignore' ELSE b.status = 'ignore' END AS hidden,
-                  b.status = 'follow' AS following
+                  CASE WHEN f.status != 'default' THEN f.status = 'ignore' ELSE b.status = 'none' END AS hidden,
+                  b.status = 'favourite' AS favourite
            FROM fragrances f JOIN brands b ON b.id = f.brand_id""")}
     shown = [{**c, "product": products[c["fragrance_id"]]} for c in changes.replay(conn)
              if c["fragrance_id"] in products and not products[c["fragrance_id"]]["hidden"]
-             and (brands != "following" or products[c["fragrance_id"]]["following"])
+             and (brands != "favourite" or products[c["fragrance_id"]]["favourite"])
              and (not supplier or c["supplier"] == supplier)]
     since = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds")
     last_day = defaultdict(int)
@@ -303,8 +303,8 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
           in_stock: bool = True, followed: bool = False, brands: str = "default", sort: str = "brand", page: int = 1,
           price: str = "", condition: str = ""):
     """One row per fragrance. q matches every word in the listing or brand name (accents and
-    punctuation ignored), or an exact EAN or SKU. 'brands' picks which: 'following' (followed brands only),
-    'default' (followed and Browse; nothing you ignored), 'all' (ignored ones too).
+    punctuation ignored), or an exact EAN or SKU. 'brands' picks which: 'favourite' (favourite brands only),
+    'default' (favourites and followed; nothing unfollowed or ignored), 'all' (those too).
     'followed' narrows to what alerts you. 'price' keeps only each fragrance's best price per ml
     ('cheapest'), or only deals, well below the next best ('deals', biggest discount first
     unless you sort by a column); see compare. 'condition' keeps
@@ -315,11 +315,11 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
         """SELECT * FROM catalog
            WHERE (? = '' OR (""" + contains("brand_name || name", words) + """) OR ? IN (ean, ean2, ean3, sku))
              AND (? = '' OR brand_id = ?) AND (? = '' OR supplier = ?) AND (NOT ? OR qty > 0)
-             AND (? = 'all' OR NOT hidden) AND (? != 'following' OR brand_status = 'follow') AND (NOT ? OR alerting)
+             AND (? = 'all' OR NOT hidden) AND (? != 'favourite' OR brand_status = 'favourite') AND (NOT ? OR alerting)
            ORDER BY brand_name, fragrance, concentration""",
         (q, *words, q.strip(), brand, brand, supplier, supplier, in_stock, brands, brands, followed),
     ).fetchall()
-    brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'ignore' ORDER BY name").fetchall()
+    brand_list = conn.execute("SELECT id, name FROM brands WHERE status != 'none' ORDER BY name").fetchall()
     suppliers = [r[0] for r in conn.execute("SELECT name FROM suppliers ORDER BY name")]
     deals = price == "deals"
     if "sort" not in request.query_params and deals:
@@ -430,7 +430,7 @@ def new_brands():
 
 @office.get("/brands")
 def brand_list(request: Request, status: str = "", q: str = ""):
-    """Every brand, or one tab: new (not chosen yet, newest first), follow, default (Browse), ignore."""
+    """Every brand, or one tab: new (not chosen yet, newest first), favourite, follow, none (unfollowed)."""
     conn = connect()
     if status == "new":
         where, order = "b.reviewed_at IS NULL", "b.created_at DESC, in_stock DESC, b.name"
@@ -450,7 +450,7 @@ def brand_list(request: Request, status: str = "", q: str = ""):
 
 @office.post("/brands")
 def brands_post(action: str = Form(...), back: str = Form("/brands")):
-    """action is 'follow:12' for one brand (likewise default and ignore), or 'merge:12:34' to
+    """action is 'favourite:12' for one brand (likewise follow and none), or 'merge:12:34' to
     merge brand 12 into brand 34."""
     conn = connect()
     kind, *args = action.split(":")
@@ -962,12 +962,14 @@ app.include_router(office)
 
 # --- Telegram buttons ------------------------------------------------------------------------
 
-LABELS = {"follow": "⭐ Following", "ignore": "🚫 Ignored", "default": "Back to default"}
+LABELS = {"favourite": "⭐ Favourite", "follow": "👀 Following", "none": "🚫 Unfollowed"}
+# Buttons in digests sent before the tiers were renamed: their Follow meant Favourite, Ignore meant Unfollow.
+OLD_BUTTONS = {"follow": "favourite", "ignore": "none"}
 
 
 @app.post("/telegram")
 def telegram_tap(update: dict = Body(...), x_telegram_bot_api_secret_token: str = Header("")):
-    """A tap on a Follow / Ignore button in the digest: apply it, then replace the buttons with the outcome."""
+    """A tap on a Favourite / Unfollow button in the digest: apply it, then replace the buttons with the outcome."""
     if not secrets.compare_digest(x_telegram_bot_api_secret_token, telegram.secret()):
         raise HTTPException(403)
     tap = update.get("callback_query")
@@ -982,7 +984,7 @@ def telegram_tap(update: dict = Body(...), x_telegram_bot_api_secret_token: str 
 
 
 def apply_tap(data: str) -> str:
-    """'brand:12:follow' or 'merge:12:34'. Returns what happened, in words."""
+    """'brand:12:favourite' or 'merge:12:34'. Returns what happened, in words."""
     conn = connect()
     kind, brand_id, value = data.split(":")
     names = dict(conn.execute("SELECT id, name FROM brands").fetchall())
@@ -992,5 +994,6 @@ def apply_tap(data: str) -> str:
         if kind == "merge":
             brands.merge(conn, int(brand_id), int(value))
             return f"Merged into {names[int(value)]}"
-        brands.set_status(conn, int(brand_id), value)
-        return LABELS[value]
+        status = OLD_BUTTONS.get(value, value)
+        brands.set_status(conn, int(brand_id), status)
+        return LABELS[status]

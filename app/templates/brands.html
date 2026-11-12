@@ -1,20 +1,18 @@
 {% extends "base.html" %}
+{% from "_macros.html" import brand_choices as choices %}
 {% block title %}Brands{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
-{% set tabs = {"new": "New", "": "All", "follow": "Following", "default": "Browse", "ignore": "Ignored"} %}
-{% set choices = [("follow", "⭐ Follow", "Alert me about new products and restocks"),
-                  ("default", "👀 Browse", "Show in Stock, no alerts"),
-                  ("ignore", "🚫 Ignore", "Hide it everywhere")] %}
+{% set tabs = {"new": "New", "": "All", "favourite": "Favourites", "follow": "Following", "none": "Unfollowed"} %}
 <div class="page-head">
   <div>
     <h1>Brands</h1>
-    <p class="subtitle"><b>Follow</b> the brands you collect: their new products and restocks alert you. <b>Browse</b> keeps a brand in Stock without alerts. <b>Ignore</b> hides it everywhere. A fragrance on your wishlist alerts whatever its brand. New brands wait in the New tab until you choose.</p>
+    <p class="subtitle"><b>Favourite</b> the brands you collect: their new products and restocks alert you. <b>Follow</b> keeps a brand in Stock without alerts. <b>Unfollow</b> hides it everywhere. A fragrance on your wishlist alerts whatever its brand. New brands start on Follow and wait in the New tab until you choose.</p>
   </div>
   {# Tucked away: adding a brand is rare, and the box was easy to mistake for search. #}
   <details>
     <summary class="small muted">Add a brand no supplier lists yet</summary>
-    <form method="post" action="/brands/add" class="toolbar" style="margin-top: 6px" title="To follow or ignore a brand before any supplier lists it">
+    <form method="post" action="/brands/add" class="toolbar" style="margin-top: 6px" title="To favourite or unfollow a brand before any supplier lists it">
       <input type="text" name="name" placeholder="New brand name" required>
       {% for k, label, tip in choices %}<button class="btn sm" name="status" value="{{ k }}" title="{{ tip }}">{{ label }}</button>{% endfor %}
     </form>

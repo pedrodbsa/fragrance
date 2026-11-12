@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import follow_switch, badges %}
+{% from "_macros.html" import brand_switch, badges %}
 {% block title %}{{ brand.name }}{% endblock %}
 {% block content %}
 {% set back = request.url.path %}
@@ -9,7 +9,7 @@
     <h1>{{ brand.name }}</h1>
     <p class="subtitle">{{ brand.in_stock }} in stock{% if brand.suppliers %} at {{ brand.suppliers.split(",")|sort|join(", ") }}{% endif %} · <a href="/stock?brand={{ brand.id }}">see stock</a></p>
   </div>
-  {{ follow_switch("/brands/" ~ brand.id ~ "/status", brand.status, back) }}
+  {{ brand_switch("/brands/" ~ brand.id ~ "/status", brand.status, back) }}
 </div>
 
 <div class="grid-2">
@@ -45,7 +45,7 @@
     <p class="help pad">Merging moves these spellings and fragrance decisions to the other brand, which keeps its own status.</p>
     <div class="panel-head"><h2>Delete</h2></div>
     {% if brand.in_stock %}
-    <p class="help pad">Suppliers have it in stock, so the next sync would bring it back. Ignore it instead to hide it everywhere.</p>
+    <p class="help pad">Suppliers have it in stock, so the next sync would bring it back. Unfollow it instead to hide it everywhere.</p>
     {% else %}
     <form method="post" action="/brands/{{ brand.id }}/delete" class="toolbar pad"
           onsubmit='return confirm({{ ("Delete " ~ brand.name ~ ", its fragrances and your lists for them? This can’t be undone.")|tojson }})'>

@@ -51,8 +51,8 @@
           {{ fragrance_switch(g.fragrance_id, g.fragrance_status, back, small=True) }}
           {{ owned_switch(g.fragrance_id, g.owned, back) }}
           <form method="post" action="/brands/{{ g.brand_id }}/status"><input type="hidden" name="back" value="{{ back }}">
-            {% if g.brand_status == "follow" %}<button class="btn sm ghost" name="status" value="default" title="Stop alerts for {{ g.brand_name }}">Unfollow brand</button>
-            {% else %}<button class="btn sm ghost" name="status" value="follow" title="Alert me about new products and restocks from {{ g.brand_name }}">Follow brand</button>{% endif %}
+            {% if g.brand_status == "favourite" %}<button class="btn sm ghost" name="status" value="follow" title="Stop alerts for {{ g.brand_name }} (it stays in Stock)">Remove brand from favourites</button>
+            {% else %}<button class="btn sm ghost" name="status" value="favourite" title="Alert me about new products and restocks from {{ g.brand_name }}">Favourite brand</button>{% endif %}
           </form>
         </div>
       </td>

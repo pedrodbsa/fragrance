@@ -1,11 +1,11 @@
 """Brand decisions, merging, and merge suggestions.
 
 Each brand has one status:
-  follow   new products and restocks alert you
-  ignore   hidden everywhere, never alerts
-  default  "Browse": shown in Stock, no alerts. Every brand starts here; new ones are offered
-           in the digest with Follow / Ignore buttons, and wait on the Brands page's New tab
-           until you choose (Browse included).
+  favourite  new products and restocks alert you
+  follow     shown in Stock, no alerts. Every brand starts here; new ones are offered in the
+             digest with Favourite / Unfollow buttons, and wait on the Brands page's New tab
+             until you choose (Follow included).
+  none       unfollowed: hidden everywhere, never alerts
 A fragrance on one of your lists decides for itself (app/fragrances.py).
 """
 
@@ -16,7 +16,7 @@ from collections import defaultdict
 from app import fragrances
 from app.db import add_brand, now
 
-STATUSES = ("follow", "ignore", "default")
+STATUSES = ("favourite", "follow", "none")
 
 
 def set_status(conn, brand_id: int, status: str) -> None:
@@ -30,7 +30,7 @@ def brand_for(conn, spelling: str, announced: bool) -> int:
     """The brand a supplier spelling belongs to. A spelling seen for the first time joins the
     brand with the same name ("Hermès" joins HERMES: capitals, accents and words like "Parfums"
     or "Paris" don't count) and is remembered; with no such brand it becomes a new one, on
-    default (announced=True keeps it out of the digest)."""
+    Follow (announced=True keeps it out of the digest)."""
     row = conn.execute("SELECT brand_id FROM brand_aliases WHERE alias = ?", (spelling,)).fetchone()
     if row:
         return row["brand_id"]
@@ -51,7 +51,7 @@ def same_name(conn, name: str) -> int | None:
 
 
 def add(conn, name: str, status: str) -> int:
-    """A brand you add yourself, e.g. to follow it before any supplier lists it. If you have it
+    """A brand you add yourself, e.g. to favourite it before any supplier lists it. If you have it
     already under the same name ("Hermes Parfums" for Hermès), that one gets the status
     instead. Returns its id. Suppliers listing it under that name land on it; under another
     spelling it shows in the New tab with a "Same as" suggestion."""
@@ -64,11 +64,11 @@ def delete(conn, brand_id: int) -> None:
     """Forget a brand nothing is in stock from: its spellings, its fragrances (your lists and
     notes for them included) and its sold-out listings with their history. If a supplier lists
     it again, it comes back as a new brand. Brands with stock can't be deleted, since the next
-    sync would bring them straight back: ignore them instead."""
+    sync would bring them straight back: unfollow them instead."""
     fragrance_ids = "SELECT id FROM fragrances WHERE brand_id = :brand"
     listings = f"SELECT supplier, sku FROM listings WHERE fragrance_id IN ({fragrance_ids})"
     if conn.execute(f"SELECT 1 FROM listings WHERE qty > 0 AND fragrance_id IN ({fragrance_ids})", {"brand": brand_id}).fetchone():
-        raise ValueError("this brand has stock: ignore it instead")
+        raise ValueError("this brand has stock: unfollow it instead")
     for statement in (
             f"DELETE FROM events WHERE (supplier, sku) IN ({listings})",
             f"DELETE FROM basket WHERE (supplier, sku) IN ({listings})",
@@ -164,12 +164,12 @@ def suggestions(conn) -> dict[int, list[tuple[int, str, str]]]:
                     found[a].setdefault(b, "same EAN")
     keys = {i: key(b["name"]) for i, b in brands.items()}
     for a in brands:
-        if brands[a]["status"] == "default":
+        if brands[a]["status"] == "follow":
             for b in brands:
                 if b != a and similar(keys[a], keys[b]):
                     found[a].setdefault(b, "similar name")
 
     return {
         a: [(b, brands[b]["name"], reason) for b, reason in others.items()]
-        for a, others in found.items() if brands[a]["status"] == "default"
+        for a, others in found.items() if brands[a]["status"] == "follow"
     }

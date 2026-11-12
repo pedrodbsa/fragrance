@@ -3,13 +3,14 @@
 Sections:
   ⚠️ suppliers whose collection failed this window
   🧺 Baskets: items in one of your baskets that sold out, came back, or changed price
-  ⭐ Followed: wishlist fragrances (new, back in stock, or cheaper), plus new products and
-     restocks from brands you follow (except fragrances you ignored or marked as filler)
-  🆕 New brands: each one follows as its own message with Follow / Ignore buttons (and
-     "Same as …" when it looks like a brand you have). Not tapping leaves it on default:
+  ⭐ Wishlist and favourites: wishlist fragrances (new, back in stock, or cheaper), plus new
+     products and restocks from favourite brands (except fragrances you ignored or marked as
+     filler)
+  🆕 New brands: each one comes as its own message with Favourite / Unfollow buttons (and
+     "Same as …" when it looks like a brand you have). Not tapping leaves it on Follow:
      shown in Stock, no alerts. When many arrive at once, the digest links to the New
      brands page instead.
-Ignored brands and fragrances, and fillers, never appear. Everything else (default brands, sold out,
+Unfollowed brands, ignored fragrances and fillers never appear. Everything else (followed brands, sold out,
 price up) is recorded for the backoffice but not sent.
 """
 
@@ -39,7 +40,7 @@ def notify(failed: list[str]) -> None:
     basket = [e for e in pending if e["in_basket"]]  # every change to a basket item matters
     followed = [e for e in pending if alerts(e) and not e["in_basket"]]
     new_brands = conn.execute(
-        "SELECT * FROM brands WHERE status = 'default' AND announced_at IS NULL ORDER BY name").fetchall()
+        "SELECT * FROM brands WHERE status = 'follow' AND announced_at IS NULL ORDER BY name").fetchall()
 
     digest = compose(failed, basket, followed, new_brands)
     if digest:
@@ -58,7 +59,7 @@ def notify(failed: list[str]) -> None:
 
 
 def alerts(event) -> bool:
-    """A wishlist fragrance also alerts on price drops; a followed brand on new and restock."""
+    """A wishlist fragrance also alerts on price drops; a favourite brand on new and restock."""
     kinds = FOLLOWED_BRAND_KINDS if event["fragrance_status"] == "default" else FOLLOWED_FRAGRANCE_KINDS
     return event["alerting"] and event["kind"] in kinds
 
@@ -71,7 +72,7 @@ def compose(failed, basket, followed, new_brands) -> str:
         sections.append([f"<b>🧺 Baskets ({len(basket)})</b>"] + [describe(e) for e in basket] + [f"See {link('/orders')}"])
     if followed:
         more = [f"…and {len(followed) - DIGEST_MAX} more in the backoffice"] if len(followed) > DIGEST_MAX else []
-        sections.append([f"<b>⭐ Followed ({len(followed)})</b>"] + [describe(e) for e in followed[:DIGEST_MAX]] + more)
+        sections.append([f"<b>⭐ Wishlist and favourites ({len(followed)})</b>"] + [describe(e) for e in followed[:DIGEST_MAX]] + more)
     if len(new_brands) > OFFER_MAX:
         sections.append([f"<b>🆕 New brands ({len(new_brands)})</b>", f"Choose for them at {link('/brands?status=new')}"])
     elif new_brands:
@@ -92,7 +93,7 @@ def describe(e) -> str:
 
 
 def offer(conn, brand, hints) -> tuple[str, list[list[dict]]]:
-    """One new brand as a message with Follow / Ignore buttons."""
+    """One new brand as a message with Favourite / Unfollow buttons (not tapping keeps Follow)."""
     products = conn.execute(
         "SELECT name, supplier FROM catalog WHERE brand_id = ? AND qty > 0 ORDER BY name", (brand["id"],)).fetchall()
     suppliers = sorted({p["supplier"] for p in products})
@@ -100,7 +101,7 @@ def offer(conn, brand, hints) -> tuple[str, list[list[dict]]]:
     lines += [f"   {escape(p['name'])}" for p in products[:3]]
     lines += [f"   Looks like <b>{escape(name)}</b> ({reason})" for _, name, reason in hints[:2]]
     buttons = [[{"text": label, "callback_data": f"brand:{brand['id']}:{status}"}
-                for label, status in (("⭐ Follow", "follow"), ("🚫 Ignore", "ignore"))]]
+                for label, status in (("⭐ Favourite", "favourite"), ("🚫 Unfollow", "none"))]]
     buttons += [[{"text": f"Same as {name}", "callback_data": f"merge:{brand['id']}:{other}"}] for other, name, _ in hints[:2]]
     return "\n".join(lines), buttons
 

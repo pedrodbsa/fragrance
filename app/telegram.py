@@ -1,6 +1,6 @@
 """Talk to your Telegram chat. Env: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.
 
-Buttons under a message (Follow / Ignore) come back as taps on the backoffice's
+Buttons under a message (Favourite / Unfollow) come back as taps on the backoffice's
 /telegram webhook, which Telegram signs with secret().
 """
 

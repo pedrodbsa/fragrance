@@ -6,7 +6,7 @@
 <div class="page-head">
   <div>
     <h1>Changes</h1>
-    <p class="subtitle">What changed for each fragrance across all your suppliers, newest first: new (no supplier had it before), back in stock or sold out everywhere, and moves of more than 5% in its 👑 best price per ml (every size and supplier, testers included, as on Stock). One supplier selling out while others still have it isn't listed here; open a change to see every supplier, or the fragrance's page for its full history. What you ignored is left out, except wishlist fragrances of ignored brands.</p>
+    <p class="subtitle">What changed for each fragrance across all your suppliers, newest first: new (no supplier had it before), back in stock or sold out everywhere, and moves of more than 5% in its 👑 best price per ml (every size and supplier, testers included, as on Stock). One supplier selling out while others still have it isn't listed here; open a change to see every supplier, or the fragrance's page for its full history. Unfollowed brands and ignored fragrances are left out, except wishlist fragrances of unfollowed brands.</p>
   </div>
   {% if new_brands %}<a class="btn" href="/brands?status=new">{{ new_brands }} new brand{{ "s" if new_brands != 1 }} to review →</a>{% endif %}
 </div>
@@ -34,7 +34,7 @@
       </select>
       <select name="brands" onchange="this.form.submit()" title="Which brands' changes to show">
         <option value="">All brands</option>
-        <option value="following" {{ 'selected' if brands == 'following' }}>Following brands</option>
+        <option value="favourite" {{ 'selected' if brands == 'favourite' }}>Favourite brands</option>
       </select>
     </form>
   </div>

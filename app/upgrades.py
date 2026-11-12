@@ -29,6 +29,10 @@
                   matched to another fragrance.
   size-without-tester  a tester counts as its size now ("100 ml", with Tester as its
                   condition): a size you'd buy saved as "100 ml tester" becomes "100 ml".
+  brand-tiers     brand statuses renamed: Follow (alerts) becomes Favourite, Browse becomes
+                  Follow, Ignore becomes none (unfollowed). Brands you hadn't chosen for yet
+                  land on Follow and stay in the New tab. The steps above ran before this
+                  rename, so they still use the old names (follow | ignore | default).
 """
 
 import sqlite3
@@ -54,6 +58,13 @@ def upgrade(conn) -> None:
     once(conn, "reread-names", reread_names)
     once(conn, "learn-eans", learn_pinned_eans)
     once(conn, "size-without-tester", size_without_tester)
+    once(conn, "brand-tiers", brand_tiers)
+
+
+def brand_tiers(conn) -> None:
+    conn.execute("""UPDATE brands SET status = CASE status WHEN 'follow' THEN 'favourite'
+                                                           WHEN 'default' THEN 'follow'
+                                                           WHEN 'ignore' THEN 'none' END""")
 
 
 def learn_pinned_eans(conn) -> None:
