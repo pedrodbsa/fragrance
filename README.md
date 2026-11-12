@@ -21,6 +21,8 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   reach a minimum order; no alerts), *ignored*, or on no list, where the brand's status
   applies. A fragrance's list wins over its brand's. Supplier
   spellings of a brand are merged through aliases, with suggestions in the Brands page's New tab.
+  Products a supplier lists without a brand all go to one brand, (Unknown); move them to
+  their real brand from the product page's Manage tab.
 - **Changes** (the backoffice's first page) is about fragrances, not listings: new (no
   supplier had it before), back in stock or sold out across all suppliers, and moves of more
   than 5% in its best price per ml (the 👑: every size and supplier, testers included). It's rebuilt from the events each time it opens

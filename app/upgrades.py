@@ -35,6 +35,8 @@
                   rename, so they still use the old names (follow | ignore | default).
   listing-image   listings remember the supplier's product picture; filled in by the next
                   collection.
+  unknown-brand   brands with no name (a supplier listed products without a brand) become one
+                  brand named (Unknown), where products without a brand go from now on.
 """
 
 import sqlite3
@@ -62,6 +64,16 @@ def upgrade(conn) -> None:
     once(conn, "size-without-tester", size_without_tester)
     once(conn, "brand-tiers", brand_tiers)
     once(conn, "listing-image", listing_image)
+    once(conn, "unknown-brand", unknown_brand)
+
+
+def unknown_brand(conn) -> None:
+    blank = [row["id"] for row in conn.execute("SELECT id FROM brands WHERE trim(name) = '' ORDER BY id")]
+    if blank:  # the oldest one stays and takes the others in
+        for other in blank[1:]:
+            brands.merge(conn, other, blank[0])
+        brands.rename(conn, blank[0], brands.UNKNOWN)
+        conn.execute("INSERT OR IGNORE INTO brand_aliases (alias, brand_id) VALUES ('', ?)", (blank[0],))
 
 
 def listing_image(conn) -> None:

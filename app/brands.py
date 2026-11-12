@@ -17,6 +17,8 @@ from app import fragrances
 from app.db import add_brand, now
 
 STATUSES = ("favourite", "follow", "none")
+# Where products a supplier lists without a brand go, all together (supplier spelling "").
+UNKNOWN = "(Unknown)"
 
 
 def set_status(conn, brand_id: int, status: str) -> None:
@@ -30,13 +32,18 @@ def brand_for(conn, spelling: str, announced: bool) -> int:
     """The brand a supplier spelling belongs to. A spelling seen for the first time joins the
     brand with the same name ("Hermès" joins HERMES: capitals, accents and words like "Parfums"
     or "Paris" don't count) and is remembered; with no such brand it becomes a new one, on
-    Follow (announced=True keeps it out of the digest)."""
+    Follow (announced=True keeps it out of the digest). No brand at all goes to (Unknown)."""
+    if not spelling.strip():
+        spelling = ""  # the (Unknown) brand's spelling
     row = conn.execute("SELECT brand_id FROM brand_aliases WHERE alias = ?", (spelling,)).fetchone()
     if row:
         return row["brand_id"]
     brand_id = same_name(conn, spelling)
     if brand_id is None:
-        return add_brand(conn, spelling, announced)
+        brand_id = add_brand(conn, spelling, announced)
+        if not spelling:
+            rename(conn, brand_id, UNKNOWN)
+        return brand_id
     conn.execute("INSERT INTO brand_aliases (alias, brand_id) VALUES (?, ?)", (spelling, brand_id))
     return brand_id
 
