@@ -21,11 +21,12 @@
   <div class="panel-head">
     <nav class="segmented">
       {% for k, label in [("", "All"), ("arrivals", "New or back in stock")] + labels.items()|list %}
-      <a href="/?{{ {'kind': k, 'brands': brands, 'supplier': supplier}|urlencode }}" class="{{ 'active' if kind == k }}">{{ label }}</a>
+      <a href="/?{{ {'kind': k, 'brands': brands, 'supplier': supplier, 'day': day}|urlencode }}" class="{{ 'active' if kind == k }}">{{ label }}</a>
       {% endfor %}
     </nav>
     <form method="get" action="/" class="toolbar">
       <input type="hidden" name="kind" value="{{ kind }}">
+      <input type="date" name="day" value="{{ day }}" onchange="this.form.submit()" title="Which day's changes to show">
       <select name="supplier" onchange="this.form.submit()" title="Only changes caused by this supplier's collections">
         <option value="">All suppliers</option>
         {% for s in supplier_names %}<option {{ 'selected' if s == supplier }}>{{ s }}</option>{% endfor %}
@@ -35,16 +36,23 @@
         <option value="following" {{ 'selected' if brands == 'following' }}>Following brands</option>
       </select>
     </form>
-    <span class="panel-note">{{ "{:,}".format(total) }} change{{ "s" if total != 1 }}</span>
   </div>
+  {% macro day_nav() %}
+  <div class="pager">
+    {% if newer %}<a class="btn sm" href="{{ day_link(newer) }}">← Newer</a>{% endif %}
+    <span class="muted small"><b>{{ day_label }}</b> · {{ rows|length }} change{{ "s" if rows|length != 1 }}</span>
+    {% if older %}<a class="btn sm" href="{{ day_link(older) }}">Older →</a>{% endif %}
+  </div>
+  {% endmacro %}
+  {{ day_nav() }}
   {% if rows %}
   <div class="scroll">
-  <table>
+  <table class="changes">
     <thead><tr><th class="hide-sm">When</th><th>Change</th><th>Product</th><th class="num">Price</th><th>Suppliers</th></tr></thead>
-    <tbody>
     {% for r in rows %}
     {% set p = r.product %}
-    <tr>
+    <tbody class="change">
+    <tr class="main" title="Show every supplier at that moment">
       <td class="nowrap muted hide-sm">{{ r.created_at|local }}</td>
       <td class="nowrap"><span class="pill {{ r.kind }}">{{ labels[r.kind] }}</span>{% if r.size %}<div class="small muted">{{ r.size }}</div>{% endif %}</td>
       <td>
@@ -62,35 +70,30 @@
       {% else %}
       <td class="num"><span class="muted">—</span></td>
       {% endif %}
-      <td>
-        <details>
-          <summary class="small">{{ r.listings|selectattr("in_stock")|list|length }} of {{ r.listings|length }} in stock · via {{ r.supplier }}</summary>
-          <table class="breakdown">
-            {% for l in r.listings %}
-            <tr class="{{ '' if l.in_stock else 'muted' }}">
-              <td>{{ l.supplier }}</td>
-              <td title="{{ l.name }}">{{ l.size }}</td>
-              <td class="num">{% if l.price is not none %}€{{ "%.2f"|format(l.price) }}{% endif %}</td>
-              <td>{% if l.event %}<span class="pill {{ l.event }}">{{ labels[l.event] }}</span>{% elif not l.in_stock %}out{% endif %}</td>
-            </tr>
-            {% endfor %}
-          </table>
-        </details>
-      </td>
+      <td class="nowrap small"><span class="caret">▸</span> {{ r.listings|selectattr("in_stock")|list|length }} of {{ r.listings|length }} in stock · via {{ r.supplier }}</td>
+    </tr>
+    {% for l in r.listings %}
+    <tr class="sub {{ '' if l.in_stock else 'muted' }}">
+      <td class="hide-sm"></td>
+      <td>{% if l.event %}<span class="pill {{ l.event }}">{{ labels[l.event] }}</span>{% else %}<span class="small">{{ "In stock" if l.in_stock else "Out" }}</span>{% endif %}</td>
+      <td title="{{ l.name }}">{{ l.supplier }} <span class="muted">· {{ l.size }}</span></td>
+      <td class="num">{% if l.price is not none %}€{{ "%.2f"|format(l.price) }}{% endif %}</td>
+      <td></td>
     </tr>
     {% endfor %}
     </tbody>
+    {% endfor %}
   </table>
   </div>
-  {% if pages > 1 %}
-  <div class="pager">
-    {% if page > 1 %}<a class="btn sm" href="{{ page_link(page - 1) }}">← Newer</a>{% endif %}
-    <span class="muted small">Page {{ page }} of {{ pages }}</span>
-    {% if page < pages %}<a class="btn sm" href="{{ page_link(page + 1) }}">Older →</a>{% endif %}
-  </div>
-  {% endif %}
+  {{ day_nav() }}
+  <script>
+    // Click a change to show or hide where the fragrance stood at every supplier.
+    document.querySelectorAll("tbody.change > tr.main").forEach(row => row.addEventListener("click", event => {
+      if (!event.target.closest("a")) row.parentElement.classList.toggle("open");
+    }));
+  </script>
   {% else %}
-  <div class="empty">No changes yet. Each supplier's first run records its stock as the starting point; changes appear from the next run.</div>
+  <div class="empty">{% if newer or older %}No changes on this day.{% else %}No changes yet. Each supplier's first run records its stock as the starting point; changes appear from the next run.{% endif %}</div>
   {% endif %}
 </div>
 {% endblock %}

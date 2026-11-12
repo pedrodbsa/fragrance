@@ -89,6 +89,11 @@ def pretty_name(name: str, brand: str) -> str:
     return " ".join(words)
 
 
+def local_day(stamp: str) -> str:
+    """UTC timestamp from the database -> its day in the server's timezone, "2026-11-12"."""
+    return datetime.fromisoformat(stamp).astimezone().date().isoformat()
+
+
 templates.env.filters["local"] = local_time
 templates.env.filters["pretty"] = pretty_name
 
@@ -116,12 +121,12 @@ def back_to(back: str, fallback: str) -> RedirectResponse:
 # The Changes page's tabs: which kinds of change each shows ("" = all).
 CHANGE_TABS = {"": "", "arrivals": "new,restock", "new": "new", "restock": "restock",
                "price_drop": "price_drop", "price_up": "price_up", "soldout": "soldout"}
-CHANGES_PAGE = 100
 
 
 @office.get("/")
-def events(request: Request, kind: str = "", brands: str = "", supplier: str = "", page: int = 1):
-    """Product changes (app/changes.py), newest first, a page at a time. kind picks a tab
+def events(request: Request, kind: str = "", brands: str = "", supplier: str = "", day: str = ""):
+    """Product changes (app/changes.py), newest first, one day per page (day: YYYY-MM-DD in the
+    server's timezone; the latest day with changes when not given). kind picks a tab
     ('arrivals': new or back in stock), brands='following' only followed brands, supplier the
     changes one supplier's runs caused."""
     conn = connect()
@@ -141,16 +146,17 @@ def events(request: Request, kind: str = "", brands: str = "", supplier: str = "
         if c["created_at"] >= since:
             last_day[c["kind"]] += 1
     kinds = CHANGE_TABS.get(kind, kind).split(",")
-    rows = [c for c in shown if not kind or c["kind"] in kinds]
-    pages = max(1, -(-len(rows) // CHANGES_PAGE))
-    page = min(max(page, 1), pages)
-    page_link = lambda n: "/?" + urlencode({"kind": kind, "brands": brands, "supplier": supplier, "page": n})
+    rows = [{**c, "day": local_day(c["created_at"])} for c in shown if not kind or c["kind"] in kinds]
+    days = sorted({c["day"] for c in rows}, reverse=True)  # the days that have changes, newest first
+    day = day or (days[0] if days else local_day(datetime.now(timezone.utc).isoformat()))
+    day_link = lambda d: "/?" + urlencode({"kind": kind, "brands": brands, "supplier": supplier, "day": d})
     in_stock, suppliers = conn.execute(
         "SELECT count(*), count(DISTINCT supplier) FROM catalog WHERE qty > 0 AND NOT hidden").fetchone()
     new_brands = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]
     return templates.TemplateResponse(request, "events.html", {
-        "rows": rows[(page - 1) * CHANGES_PAGE:page * CHANGES_PAGE], "total": len(rows),
-        "page": page, "pages": pages, "page_link": page_link,
+        "rows": [c for c in rows if c["day"] == day], "day": day, "day_label": datetime.fromisoformat(day).strftime("%A %d %b %Y"),
+        "newer": min((d for d in days if d > day), default=None), "older": max((d for d in days if d < day), default=None),
+        "day_link": day_link,
         "kind": kind, "brands": brands, "supplier": supplier, "last_day": last_day,
         "in_stock": in_stock, "suppliers": suppliers, "new_brands": new_brands, "supplier_names": sorted(SUPPLIERS),
     })

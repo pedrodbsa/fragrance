@@ -313,6 +313,12 @@ table.lines .c-act { width: 48px; }
 .product-name a.wishlist { color: var(--amber-fg); }
 .product-name a.filler { color: var(--purple-fg); }
 
-/* Changes page: where a fragrance stood at every supplier right after a change */
-table.breakdown { margin-top: 6px; font-size: 12px; }
-table.breakdown td { padding: 2px 8px 2px 0; border: 0; white-space: nowrap; }
+/* Changes page: click a change to open one sub-row per supplier listing at that moment */
+table.changes tbody.change tr:last-child td { border-bottom: 1px solid var(--border); }
+table.changes tr.main { cursor: pointer; }
+table.changes tr.sub { display: none; }
+table.changes tbody.open tr.sub { display: table-row; }
+table.changes tr.sub td { background: var(--bg); padding-top: 6px; padding-bottom: 6px; font-size: 13px; }
+table.changes tr.sub td:nth-child(3) { padding-left: 32px; }
+table.changes .caret { display: inline-block; transition: transform 0.15s; color: var(--muted); }
+table.changes tbody.open .caret { transform: rotate(90deg); }
