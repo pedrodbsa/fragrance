@@ -1,7 +1,8 @@
-"""The digest: one Telegram message per collection window, sent only if something changed.
+"""The digest: one Telegram message with everything since the last one (the digest schedule
+runs it once a day), sent only if something changed.
 
 Sections:
-  ⚠️ suppliers whose collection failed this window
+  ⚠️ suppliers whose last collection failed
   🧺 Baskets: items in one of your baskets that sold out, came back, or changed price
   ⭐ Wishlist and favourites: product changes as on the Feed, one entry per fragrance
      across all suppliers. Wishlist fragrances: new, back in stock, or a lower 👑 best price per
@@ -44,8 +45,9 @@ WHERE e.notified_at IS NULL ORDER BY c.brand_name, c.name
 """
 
 
-def notify(failed: list[str]) -> None:
+def notify() -> None:
     conn = connect()
+    failed = [r["name"] for r in conn.execute("SELECT name FROM suppliers WHERE last_error IS NOT NULL ORDER BY name")]
     pending = conn.execute(PENDING).fetchall()
     basket = [e for e in pending if e["in_basket"]]  # every change to a basket item matters
     followed = favourites(conn, pending)

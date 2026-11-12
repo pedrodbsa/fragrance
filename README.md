@@ -8,7 +8,7 @@ show up. The full plan is in docs/spec.md.
 
 ```
 Dokploy schedule ─▶ fragrance run ─▶ collect each supplier ─▶ SQLite (listings, fragrances, brands, events)
-                                 └─▶ one digest ─▶ Telegram ─▶ Favourite button ─▶ backoffice /telegram
+Dokploy schedule ─▶ fragrance notify ─▶ one digest a day ─▶ Telegram ─▶ Favourite button ─▶ backoffice /telegram
 backoffice (https://…) ◀─ you: brand tiers, fragrance lists, stock, collection
 Litestream ─▶ R2 (continuous backup; restored automatically on a fresh server)
 ```
@@ -28,7 +28,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   than 5% in its best price per ml (the 👑: every size and supplier, testers included). It's rebuilt from the events each time it opens
   (`app/changes.py`), so nothing extra is stored. Each change opens to show every supplier
   at that moment; a fragrance's page has its full per-supplier history.
-- **notify** sends one digest after all suppliers ran, only if something changed: failed
+- **notify** sends one digest a day with everything since the last one, only if something changed: failed
   suppliers, basket items that sold out, came back or changed price, and, one entry per fragrance as on the Feed, favourite brands'
   new fragrances and restocks and wishlist fragrances (new, back in stock, cheaper), and new brands with a Favourite button. Order suggestions stay on the
   Orders page.
@@ -88,5 +88,6 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 uv sync
 set -a; . ./.env; set +a
 uv run fragrance run
+uv run fragrance notify
 uv run uvicorn app.web:app --reload   # http://127.0.0.1:8000
 ```

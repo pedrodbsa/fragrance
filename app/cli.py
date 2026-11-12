@@ -1,8 +1,8 @@
 """Command line, used by the schedule.
 
-  fragrance run                  collect every supplier, then send one digest (the schedule)
+  fragrance run                  collect every supplier (the collection schedule), no digest
   fragrance collect <supplier>   fetch one supplier and record changes, no digest
-  fragrance notify               send the digest for whatever is pending
+  fragrance notify               send the digest for everything since the last one (the digest schedule)
 """
 
 import sys
@@ -16,10 +16,9 @@ from app.suppliers import SUPPLIERS
 
 
 def run() -> None:
-    """A supplier that fails doesn't stop the others; the digest names it and the exit code
-    marks the schedule run as failed in Dokploy."""
+    """A supplier that fails doesn't stop the others; the exit code marks the schedule run as
+    failed in Dokploy, and the next digest names it if its last attempt still failed."""
     failed = [supplier for supplier in SUPPLIERS if not attempt(supplier)]
-    notify(failed)
     if failed:
         sys.exit(1)
 
@@ -45,6 +44,6 @@ def main() -> None:
         case ["collect", supplier] if supplier in SUPPLIERS:
             sys.exit(0 if attempt(supplier) else 1)
         case ["notify"]:
-            notify([])
+            notify()
         case _:
             sys.exit(f"usage: fragrance run | fragrance collect {{{'|'.join(SUPPLIERS)}}} | fragrance notify")

@@ -14,14 +14,16 @@ persistent `../files/data` mount, streamed continuously to R2.
 
 ## Schedule
 
-One schedule against the `fragrance` service collects every supplier, then sends one digest:
+Two schedules against the `fragrance` service, timezone Europe/Madrid: one collects every
+supplier, the other sends one Telegram digest with everything found since the last digest.
 
-| Command | Cron |
-| --- | --- |
-| `fragrance run` | `0 0,6-22/2 * * *`, timezone Europe/Madrid: every 2 hours from 06:00 to midnight |
+| Command | Cron | |
+| --- | --- | --- |
+| `fragrance run` | `0 0,6-22/2 * * *` | collect every 2 hours from 06:00 to midnight |
+| `fragrance notify` | `0 12 * * *` | the digest, once a day at noon |
 
-A supplier that fails is named in the digest with ⚠️ and the run shows as failed; details
-are in the schedule's log.
+A supplier that fails shows as a failed collection run (details in that schedule's log), and
+the digest names it with ⚠️ if its last attempt still failed.
 
 ## Telegram buttons
 
