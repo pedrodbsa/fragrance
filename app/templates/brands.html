@@ -1,18 +1,18 @@
 {% extends "base.html" %}
-{% from "_macros.html" import brand_choices as choices %}
+{% from "_macros.html" import brand_choices as choices, brand_off %}
 {% block title %}Brands{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
-{% set tabs = {"new": "New", "": "All", "favourite": "Favourites", "follow": "Following", "none": "Unfollowed"} %}
+{% set tabs = {"new": "New", "": "All", "favourite": "Favourites", "follow": "Following", "none": "Not followed"} %}
 <div class="page-head">
   <div>
     <h1>Brands</h1>
-    <p class="subtitle"><b>Favourite</b> the brands you collect: their new products and restocks alert you. <b>Follow</b> keeps a brand in Stock without alerts. <b>Unfollow</b> hides it everywhere. A fragrance on your wishlist alerts whatever its brand. New brands start on Follow and wait in the New tab until you choose.</p>
+    <p class="subtitle"><b>Favourite</b> the brands you collect: their new products and restocks alert you. <b>Follow</b> keeps a brand in Stock without alerts. Click the highlighted choice again to step down: a favourite goes back to Follow, a followed brand is hidden everywhere (Not followed tab). A fragrance on your wishlist alerts whatever its brand. New brands start on Follow and wait in the New tab until you choose.</p>
   </div>
   {# Tucked away: adding a brand is rare, and the box was easy to mistake for search. #}
   <details>
     <summary class="small muted">Add a brand no supplier lists yet</summary>
-    <form method="post" action="/brands/add" class="toolbar" style="margin-top: 6px" title="To favourite or unfollow a brand before any supplier lists it">
+    <form method="post" action="/brands/add" class="toolbar" style="margin-top: 6px" title="To follow or favourite a brand before any supplier lists it">
       <input type="text" name="name" placeholder="New brand name" required>
       {% for k, label, tip in choices %}<button class="btn sm" name="status" value="{{ k }}" title="{{ tip }}">{{ label }}</button>{% endfor %}
     </form>
@@ -61,7 +61,8 @@
       <td class="nowrap num">
         <div class="choice sm">
           {% for k, label, tip in choices %}
-          <button class="{{ 'on' if b.status == k and b.reviewed_at }}" name="action" value="{{ k }}:{{ b.id }}" title="{{ tip }}">{{ label }}</button>
+          {% set on = b.status == k and b.reviewed_at %}
+          <button class="{{ 'on' if on }}" name="action" value="{{ brand_off[k] if on else k }}:{{ b.id }}" title="{{ 'Click to stop' if on else tip }}">{{ label }}</button>
           {% endfor %}
         </div>
       </td>

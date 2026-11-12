@@ -264,7 +264,7 @@ def merge(conn, fragrance_id: int, into_id: int) -> None:
     conn.execute("DELETE FROM fragrances WHERE id = ?", (fragrance_id,))
 
 
-# Same brand, at least one EAN in common, not marked as different, brand not unfollowed. Same name
+# Same brand, at least one EAN in common, not marked as different, brand followed. Same name
 # first: those are usually suppliers disagreeing about the concentration.
 SUGGESTIONS = """
 WITH codes AS (

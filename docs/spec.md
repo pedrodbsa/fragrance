@@ -21,13 +21,16 @@ purchases (personal use, no resale).
 You make decisions about brands and fragrances. Variants and listings are filled in
 automatically from supplier data.
 
-## Brands: Favourite, Follow, or Unfollow
+## Brands: Favourite or Follow
 
 | Tier | For | Shown in Stock | Alerts |
 |---|---|---|---|
 | **Favourite** | brands you collect (Amouage) | Yes | New products and restocks of every fragrance of the brand |
 | **Follow** (where new brands start) | brands worth looking at, without alerts | Yes | Never |
-| None (**Unfollow**) | brands you don't want | No (only with Stock's "All brands") | Never |
+| Not followed | brands you don't want | No (only with Stock's "All brands") | Never |
+
+Clicking the highlighted tier again steps the brand down: a favourite back to Follow, a
+followed brand to not followed.
 
 ## Fragrances: your lists
 
@@ -81,10 +84,10 @@ Suggestions aren't sent to Telegram: the digest is only for what needs your atte
 Every new brand starts on Follow (shown, no alerts) until you review it, so nothing urgently
 needs triage.
 
-- **Telegram**: the digest mentions new brands with **Favourite / Unfollow** buttons. Not
+- **Telegram**: the digest mentions new brands with a **Favourite** button. Not
   tapping keeps Follow.
 - **Brands page, New tab**: brands you haven't chosen for yet, newest first, with merge
-  suggestions. Choose Favourite, Follow or Unfollow for each; choosing Follow counts too,
+  suggestions. Choose Favourite or Follow for each, or take it off Follow; choosing Follow counts too,
   and takes the brand out of the tab.
 - A supplier's first run adds its brands quietly; they appear in the New tab.
 
@@ -107,8 +110,8 @@ EAN manufacturer prefixes were tried and dropped: they identify the licence hold
 
 The Brands page manages aliases by hand too: merging two brands, splitting one apart, renaming.
 A brand nothing is in stock from can be deleted on its page, with its fragrances and sold-out
-listings; one with stock can't (the next sync would bring it back), so unfollow it instead.
-You can also add a brand yourself (Brands page, "Add a brand"), to favourite or unfollow it before
+listings; one with stock can't (the next sync would bring it back), so take it off Follow instead.
+You can also add a brand yourself (Brands page, "Add a brand"), to follow or favourite it before
 any supplier lists it. If you have it already under another spelling, that brand gets the
 status instead. A supplier listing it later under the same name lands on it; under another
 spelling it shows in the New tab with a "Same as" suggestion.
@@ -223,7 +226,7 @@ Sections, in this order:
 1. **🧺 Baskets**: basket items that sold out, came back, or changed price (up or down).
 2. **⭐ Wishlist and favourites**: new listings, restocks, price drops and low stock for
    favourite brands and wishlist fragrances, with the best-price and lowest-ever notes.
-3. **🆕 New brands**: each brand with Favourite / Unfollow buttons and any merge suggestion.
+3. **🆕 New brands**: each brand with a Favourite button and any merge suggestion.
 
 Followed brands, fillers and fragrances on no list never appear in the digest. You see them in the backoffice.
 
@@ -234,14 +237,14 @@ price (or the price when first seen). Small daily moves add up: five €1.10 dro
 ## Backoffice pages
 
 - **Changes**: what moved, without hidden brands and fragrances (wishlist fragrances of
-  unfollowed brands are shown). Filters: type of change (including "New or back in stock"), supplier, and all brands or
+  brands you don't follow are shown). Filters: type of change (including "New or back in stock"), supplier, and all brands or
   favourite brands only. The Suppliers page links to each supplier's changes, price drops and arrivals.
 - **Stock**: one row per fragrance (brand + name + concentration) with its sizes and testers
-  and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, which brands (favourites; favourites and followed; all, unfollowed too), men / women / unisex, in stock, alerting only, cheapest only (sizes no other supplier sells for less; with a supplier picked, where that supplier is cheapest). Grouping uses the
+  and the cheapest price for each, leaving out what you ignored. Filters: brand, supplier, which brands (favourites; favourites and followed; all, not followed too), men / women / unisex, in stock, alerting only, cheapest only (sizes no other supplier sells for less; with a supplier picked, where that supplier is cheapest). Grouping uses the
   fragrance name read from listings, not EANs, so different EANs per size don't matter.
 - **Product page**: every listing of one fragrance by size, and a price history chart (one
   line per size and supplier, rebuilt from recorded price changes).
-- **Brands**: every brand with its status, Favourite / Follow / Unfollow, and a New tab for
+- **Brands**: every brand with its status, Favourite / Follow, and a New tab for
   brands you haven't chosen for yet (with merge suggestions). A brand's page: rename, merge,
   spellings, and the fragrance decisions made for it.
 - **Products**: your fragrance lists: Wishlist, Fillers, Collection, Ignored.

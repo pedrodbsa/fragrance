@@ -8,7 +8,7 @@ show up. The full plan is in docs/spec.md.
 
 ```
 Dokploy schedule ─▶ fragrance run ─▶ collect each supplier ─▶ SQLite (listings, fragrances, brands, events)
-                                 └─▶ one digest ─▶ Telegram ─▶ Favourite / Unfollow buttons ─▶ backoffice /telegram
+                                 └─▶ one digest ─▶ Telegram ─▶ Favourite button ─▶ backoffice /telegram
 backoffice (https://…) ◀─ you: brand tiers, fragrance lists, stock, collection
 Litestream ─▶ R2 (continuous backup; restored automatically on a fresh server)
 ```
@@ -17,7 +17,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   records events: `new`, `restock`, `price_drop`, `price_up`, `soldout`. A supplier's first
   run only stores the starting point. Quantity changes are stored but aren't events.
 - **Brands** are *favourites* (shown, alerts), *followed* (shown, no alerts; where new
-  brands start) or *unfollowed* (hidden). **Fragrances** go on the *wishlist* (alerts), the *fillers* (fine to own, e.g. to
+  brands start) or not followed (hidden). **Fragrances** go on the *wishlist* (alerts), the *fillers* (fine to own, e.g. to
   reach a minimum order; no alerts), *ignored*, or on no list, where the brand's status
   applies. A fragrance's list wins over its brand's. Supplier
   spellings of a brand are merged through aliases, with suggestions in the Brands page's New tab.
@@ -28,7 +28,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   at that moment; a fragrance's page has its full per-supplier history.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
   suppliers, basket items that sold out, came back or changed price, favourite brands' new products and restocks, wishlist fragrances (new, back in
-  stock, cheaper), and new brands with Favourite / Unfollow buttons. Order suggestions stay on the
+  stock, cheaper), and new brands with a Favourite button. Order suggestions stay on the
   Orders page.
 - **Products** lists the wishlist, fillers, ignored fragrances and your collection (owned, which
   doesn't change alerts).

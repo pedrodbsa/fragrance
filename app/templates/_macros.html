@@ -1,12 +1,14 @@
-{# A brand's tier: Favourite / Follow / Unfollow. The current one is highlighted. #}
+{# A brand's tier: Favourite / Follow. The current one is highlighted; clicking it again takes
+   the brand one step down: a favourite back to Follow, a followed brand to not followed (hidden). #}
 {% set brand_choices = [("favourite", "⭐ Favourite", "Show in Stock and alert me about new products and restocks"),
-                        ("follow", "👀 Follow", "Show in Stock, no alerts"),
-                        ("none", "🚫 Unfollow", "Hide it everywhere")] %}
+                        ("follow", "👀 Follow", "Show in Stock, no alerts")] %}
+{% set brand_off = {"favourite": "follow", "follow": "none"} %}
 {% macro brand_switch(action, current, back) %}
 <form method="post" action="{{ action }}" class="choice">
   <input type="hidden" name="back" value="{{ back }}">
   {% for k, label, tip in brand_choices %}
-  <button class="{{ 'on' if current == k }}" name="status" value="{{ k }}" title="{{ tip }}">{{ label }}</button>
+  <button class="{{ 'on' if current == k }}" name="status" value="{{ brand_off[k] if current == k else k }}"
+          title="{{ 'Click to stop: ' ~ ('no more alerts, still in Stock' if k == 'favourite' else 'hide it everywhere') if current == k else tip }}">{{ label }}</button>
   {% endfor %}
 </form>
 {% endmacro %}

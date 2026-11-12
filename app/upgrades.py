@@ -30,7 +30,7 @@
   size-without-tester  a tester counts as its size now ("100 ml", with Tester as its
                   condition): a size you'd buy saved as "100 ml tester" becomes "100 ml".
   brand-tiers     brand statuses renamed: Follow (alerts) becomes Favourite, Browse becomes
-                  Follow, Ignore becomes none (unfollowed). Brands you hadn't chosen for yet
+                  Follow, Ignore becomes none (not followed). Brands you hadn't chosen for yet
                   land on Follow and stay in the New tab. The steps above ran before this
                   rename, so they still use the old names (follow | ignore | default).
 """

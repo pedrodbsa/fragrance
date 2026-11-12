@@ -6,11 +6,11 @@ Sections:
   ⭐ Wishlist and favourites: wishlist fragrances (new, back in stock, or cheaper), plus new
      products and restocks from favourite brands (except fragrances you ignored or marked as
      filler)
-  🆕 New brands: each one comes as its own message with Favourite / Unfollow buttons (and
+  🆕 New brands: each one comes as its own message with a Favourite button (and
      "Same as …" when it looks like a brand you have). Not tapping leaves it on Follow:
      shown in Stock, no alerts. When many arrive at once, the digest links to the New
      brands page instead.
-Unfollowed brands, ignored fragrances and fillers never appear. Everything else (followed brands, sold out,
+Brands you don't follow, ignored fragrances and fillers never appear. Everything else (followed brands, sold out,
 price up) is recorded for the backoffice but not sent.
 """
 
@@ -93,7 +93,7 @@ def describe(e) -> str:
 
 
 def offer(conn, brand, hints) -> tuple[str, list[list[dict]]]:
-    """One new brand as a message with Favourite / Unfollow buttons (not tapping keeps Follow)."""
+    """One new brand as a message with a Favourite button (not tapping keeps Follow)."""
     products = conn.execute(
         "SELECT name, supplier FROM catalog WHERE brand_id = ? AND qty > 0 ORDER BY name", (brand["id"],)).fetchall()
     suppliers = sorted({p["supplier"] for p in products})
@@ -101,7 +101,7 @@ def offer(conn, brand, hints) -> tuple[str, list[list[dict]]]:
     lines += [f"   {escape(p['name'])}" for p in products[:3]]
     lines += [f"   Looks like <b>{escape(name)}</b> ({reason})" for _, name, reason in hints[:2]]
     buttons = [[{"text": label, "callback_data": f"brand:{brand['id']}:{status}"}
-                for label, status in (("⭐ Favourite", "favourite"), ("🚫 Unfollow", "none"))]]
+                for label, status in (("⭐ Favourite", "favourite"),)]]
     buttons += [[{"text": f"Same as {name}", "callback_data": f"merge:{brand['id']}:{other}"}] for other, name, _ in hints[:2]]
     return "\n".join(lines), buttons
 

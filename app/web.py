@@ -304,7 +304,7 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
           price: str = "", condition: str = ""):
     """One row per fragrance. q matches every word in the listing or brand name (accents and
     punctuation ignored), or an exact EAN or SKU. 'brands' picks which: 'favourite' (favourite brands only),
-    'default' (favourites and followed; nothing unfollowed or ignored), 'all' (those too).
+    'default' (favourites and followed; nothing not followed or ignored), 'all' (those too).
     'followed' narrows to what alerts you. 'price' keeps only each fragrance's best price per ml
     ('cheapest'), or only deals, well below the next best ('deals', biggest discount first
     unless you sort by a column); see compare. 'condition' keeps
@@ -430,7 +430,7 @@ def new_brands():
 
 @office.get("/brands")
 def brand_list(request: Request, status: str = "", q: str = ""):
-    """Every brand, or one tab: new (not chosen yet, newest first), favourite, follow, none (unfollowed)."""
+    """Every brand, or one tab: new (not chosen yet, newest first), favourite, follow, none (not followed)."""
     conn = connect()
     if status == "new":
         where, order = "b.reviewed_at IS NULL", "b.created_at DESC, in_stock DESC, b.name"
@@ -962,14 +962,15 @@ app.include_router(office)
 
 # --- Telegram buttons ------------------------------------------------------------------------
 
-LABELS = {"favourite": "⭐ Favourite", "follow": "👀 Following", "none": "🚫 Unfollowed"}
-# Buttons in digests sent before the tiers were renamed: their Follow meant Favourite, Ignore meant Unfollow.
+LABELS = {"favourite": "⭐ Favourite", "follow": "👀 Following", "none": "Not followed"}
+# Buttons in digests sent before the tiers were renamed: their Follow meant Favourite, Ignore meant not followed.
+# Digests sent with an Unfollow button carry 'none', which still works.
 OLD_BUTTONS = {"follow": "favourite", "ignore": "none"}
 
 
 @app.post("/telegram")
 def telegram_tap(update: dict = Body(...), x_telegram_bot_api_secret_token: str = Header("")):
-    """A tap on a Favourite / Unfollow button in the digest: apply it, then replace the buttons with the outcome."""
+    """A tap on a Favourite button in the digest: apply it, then replace the buttons with the outcome."""
     if not secrets.compare_digest(x_telegram_bot_api_secret_token, telegram.secret()):
         raise HTTPException(403)
     tap = update.get("callback_query")

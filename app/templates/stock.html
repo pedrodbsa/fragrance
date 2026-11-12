@@ -5,7 +5,7 @@
 <div class="page-head">
   <div>
     <h1>Stock</h1>
-    <p class="subtitle">One row per fragrance, sizes grouped. Unfollowed brands and ignored fragrances are left out. <span class="star">★</span>alerts you; names in <span style="color: var(--amber-fg)">gold</span> are on your wishlist, in <span style="color: var(--purple-fg)">purple</span> fillers.</p>
+    <p class="subtitle">One row per fragrance, sizes grouped. Brands you don't follow and ignored fragrances are left out. <span class="star">★</span>alerts you; names in <span style="color: var(--amber-fg)">gold</span> are on your wishlist, in <span style="color: var(--purple-fg)">purple</span> fillers.</p>
   </div>
 </div>
 
@@ -22,7 +22,7 @@
         {% for s in suppliers %}<option {% if s == supplier %}selected{% endif %}>{{ s }}</option>{% endfor %}
       </select>
       <select name="brands" title="Which brands">
-        {% for k, label in (("favourite", "Favourite brands"), ("default", "Favourites and followed"), ("all", "All brands, unfollowed too")) %}<option value="{{ k }}" {{ 'selected' if k == brands_shown }}>{{ label }}</option>{% endfor %}
+        {% for k, label in (("favourite", "Favourite brands"), ("default", "Favourites and followed"), ("all", "All brands, not followed too")) %}<option value="{{ k }}" {{ 'selected' if k == brands_shown }}>{{ label }}</option>{% endfor %}
       </select>
       <select name="price" title="Only the sizes priced well">
         <option value="">Any price</option>

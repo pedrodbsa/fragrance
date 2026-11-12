@@ -4,7 +4,7 @@ Tables:
   suppliers         one row per supplier: its minimum order value (set on the Suppliers
                     page) and how its last collection went.
   brands            one row per real brand, with your decision about it: favourite |
-                    follow | none (unfollowed) (app/brands.py). announced_at is set once a new
+                    follow | none (not followed) (app/brands.py). announced_at is set once a new
                     brand has been offered in the digest; reviewed_at once you've chosen.
   brand_aliases     every supplier spelling of a brand ("YSL", "YVES SAINT LAURENT"), so
                     listings from all suppliers land on the same brand.
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS brands (
     status       TEXT NOT NULL DEFAULT 'follow',  -- favourite | follow | none
     created_at   TEXT NOT NULL,
     announced_at TEXT,
-    reviewed_at  TEXT                -- when you first chose Favourite, Follow or Unfollow; NULL = new
+    reviewed_at  TEXT                -- when you first chose for it (Favourite, Follow, or off Follow); NULL = new
 );
 
 CREATE TABLE IF NOT EXISTS brand_aliases (

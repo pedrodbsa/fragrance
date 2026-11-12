@@ -3,9 +3,9 @@
 Each brand has one status:
   favourite  new products and restocks alert you
   follow     shown in Stock, no alerts. Every brand starts here; new ones are offered in the
-             digest with Favourite / Unfollow buttons, and wait on the Brands page's New tab
-             until you choose (Follow included).
-  none       unfollowed: hidden everywhere, never alerts
+             digest with a Favourite button, and wait on the Brands page's New tab until you
+             choose (Follow included).
+  none       not followed: hidden everywhere, never alerts. Reached by taking a brand off Follow.
 A fragrance on one of your lists decides for itself (app/fragrances.py).
 """
 
@@ -64,11 +64,11 @@ def delete(conn, brand_id: int) -> None:
     """Forget a brand nothing is in stock from: its spellings, its fragrances (your lists and
     notes for them included) and its sold-out listings with their history. If a supplier lists
     it again, it comes back as a new brand. Brands with stock can't be deleted, since the next
-    sync would bring them straight back: unfollow them instead."""
+    sync would bring them straight back: take them off Follow instead."""
     fragrance_ids = "SELECT id FROM fragrances WHERE brand_id = :brand"
     listings = f"SELECT supplier, sku FROM listings WHERE fragrance_id IN ({fragrance_ids})"
     if conn.execute(f"SELECT 1 FROM listings WHERE qty > 0 AND fragrance_id IN ({fragrance_ids})", {"brand": brand_id}).fetchone():
-        raise ValueError("this brand has stock: unfollow it instead")
+        raise ValueError("this brand has stock: take it off Follow instead")
     for statement in (
             f"DELETE FROM events WHERE (supplier, sku) IN ({listings})",
             f"DELETE FROM basket WHERE (supplier, sku) IN ({listings})",

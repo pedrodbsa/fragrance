@@ -17,7 +17,7 @@
       {{ owned_switch(product.id, product.owned, back) }}
     </div>
     {# The brand's status, and whether it applies: a list here wins over it. #}
-    {% set brand_label = "favourite" if product.brand_status == "favourite" else "followed, no alerts" if product.brand_status == "follow" else "unfollowed" %}
+    {% set brand_label = "favourite" if product.brand_status == "favourite" else "followed, no alerts" if product.brand_status == "follow" else "not followed" %}
     <p class="subtitle small">Brand <a href="/brands/{{ product.brand_id }}">{{ brand_label }}</a>{% if product.status == "default" %}: applies, no list picked here{% else %}: this list wins{% endif %}</p>
   </div>
 </div>
