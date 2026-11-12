@@ -18,7 +18,7 @@ One schedule against the `fragrance` service collects every supplier, then sends
 
 | Command | Cron |
 | --- | --- |
-| `fragrance run` | `0 9,12,21 * * *`, timezone Europe/Madrid (store hours) |
+| `fragrance run` | `0 0,6-22/2 * * *`, timezone Europe/Madrid: every 2 hours from 06:00 to midnight |
 
 A supplier that fails is named in the digest with ⚠️ and the run shows as failed; details
 are in the schedule's log.
