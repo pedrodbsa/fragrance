@@ -29,8 +29,8 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   (`app/changes.py`), so nothing extra is stored. Each change opens to show every supplier
   at that moment; a fragrance's page has its full per-supplier history.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
-  suppliers, basket items that sold out, came back or changed price, favourite brands' new products and restocks, wishlist fragrances (new, back in
-  stock, cheaper), and new brands with a Favourite button. Order suggestions stay on the
+  suppliers, basket items that sold out, came back or changed price, and, one entry per fragrance as on the Changes page, favourite brands'
+  new fragrances and restocks and wishlist fragrances (new, back in stock, cheaper), and new brands with a Favourite button. Order suggestions stay on the
   Orders page.
 - **Products** lists the wishlist, fillers, ignored fragrances and your collection (owned, which
   doesn't change alerts).

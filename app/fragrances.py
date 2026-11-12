@@ -390,3 +390,26 @@ def prune(conn) -> None:
                 AND NOT EXISTS (SELECT 1 FROM fragrance_eans e WHERE e.fragrance_id = f.id)"""
     conn.execute(f"DELETE FROM fragrance_names WHERE fragrance_id IN ({unused})")
     conn.execute(f"DELETE FROM fragrances WHERE id IN ({unused})")
+
+
+# Suppliers list names in capitals with the brand first ("CREED AVENTUS EDP 50 ML VAPO").
+# The brand has its own line, so it's dropped from the name, and the rest is title-cased
+# with fragrance abbreviations kept readable ("Aventus EDP 50 ml Vapo").
+UPPER = {"EDP", "EDT", "EDC", "EDS", "SPF", "II", "III", "IV", "XL", "XS", "UV", "N°", "NO."}
+LOWER = {"ML", "GR", "G", "OZ", "KG", "L", "X", "DE", "DU", "LA", "LE", "DI", "OF", "THE", "AND", "&"}
+
+
+def pretty_name(name: str, brand: str) -> str:
+    if brand and name.upper().startswith(brand.upper() + " "):
+        name = name[len(brand) + 1:]
+    words = []
+    for i, word in enumerate(name.upper().split()):
+        if any(c.isdigit() for c in word):  # sizes and numbers: "100ML" -> "100ml", "N°5" stays
+            words.append(re.sub(r"(ML|GR|G|OZ|KG)$", lambda m: m.group().lower(), word))
+        elif word in UPPER:
+            words.append(word)
+        elif word in LOWER and i > 0:
+            words.append(word.lower())
+        else:  # "L'INTERDIT" -> "L'Interdit"
+            words.append("'".join(part.capitalize() for part in word.split("'")))
+    return " ".join(words)

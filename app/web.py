@@ -28,7 +28,7 @@ from app.cli import attempt
 from app.db import connect, fold
 from app.upgrades import upgrade
 from app import fragrances
-from app.fragrances import CONCENTRATIONS, condition, key, variant
+from app.fragrances import CONCENTRATIONS, condition, key, pretty_name, variant
 from app.suppliers import SUPPLIERS
 
 security = HTTPBasic()
@@ -64,29 +64,6 @@ PAGE = 200
 def local_time(stamp: str) -> str:
     """UTC timestamp from the database, shown in the server's timezone (TZ)."""
     return datetime.fromisoformat(stamp).astimezone().strftime("%d %b %H:%M")
-
-
-# Suppliers list names in capitals with the brand first ("CREED AVENTUS EDP 50 ML VAPO").
-# The brand has its own line, so it's dropped from the name, and the rest is title-cased
-# with fragrance abbreviations kept readable ("Aventus EDP 50 ml Vapo").
-UPPER = {"EDP", "EDT", "EDC", "EDS", "SPF", "II", "III", "IV", "XL", "XS", "UV", "N°", "NO."}
-LOWER = {"ML", "GR", "G", "OZ", "KG", "L", "X", "DE", "DU", "LA", "LE", "DI", "OF", "THE", "AND", "&"}
-
-
-def pretty_name(name: str, brand: str) -> str:
-    if brand and name.upper().startswith(brand.upper() + " "):
-        name = name[len(brand) + 1:]
-    words = []
-    for i, word in enumerate(name.upper().split()):
-        if any(c.isdigit() for c in word):  # sizes and numbers: "100ML" -> "100ml", "N°5" stays
-            words.append(re.sub(r"(ML|GR|G|OZ|KG)$", lambda m: m.group().lower(), word))
-        elif word in UPPER:
-            words.append(word)
-        elif word in LOWER and i > 0:
-            words.append(word.lower())
-        else:  # "L'INTERDIT" -> "L'Interdit"
-            words.append("'".join(part.capitalize() for part in word.split("'")))
-    return " ".join(words)
 
 
 def local_day(stamp: str) -> str:
