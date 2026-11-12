@@ -1,5 +1,5 @@
 {# Stock grouped by fragrance, sizes under it (the cheapest of each, tester or not). Shared by Stock and brand pages.
-   Needs: groups, back. Stock sorts on the server: it passes `sort` and `sort_links`, and its
+   Needs: groups, back; one_brand on a brand page, which leaves out the brand line. Stock sorts on the server: it passes `sort` and `sort_links`, and its
    headers are links. Elsewhere the page sorts itself (static/tables.js). #}
 {# A column name that sorts: on Stock a link to the page sorted by it, elsewhere plain text
    that static/tables.js makes clickable. #}
@@ -25,7 +25,7 @@
         <div class="product-name">{% if g.sizes|selectattr("discount", "defined")|list %}<span title="One of its sizes is a deal: 20% or more below the next best price per ml">🔥</span> {% endif %}{% if g.alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<a class="quiet {{ g.fragrance_status }}" href="{{ page }}"{% if g.fragrance_status in ("wishlist", "filler") %} title="{{ "On your wishlist" if g.fragrance_status == "wishlist" else "A filler" }}"{% endif %}>{{ g.fragrance|pretty('') }}</a>{% if g.concentration %} <span class="muted">{{ g.concentration }}</span>{% endif %}
           {# the name's colour says wishlist (gold) or filler (purple); only Ignored gets a pill #}
           {{ badges("ignore" if g.fragrance_status == "ignore", g.owned, g.audience) }}</div>
-        <div class="product-brand"><a class="quiet" href="/brands/{{ g.brand_id }}">{{ g.brand_name }}</a></div>
+        {% if not one_brand %}<div class="product-brand"><a class="quiet" href="/brands/{{ g.brand_id }}">{{ g.brand_name }}</a></div>{% endif %}
       </td>
       <td>
         <div class="sizes">

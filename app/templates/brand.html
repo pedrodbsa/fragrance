@@ -73,6 +73,6 @@
 <div class="panel" style="margin-top: 20px">
   <div class="panel-head"><h2>Stock</h2><span class="panel-note">Every fragrance of this brand, sizes grouped</span>
     {% if groups %}<input type="search" placeholder="Filter by name" data-filter="#brand-stock" aria-label="Filter fragrances by name">{% endif %}</div>
-  {% if groups %}<div id="brand-stock">{% include "_fragrances.html" %}</div>{% else %}<div class="empty">No supplier lists this brand right now.</div>{% endif %}
+  {% if groups %}<div id="brand-stock">{% with one_brand = true %}{% include "_fragrances.html" %}{% endwith %}</div>{% else %}<div class="empty">No supplier lists this brand right now.</div>{% endif %}
 </div>
 {% endblock %}
