@@ -5,7 +5,7 @@
 <div class="page-head">
   <div>
     <h1>Suppliers</h1>
-    <p class="subtitle">Whether collecting each supplier works, and its minimum order value (MOV), used for order suggestions. Enter the MOV on the same basis as the supplier's prices (with or without VAT).</p>
+    <p class="subtitle">Whether collecting each supplier works, and its minimum order value (MOV), used for order suggestions. <b>Collect now</b> checks a supplier straight away; what it finds goes out with the next scheduled digest. Enter the MOV on the same basis as the supplier's prices (with or without VAT).</p>
   </div>
 </div>
 
@@ -19,7 +19,12 @@
     <tr>
       <td class="product-name">{{ s.name }}<div class="small"><a href="/?supplier={{ s.name }}">changes</a> · <a href="/?{{ {'supplier': s.name, 'kind': 'price_drop'}|urlencode }}">price drops</a> · <a href="/?{{ {'supplier': s.name, 'kind': 'arrivals'}|urlencode }}">new or back</a></div></td>
       <td>
+        {% if s.collecting %}
+        <span class="pill restock">Collecting now…</span> <a class="small" href="/suppliers">refresh</a>
+        {% else %}
         <span class="pill {{ pill }}">{{ label }}</span>
+        <form method="post" action="/suppliers/{{ s.name }}/collect" style="display:inline"><button class="btn sm">Collect now</button></form>
+        {% endif %}
         {% if s.error %}<div class="small muted" title="{{ s.error }}">{{ s.last_run|local }}: {{ s.error|truncate(120) }}</div>{% endif %}
       </td>
       <td class="nowrap muted hide-sm" data-sort="{{ s.last_ok or '' }}">{{ s.last_ok|local if s.last_ok else "—" }}</td>

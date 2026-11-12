@@ -17,13 +17,14 @@ from html import escape
 from urllib.parse import urlencode
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, FastAPI, Form, Header, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, FastAPI, Form, Header, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app import baskets, brands, orders, telegram
+from app.cli import attempt
 from app.db import connect, fold
 from app.upgrades import upgrade
 from app import fragrances
@@ -811,6 +812,7 @@ def product_split(fragrance_id: int, name: str = Form(...), concentration: str =
 # --- Suppliers and orders --------------------------------------------------------------------
 
 STALE = timedelta(hours=24)  # the schedule runs three times a day: a day without success is wrong
+collecting = set()  # suppliers being collected from the Suppliers page's button right now
 
 
 @office.get("/suppliers")
@@ -833,7 +835,8 @@ def suppliers(request: Request):
         else:
             health = "ok"
         rows.append({"name": name, "health": health, "last_ok": last_ok, "last_run": s and s["last_run_at"],
-                     "error": s and s["last_error"], "mov": s and s["mov"], "in_stock": p["in_stock"] if p else 0})
+                     "error": s and s["last_error"], "mov": s and s["mov"], "in_stock": p["in_stock"] if p else 0,
+                     "collecting": name in collecting})
     return templates.TemplateResponse(request, "suppliers.html", {"rows": rows})
 
 
@@ -848,6 +851,25 @@ def supplier_mov(name: str, mov: str = Form("")):
         conn.execute("INSERT INTO suppliers (name, mov) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET mov = excluded.mov",
                      (name, value))
     return RedirectResponse("/suppliers", status_code=303)
+
+
+@office.post("/suppliers/{name}/collect")
+def supplier_collect(name: str, background: BackgroundTasks):
+    """Collect one supplier now, like `fragrance collect <supplier>`: it runs after the page
+    reloads, and its changes go out with the next scheduled digest."""
+    if name not in SUPPLIERS:
+        raise HTTPException(404, "unknown supplier")
+    if name not in collecting:  # a second click while it runs does nothing
+        collecting.add(name)
+        background.add_task(collect_in_background, name)
+    return RedirectResponse("/suppliers", status_code=303)
+
+
+def collect_in_background(name: str) -> None:
+    try:
+        attempt(name)  # a failure shows on the Suppliers page, as from the schedule
+    finally:
+        collecting.discard(name)
 
 
 @office.get("/orders")
