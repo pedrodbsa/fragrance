@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import picture %}
 {% block title %}Changes{% endblock %}
 {% block content %}
 {% macro offer(o) %}{{ o.supplier }} · {{ o.size }}{% if o.tester %} tester{% endif %} · €{{ "%.2f"|format(o.price) }}{% endmacro %}
@@ -56,10 +57,10 @@
     <tr class="main" title="Show every supplier at that moment">
       <td class="nowrap muted hide-sm">{{ r.created_at|local }}</td>
       <td class="nowrap"><span class="pill {{ r.kind }}">{{ labels[r.kind] }}</span></td>
-      <td>
+      <td><div class="with-picture">{{ picture(pictures.get(r.fragrance_id)) }}<div>
         <div class="product-name"><a class="quiet" href="/products/{{ r.fragrance_id }}">{{ p.name|pretty('') }}</a>{% if p.concentration %} <span class="muted">{{ p.concentration }}</span>{% endif %}</div>
         <div class="product-brand">{{ p.brand_name }}</div>
-      </td>
+      </div></div></td>
       {% if r.kind in ("price_drop", "price_up") %}{% set change = r.offer.per_ml / r.was.per_ml - 1 %}
       <td class="num nowrap">
         👑 €{{ "%.2f"|format(r.offer.per_ml) }}/ml <span class="delta"><s>€{{ "%.2f"|format(r.was.per_ml) }}/ml</s></span>

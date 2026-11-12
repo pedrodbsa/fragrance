@@ -153,8 +153,9 @@ def events(request: Request, kind: str = "", brands: str = "", supplier: str = "
     in_stock, suppliers = conn.execute(
         "SELECT count(*), count(DISTINCT supplier) FROM catalog WHERE qty > 0 AND NOT hidden").fetchone()
     new_brands = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]
+    rows = [c for c in rows if c["day"] == day]
     return templates.TemplateResponse(request, "events.html", {
-        "rows": [c for c in rows if c["day"] == day], "day": day, "day_label": datetime.fromisoformat(day).strftime("%A %d %b %Y"),
+        "rows": rows, "pictures": fragrances.pictures(conn, {c["fragrance_id"] for c in rows}), "day": day, "day_label": datetime.fromisoformat(day).strftime("%A %d %b %Y"),
         "newer": min((d for d in days if d > day), default=None), "older": max((d for d in days if d < day), default=None),
         "day_link": day_link,
         "kind": kind, "brands": brands, "supplier": supplier, "last_day": last_day,
@@ -346,7 +347,7 @@ def stock(request: Request, q: str = "", brand: str = "", supplier: str = "",
     if supplier and not price:  # with a supplier, other sizes are added greyed, unless filtered by price
         shown = add_elsewhere(conn, shown, supplier)
     return templates.TemplateResponse(request, "stock.html", {
-        "groups": shown, "total": len(groups),
+        "groups": shown, "pictures": fragrances.pictures(conn, [g["fragrance_id"] for g in shown]), "total": len(groups),
         "page": page, "pages": pages, "page_link": page_link, "first": (page - 1) * PAGE + 1, "brands": brand_list, "suppliers": suppliers,
         "q": q, "brand": brand, "supplier": supplier, "in_stock": in_stock, "followed": followed,
         "brands_shown": brands, "sort": sort, "sort_links": sort_links,
@@ -397,6 +398,7 @@ def search(request: Request, q: str = ""):
         words + [q.strip(), q.strip(), SEARCH_LIMIT]).fetchall()
     return templates.TemplateResponse(request, "search.html", {
         "q": q, "brands": brand_rows, "fragrances": found, "limit": SEARCH_LIMIT,
+        "pictures": fragrances.pictures(conn, [f["id"] for f in found]),
     })
 
 
@@ -484,10 +486,11 @@ def brand_detail(request: Request, brand_id: int):
         "SELECT * FROM fragrances WHERE brand_id = ? AND (status != 'default' OR owned) ORDER BY status, name",
         (brand_id,)).fetchall()
     listings = conn.execute(f"SELECT * FROM catalog WHERE brand_id = ? {IN_STOCK_FIRST}", (brand_id,)).fetchall()
+    # By name, A to Z, sold-out ones included in their place (a column header re-sorts).
+    groups = sorted(group(annotate(listings)), key=lambda g: (fold(g["fragrance"]), g["concentration"] or ""))
     return templates.TemplateResponse(request, "brand.html", {
         "brand": brand, "aliases": aliases, "others": others, "decided": decided,
-        # By name, A to Z, sold-out ones included in their place (a column header re-sorts).
-        "groups": sorted(group(annotate(listings)), key=lambda g: (fold(g["fragrance"]), g["concentration"] or "")),
+        "groups": groups, "pictures": fragrances.pictures(conn, [g["fragrance_id"] for g in groups]),
     })
 
 
@@ -552,7 +555,7 @@ def products(request: Request, tab: str = "wishlist"):
     brand_list = conn.execute("SELECT id, name FROM brands ORDER BY name").fetchall()
     return templates.TemplateResponse(request, "products.html", {
         "rows": [{**dict(r), "offers": offers[r["id"]]} for r in rows],
-        "tab": tab, "tabs": TABS, "counts": counts, "brands": brand_list, "concentrations": CONCENTRATIONS,
+        "pictures": fragrances.pictures(conn, [r["id"] for r in rows]), "tab": tab, "tabs": TABS, "counts": counts, "brands": brand_list, "concentrations": CONCENTRATIONS,
     })
 
 
@@ -588,7 +591,8 @@ def product_detail(request: Request, fragrance_id: int, history_page: int = 1, t
         name, concentration = fragrances.identify(r["name"], r["brand"])
         r["reads_as"] = (" ".join(name.upper().split()), concentration)
     return templates.TemplateResponse(request, "product.html", {
-        "product": product, "rows": rows, "history": price_history(conn, rows), "tab": tab, "concentrations": CONCENTRATIONS,
+        "product": product, "picture": fragrances.pictures(conn, [fragrance_id]).get(fragrance_id),
+        "rows": rows, "history": price_history(conn, rows), "tab": tab, "concentrations": CONCENTRATIONS,
         "eans": ean_list(conn, fragrance_id, rows), "in_basket": baskets.keys(conn),
         **supplier_history(conn, request, fragrance_id, history_page),
         "all_brands": conn.execute("SELECT id, name FROM brands ORDER BY name").fetchall(),

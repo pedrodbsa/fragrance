@@ -23,6 +23,7 @@ Tables:
   listings          what suppliers offer: one row per supplier + SKU, sold-out ones kept
                     with qty 0. `name` and `brand` are as the supplier writes them;
                     fragrance_id is worked out once, when the listing first appears.
+                    image is the supplier's product picture, when it sends one.
   events            what changed between runs (new, restock, sold out, price change).
                     notified_at is set once the notifier has handled the event.
   basket            what you're gathering to order, per supplier (app/baskets.py). Items stay
@@ -112,6 +113,7 @@ CREATE TABLE IF NOT EXISTS listings (
     price        REAL,
     recorded_price REAL,              -- the price at the last recorded price change (or when first seen)
     flagged_new  INTEGER NOT NULL DEFAULT 0,  -- the supplier's own "new" marker
+    image        TEXT,                -- web address of the supplier's product picture
     first_seen   TEXT NOT NULL,
     last_seen    TEXT NOT NULL,
     fragrance_id INTEGER NOT NULL REFERENCES fragrances (id),

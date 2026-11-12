@@ -11,8 +11,9 @@ sets are kept, and only what's in stock.
 Each product looks like this (NAME has no brand and no size):
   <PRODUCT><ID>204855</ID><TYPE>Perfume</TYPE><MANUFACTURER>24 perfumes and colognes</MANUFACTURER>
     <NAME>Gold EDT</NAME><SIZE>50ml</SIZE><EANS><EAN>3760048937030</EAN></EANS>
-    <SEX>U</SEX><PRICE>15.42</PRICE><STOCK>4</STOCK></PRODUCT>
-SEX is who it's for: M (men), W (women), U (unisex).
+    <SEX>U</SEX><IMAGE>https://cmx.prodejparfemu.cz/img/products/…jpg</IMAGE>
+    <PRICE>15.42</PRICE><STOCK>4</STOCK></PRODUCT>
+SEX is who it's for: M (men), W (women), U (unisex). IMAGE is the product picture.
 """
 
 import os
@@ -65,5 +66,6 @@ def parse(xml: bytes) -> list[Item]:
             price=float(product.findtext("PRICE")),
             flagged_new=False,
             audience=AUDIENCES.get(product.findtext("SEX")),
+            image=(product.findtext("IMAGE") or "").strip() or None,
         ))
     return items

@@ -35,6 +35,14 @@
 </form>
 {% endmacro %}
 
+{# A fragrance's picture, from a supplier's site (fragrances.pictures), or an empty square of
+   the same size when no supplier has one, so names stay lined up. Sizes: "sm" in lists, "lg"
+   on the product page. #}
+{% macro picture(url, size="sm") -%}
+{%- if url %}<img class="picture {{ size }}" src="{{ url }}" alt="" loading="lazy" referrerpolicy="no-referrer">
+{%- else %}<span class="picture {{ size }}"></span>{% endif -%}
+{%- endmacro %}
+
 {# Badges for a fragrance: its list, and In collection. #}
 {% macro badges(status, owned, audience=None) %}
 {%- if audience %} <span class="muted small" title="Who it's for">{{ {"man": "Men", "woman": "Women", "unisex": "Unisex"}[audience] }}</span>{% endif -%}

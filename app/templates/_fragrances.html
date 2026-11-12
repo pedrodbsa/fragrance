@@ -8,7 +8,7 @@
   <a class="quiet sorter" href="{{ sort_links[field] }}" {% if sort.lstrip("-") == field %}data-dir="{{ 'desc' if sort.startswith('-') else 'asc' }}"{% endif %}>{{ label }}</a>
   {%- else %}{{ label }}{% endif -%}
 {%- endmacro %}
-{% from "_macros.html" import fragrance_switch, owned_switch, badges %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges, picture %}
   <div class="scroll">
   <table class="{{ '' if sort is defined else 'sortable' }}">
     <thead><tr>
@@ -21,12 +21,12 @@
     {% for g in groups %}
     {% set page = "/products/" ~ g.fragrance_id %}
     <tr class="{{ 'faded' if g.hidden or g.qty == 0 }}">
-      <td data-sort="{{ g.fragrance }}">
+      <td data-sort="{{ g.fragrance }}"><div class="with-picture">{{ picture(pictures.get(g.fragrance_id)) }}<div>
         <div class="product-name">{% if g.sizes|selectattr("discount", "defined")|list %}<span title="One of its sizes is a deal: 20% or more below the next best price per ml">🔥</span> {% endif %}{% if g.alerting %}<span class="star" title="Alerts you">★</span>{% endif %}<a class="quiet {{ g.fragrance_status }}" href="{{ page }}"{% if g.fragrance_status in ("wishlist", "filler") %} title="{{ "On your wishlist" if g.fragrance_status == "wishlist" else "A filler" }}"{% endif %}>{{ g.fragrance|pretty('') }}</a>{% if g.concentration %} <span class="muted">{{ g.concentration }}</span>{% endif %}
           {# the name's colour says wishlist (gold) or filler (purple); only Ignored gets a pill #}
           {{ badges("ignore" if g.fragrance_status == "ignore", g.owned, g.audience) }}</div>
         {% if not one_brand %}<div class="product-brand"><a class="quiet" href="/brands/{{ g.brand_id }}">{{ g.brand_name }}</a></div>{% endif %}
-      </td>
+      </div></div></td>
       <td>
         <div class="sizes">
         {% for r in g.sizes %}

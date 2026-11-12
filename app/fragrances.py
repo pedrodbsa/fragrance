@@ -124,6 +124,24 @@ def condition(name: str) -> str:
     return "Tester" if TESTER.search(name.upper()) else "New"
 
 
+# Whose product picture a fragrance shows, first choice first: the first of these suppliers
+# that lists it with a picture. fragranta, romscent and perfumes-wholesale send no pictures.
+PICTURE_SUPPLIERS = ("fragrances-wholesale", "symphonya", "parfumcompany", "nunu")
+
+
+def pictures(conn, fragrance_ids) -> dict:
+    """Each fragrance's picture: fragrance id -> the web address of a supplier's product
+    picture. Fragrances no supplier has a picture for are left out."""
+    ids = list(fragrance_ids)
+    rows = conn.execute(f"""SELECT fragrance_id, supplier, image FROM listings
+                            WHERE image IS NOT NULL AND fragrance_id IN ({",".join("?" * len(ids))})""", ids).fetchall()
+    found = {}
+    rank = {supplier: i for i, supplier in enumerate(PICTURE_SUPPLIERS)}  # any other supplier comes last
+    for row in sorted(rows, key=lambda r: rank.get(r["supplier"], len(rank))):
+        found.setdefault(row["fragrance_id"], row["image"])
+    return found
+
+
 def find_or_create(conn, brand_id: int, name: str, concentration: str | None) -> int:
     """The fragrance a name reads as (after your merges), created if it's new. Returns its id."""
     found = conn.execute(

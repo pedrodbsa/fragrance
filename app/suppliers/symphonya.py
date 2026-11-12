@@ -12,7 +12,8 @@ who it's for, size, then "*Tester" for testers):
   {"id": "113", "brand": "Salvatore Ferragamo", "ean": "8052464890194",
    "name": "Salvatore Ferragamo, F By Ferragamo, Eau De Toilette, For Men, 100 ml *Tester",
    "gender": "For Men", "presentation": "Tester", "category": "Fragrance",
-   "subcategory": "Perfumes", "subsubcategory": "Eau De Toilette", "price": "19.90", "stock": 1}
+   "subcategory": "Perfumes", "subsubcategory": "Eau De Toilette", "price": "19.90", "stock": 1,
+   "image": "https://cdn.symphonya.eu/images/_products/….jpg"}
 Sets are named "Set Ikks: Little Woman, Eau De Toilette, For Women, 100 ml + Little Woman, …".
 """
 
@@ -62,6 +63,7 @@ def parse(products: list[dict]) -> list[Item]:
             price=price,
             flagged_new=False,
             audience=AUDIENCES.get(p.get("gender")),
+            image=(p.get("image") or "").strip() or None,
         ))
     return items
 

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import badges %}
+{% from "_macros.html" import badges, picture %}
 {% block title %}Search{% endblock %}
 {% block content %}
 {% set labels = {"favourite": "⭐ Favourite", "follow": "👀 Following", "none": "Not followed"} %}
@@ -41,10 +41,10 @@
     <tbody>
     {% for f in fragrances %}
     <tr class="{{ 'faded' if not f.offers }}">
-      <td data-sort="{{ f.name }}">
+      <td data-sort="{{ f.name }}"><div class="with-picture">{{ picture(pictures.get(f.id)) }}<div>
         <div class="product-name"><a class="quiet" href="/products/{{ f.id }}">{{ f.name|pretty('') }}</a>{% if f.concentration %} <span class="muted">{{ f.concentration }}</span>{% endif %}{{ badges(f.status, f.owned, f.audience) }}</div>
         <div class="product-brand"><a class="quiet" href="/brands/{{ f.brand_id }}">{{ f.brand_name }}</a></div>
-      </td>
+      </div></div></td>
       <td class="num" data-sort="{{ f.best if f.best is not none }}">{% if f.best is not none %}€{{ "%.2f"|format(f.best) }}{% else %}<span class="pill">{{ "Sold out" if f.offers is not none else "Not listed" }}</span>{% endif %}</td>
       <td class="num">{{ f.offers or 0 }}</td>
       <td class="muted hide-sm">{{ (f.suppliers or "").split(",")|sort|join(", ") }}</td>

@@ -33,6 +33,8 @@
                   Follow, Ignore becomes none (not followed). Brands you hadn't chosen for yet
                   land on Follow and stay in the New tab. The steps above ran before this
                   rename, so they still use the old names (follow | ignore | default).
+  listing-image   listings remember the supplier's product picture; filled in by the next
+                  collection.
 """
 
 import sqlite3
@@ -59,6 +61,12 @@ def upgrade(conn) -> None:
     once(conn, "learn-eans", learn_pinned_eans)
     once(conn, "size-without-tester", size_without_tester)
     once(conn, "brand-tiers", brand_tiers)
+    once(conn, "listing-image", listing_image)
+
+
+def listing_image(conn) -> None:
+    if "image" not in {c["name"] for c in conn.execute("PRAGMA table_info(listings)")}:
+        conn.execute("ALTER TABLE listings ADD COLUMN image TEXT")
 
 
 def brand_tiers(conn) -> None:

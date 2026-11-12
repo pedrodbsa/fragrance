@@ -13,6 +13,7 @@ A product looks like this (the name starts with the brand):
     <features><feature><name>Type</name><value>eau de parfum</value></feature>
       <feature><name>Tester</name><value>no</value></feature>
       <feature><name>For whom</name><value>women's</value></feature>…</features>
+    <photos><photo>https://parfumcompany.pl/files/fotob/product-134.jpg</photo>…</photos>  (the first is the main picture)
     <prices><default><price_net>25.06</price_net><currency>€</currency></default></prices></product>
 """
 
@@ -75,5 +76,6 @@ def parse(xml: bytes) -> list[Item]:
             price=price,
             flagged_new=False,
             audience=AUDIENCES.get(features.get("For whom")),
+            image=(product.findtext("photos/photo") or "").strip() or None,
         ))
     return items

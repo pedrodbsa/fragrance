@@ -37,6 +37,10 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 - **Catalogue**: every listing points to a fragrance (brand + name + concentration), worked
   out once when the listing first appears, from the name read out of the supplier's product
   name. Every fragrance has its own page, on a list or not.
+- **Pictures**: listings keep the supplier's product picture when it sends one
+  (fragrances-wholesale, symphonya, parfumcompany, Nunu; not fragranta, romscent or
+  perfumes-wholesale). A fragrance shows the first of those suppliers' pictures, in that order,
+  beside its name in the lists and on its page. Pictures load straight from the suppliers' sites.
 
 ## Code map
 

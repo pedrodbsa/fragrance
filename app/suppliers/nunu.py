@@ -36,6 +36,7 @@ query($after: String, $category: Int!, $first: Int!) {
         pageInfo { endCursor hasNextPage }
         edges { node {
           sku name upc
+          defaultImage { url(width: 500) }
           brand { name }
           prices { price { value } }
           inventory { aggregated { availableToSell } }
@@ -96,6 +97,7 @@ def fetch() -> list[Item]:
                     # thousands of fake price changes.
                     price=node["prices"]["price"]["value"],
                     flagged_new=fields.get("nuevo") == "Si",
+                    image=(node["defaultImage"] or {}).get("url"),
                 ))
             cursor = products["pageInfo"]["endCursor"]
             more = products["pageInfo"]["hasNextPage"]

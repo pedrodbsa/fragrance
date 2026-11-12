@@ -1,15 +1,18 @@
 {% extends "base.html" %}
-{% from "_macros.html" import fragrance_switch, owned_switch, badges, move_ean %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges, move_ean, picture as show_picture %}
 {% block title %}{{ product.name|pretty('') }}{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
 <div class="page-head">
+  <div class="with-picture">
+  {% if picture %}{{ show_picture(picture, "lg") }}{% endif %}
   <div>
     <p class="subtitle"><a href="/brands/{{ product.brand_id }}">← {{ product.brand_name }}</a></p>
     <h1>{{ product.name|pretty('') }}{% if product.concentration %} <span class="muted">{{ product.concentration }}</span>{% endif %}</h1>
     {# The list it's on shows on the right, by the switch. #}
     <p class="subtitle">{{ badges(None, product.owned, product.audience) }}</p>
     {% if product.note %}<p class="subtitle">{{ product.note }}</p>{% endif %}
+  </div>
   </div>
   <div>
     <div class="toolbar">

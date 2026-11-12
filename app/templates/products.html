@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import fragrance_switch, owned_switch, badges %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges, picture %}
 {% block title %}Products{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
@@ -42,10 +42,10 @@
     <tbody>
     {% for r in rows %}
     <tr>
-      <td data-sort="{{ r.name }}">
+      <td data-sort="{{ r.name }}"><div class="with-picture">{{ picture(pictures.get(r.id)) }}<div>
         <div class="product-name"><a class="quiet" href="/products/{{ r.id }}">{{ r.name|pretty('') }}</a>{% if r.concentration %} <span class="muted">{{ r.concentration }}</span>{% endif %}{{ badges(r.status, r.owned, r.audience) }}</div>
         <div class="product-brand"><a class="quiet" href="/brands/{{ r.brand_id }}">{{ r.brand_name }}</a></div>
-      </td>
+      </div></div></td>
       <td data-sort="{{ r.offers|map(attribute='price')|reject('none')|min }}">
         {% for o in r.offers[:3] %}
         <div class="small"><b>{% if o.price is not none %}€{{ "%.2f"|format(o.price) }}{% else %}—{% endif %}</b> <span class="muted">{{ o.name|pretty(o.brand) }} · {{ o.qty }} at {{ o.supplier }}</span></div>

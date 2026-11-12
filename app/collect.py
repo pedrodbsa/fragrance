@@ -16,13 +16,13 @@ from app.item import Item
 from app.suppliers import SUPPLIERS
 
 UPSERT = """
-INSERT INTO listings (supplier, sku, name, brand, ean, ean2, ean3, qty, price, flagged_new, first_seen, last_seen, fragrance_id, recorded_price)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO listings (supplier, sku, name, brand, ean, ean2, ean3, qty, price, flagged_new, first_seen, last_seen, fragrance_id, recorded_price, image)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (supplier, sku) DO UPDATE SET
   name = excluded.name, brand = excluded.brand, ean = excluded.ean, ean2 = excluded.ean2,
   ean3 = excluded.ean3, qty = excluded.qty, price = excluded.price,
   flagged_new = excluded.flagged_new, last_seen = excluded.last_seen, fragrance_id = excluded.fragrance_id,
-  recorded_price = excluded.recorded_price
+  recorded_price = excluded.recorded_price, image = excluded.image
 """
 
 
@@ -61,7 +61,7 @@ def record(conn, supplier: str, items: list[Item], now: str) -> list[tuple]:
             # An EAN you added to a fragrance decides; otherwise the name is read.
             fragrance_id = by_ean(conn, (item.ean, item.ean2, item.ean3)) or assign(conn, brand_id, item.name, item.brand)
         conn.execute(UPSERT, (supplier, item.sku, item.name, item.brand, item.ean, item.ean2, item.ean3,
-                              item.qty, item.price, item.flagged_new, now, now, fragrance_id, recorded))
+                              item.qty, item.price, item.flagged_new, now, now, fragrance_id, recorded, item.image))
         learn_audience(conn, fragrance_id, item.audience or read_audience(item.name))
 
     # Whatever we knew about but the supplier no longer lists has sold out.

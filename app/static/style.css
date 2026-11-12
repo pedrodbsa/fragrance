@@ -138,6 +138,14 @@ tbody tr:hover td { background: var(--surface-2); }
 .product-brand { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; margin-top: 1px; }
 .star { color: #e5a000; margin-right: 4px; }
 
+/* A fragrance's picture beside its name. Supplier pictures are product shots on white, so the
+   square stays white in dark mode too; an empty one (no picture) is just a faint square. */
+.with-picture { display: flex; align-items: center; gap: 10px; }
+.picture { flex: none; display: block; width: 40px; height: 40px; border-radius: 6px; object-fit: contain;
+           background: #fff; border: 1px solid var(--border); }
+span.picture { background: var(--surface-2); }
+.picture.lg { width: 120px; height: 120px; border-radius: var(--radius); }
+
 .empty { padding: 48px 16px; text-align: center; color: var(--muted); }
 
 /* Pills */

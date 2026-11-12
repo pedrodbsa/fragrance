@@ -15,3 +15,4 @@ class Item:
     price: float
     flagged_new: bool
     audience: str | None = None  # man | woman | unisex, when the supplier says; else read from the name
+    image: str | None = None  # web address of the supplier's product picture, when it has one
