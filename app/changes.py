@@ -119,7 +119,11 @@ def compare(before: dict, after: dict) -> list[dict]:
 
 def breakdown(state, keys, listings, happened: dict) -> list[dict]:
     """Every listing of the fragrance right after a run: supplier, size, price, in stock or
-    not, and the supplier event of this run (happened: listing -> its event), if it had one."""
+    not, whether it's the cheapest in stock for its size, and the supplier event of this run
+    (happened: listing -> its event), if it had one."""
     rows = [{"supplier": k[0], "size": listings[k]["size"][1], "sort": listings[k]["size"][0],
              "name": listings[k]["name"], **state[k], "event": happened.get(k)} for k in keys]
-    return sorted(rows, key=lambda r: (r["sort"], r["size"], not r["in_stock"], r["price"] or 0))
+    rows.sort(key=lambda r: (r["sort"], r["size"], not r["in_stock"], r["price"] if r["price"] is not None else 1e9))
+    for i, r in enumerate(rows):  # sorted so the first in-stock listing of each size is its cheapest
+        r["cheapest"] = r["in_stock"] and r["price"] is not None and (i == 0 or rows[i - 1]["size"] != r["size"])
+    return rows
