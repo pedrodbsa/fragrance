@@ -6,8 +6,10 @@ run we look at every listing of the fragrances it touched, at every supplier, an
   new         no supplier had listed this fragrance before
   restock     it was out of stock everywhere and now a supplier has it
   soldout     a supplier had it and now none does
-  price_drop  the cheapest in-stock price of one of its sizes fell by more than MIN_PRICE_MOVE
-  price_up    ... or rose by more than that (also when the cheapest supplier sells out)
+  price_drop  its best price per ml (the 👑 of the Stock page: every size and supplier, testers
+              included) fell by more than MIN_BEST_MOVE
+  price_up    ... or rose by more than that (also when the best offer sells out)
+Gift sets and sizes in grams have no price per ml, so they never make a price change.
 One supplier losing a fragrance that others still have is not a product change; it shows in
 the supplier breakdown and on the product page's history.
 
@@ -17,14 +19,16 @@ stored: because it's rebuilt each time, merging two fragrances also merges their
 
 from collections import defaultdict
 
-from app.collect import MIN_PRICE_MOVE
-from app.fragrances import variant
+from app.fragrances import condition, millilitres, variant
+
+MIN_BEST_MOVE = 0.05  # the best price per ml has to move by more than 5% to count
 
 
 def replay(conn) -> list[dict]:
     """Every product change ever, newest first. Each one carries `listings`: where the fragrance
     stood at every supplier right after that run, with what changed in the run marked."""
-    listings = {(r["supplier"], r["sku"]): {**r, "size": variant(r["name"])} for r in conn.execute(
+    listings = {(r["supplier"], r["sku"]): {**r, "size": variant(r["name"]), "ml": millilitres(r["name"]),
+                                                "tester": condition(r["name"]) == "Tester"} for r in conn.execute(
         "SELECT supplier, sku, name, fragrance_id, first_seen, price FROM listings")}
     events = conn.execute(
         "SELECT supplier, sku, kind, old_value, new_value, created_at FROM events ORDER BY created_at, id").fetchall()
@@ -89,41 +93,43 @@ def appear(state, by_fragrance, listings, first_price, key) -> None:
 
 def snapshot(state, keys, listings) -> dict:
     """A fragrance at one moment: whether any supplier listed it, whether any has it in stock,
-    and the cheapest in-stock price of each size with the supplier offering it."""
-    best = {}
+    and its best offer: the in-stock listing with the lowest price per ml (None if none has one)."""
+    best = None
     for key in keys:
-        s = state[key]
-        if s["in_stock"] and s["price"] is not None:
-            size = listings[key]["size"][1]
-            if size not in best or s["price"] < best[size][0]:
-                best[size] = (s["price"], key[0])
+        s, listing = state[key], listings[key]
+        if s["in_stock"] and s["price"] is not None and listing["ml"]:
+            per_ml = s["price"] / listing["ml"]
+            if best is None or per_ml < best["per_ml"]:
+                best = {"per_ml": per_ml, "supplier": key[0], "size": listing["size"][1],
+                        "price": s["price"], "tester": listing["tester"]}
     return {"listed": bool(keys), "in_stock": any(state[k]["in_stock"] for k in keys), "best": best}
 
 
 def compare(before: dict, after: dict) -> list[dict]:
-    """The product changes between two snapshots of a fragrance."""
+    """The product changes between two snapshots of a fragrance. `offer` is the best offer
+    after the run, `was` the one before."""
     if not before["in_stock"] and after["in_stock"]:
-        kind = "restock" if before["listed"] else "new"
-        price, cheapest = min(after["best"].values(), default=(None, None))
-        return [{"kind": kind, "size": None, "old_value": None, "new_value": price, "cheapest": cheapest}]
+        return [{"kind": "restock" if before["listed"] else "new", "offer": after["best"], "was": None}]
     if before["in_stock"] and not after["in_stock"]:
-        return [{"kind": "soldout", "size": None, "old_value": None, "new_value": None, "cheapest": None}]
-    found = []
-    for size, (new, cheapest) in after["best"].items():
-        old = before["best"].get(size, (None,))[0]
-        if old is not None and abs(new - old) > MIN_PRICE_MOVE:
-            found.append({"kind": "price_drop" if new < old else "price_up", "size": size,
-                          "old_value": old, "new_value": new, "cheapest": cheapest})
-    return found
+        return [{"kind": "soldout", "offer": None, "was": before["best"]}]
+    old, new = before["best"], after["best"]
+    if old and new and abs(new["per_ml"] - old["per_ml"]) > old["per_ml"] * MIN_BEST_MOVE:
+        return [{"kind": "price_drop" if new["per_ml"] < old["per_ml"] else "price_up", "offer": new, "was": old}]
+    return []
 
 
 def breakdown(state, keys, listings, happened: dict) -> list[dict]:
-    """Every listing of the fragrance right after a run: supplier, size, price, in stock or
-    not, whether it's the cheapest in stock for its size, and the supplier event of this run
-    (happened: listing -> its event), if it had one."""
-    rows = [{"supplier": k[0], "size": listings[k]["size"][1], "sort": listings[k]["size"][0],
-             "name": listings[k]["name"], **state[k], "event": happened.get(k)} for k in keys]
+    """Every listing of the fragrance right after a run: supplier, size, tester or not, price
+    and price per ml, in stock or not, whether it's the best offer, and the supplier event of
+    this run (happened: listing -> its event), if it had one."""
+    rows = []
+    for k in keys:
+        listing, s = listings[k], state[k]
+        per_ml = s["price"] / listing["ml"] if listing["ml"] and s["price"] is not None else None
+        rows.append({"supplier": k[0], "size": listing["size"][1], "sort": listing["size"][0], "name": listing["name"],
+                     "tester": listing["tester"], "per_ml": per_ml, **s, "event": happened.get(k)})
     rows.sort(key=lambda r: (r["sort"], r["size"], not r["in_stock"], r["price"] if r["price"] is not None else 1e9))
-    for i, r in enumerate(rows):  # sorted so the first in-stock listing of each size is its cheapest
-        r["cheapest"] = r["in_stock"] and r["price"] is not None and (i == 0 or rows[i - 1]["size"] != r["size"])
+    offers = [r["per_ml"] for r in rows if r["in_stock"] and r["per_ml"] is not None]
+    for r in rows:
+        r["best"] = bool(offers) and r["in_stock"] and r["per_ml"] == min(offers)
     return rows

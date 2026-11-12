@@ -23,7 +23,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   spellings of a brand are merged through aliases, with suggestions in the Brands page's New tab.
 - **Changes** (the backoffice's first page) is about fragrances, not listings: new (no
   supplier had it before), back in stock or sold out across all suppliers, and moves of more
-  than €5 in the cheapest price of a size. It's rebuilt from the events each time it opens
+  than 5% in its best price per ml (the 👑: every size and supplier, testers included). It's rebuilt from the events each time it opens
   (`app/changes.py`), so nothing extra is stored. Each change opens to show every supplier
   at that moment; a fragrance's page has its full per-supplier history.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
