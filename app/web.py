@@ -407,9 +407,24 @@ def new_brands():
     return RedirectResponse("/brands?status=new", status_code=303)
 
 
+def changes_today(conn) -> dict:
+    """Each brand's product changes today (server's timezone), as on the Changes page:
+    brand id -> {kind: count}. Ignored fragrances are left out."""
+    brand_of = dict(conn.execute("SELECT id, brand_id FROM fragrances WHERE status != 'ignore'").fetchall())
+    today = local_day(datetime.now(timezone.utc).isoformat())
+    counts = defaultdict(lambda: defaultdict(int))
+    for c in changes.replay(conn):  # newest first, so stop at the first change from an earlier day
+        if local_day(c["created_at"]) != today:
+            break
+        if c["fragrance_id"] in brand_of:
+            counts[brand_of[c["fragrance_id"]]][c["kind"]] += 1
+    return counts
+
+
 @office.get("/brands")
-def brand_list(request: Request, status: str = "", q: str = ""):
-    """Every brand, or one tab: new (not chosen yet, newest first), favourite, follow, none (not followed)."""
+def brand_list(request: Request, status: str = "favourite", q: str = ""):
+    """Every brand (status ''), or one tab: new (not chosen yet, newest first), favourite (the
+    default), follow, none (not followed). Each row shows the brand's product changes today."""
     conn = connect()
     if status == "new":
         where, order = "b.reviewed_at IS NULL", "b.created_at DESC, in_stock DESC, b.name"
@@ -422,7 +437,7 @@ def brand_list(request: Request, status: str = "", q: str = ""):
     counts = dict(conn.execute("SELECT status, count(*) FROM brands GROUP BY status").fetchall())
     counts["new"] = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]
     return templates.TemplateResponse(request, "brands.html", {
-        "rows": rows, "status": status, "q": q, "counts": counts,
+        "rows": rows, "status": status, "q": q, "counts": counts, "today": changes_today(conn),
         "hints": brands.suggestions(conn) if status == "new" else {},
     })
 

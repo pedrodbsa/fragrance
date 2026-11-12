@@ -3,6 +3,8 @@
 {% block title %}Brands{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
+{# Today's product changes per brand: kind, short label, tooltip. #}
+{% set today_kinds = [("new", "New", "New products"), ("restock", "Back", "Back in stock"), ("price_drop", "↓", "Price drops (best price per ml, over 5%)"), ("price_up", "↑", "Price rises (best price per ml, over 5%)"), ("soldout", "Sold out", "Sold out everywhere")] %}
 {% set tabs = {"new": "New", "": "All", "favourite": "Favourites", "follow": "Following", "none": "Not followed"} %}
 <div class="page-head">
   <div>
@@ -35,7 +37,7 @@
   {% if rows %}
   <div class="scroll">
   <table class="sortable">
-    <thead><tr><th>Brand</th><th class="num">In stock</th><th class="num" title="Cheapest listing in stock, any size">From</th><th class="num" title="Dearest listing in stock, any size">To</th><th class="hide-sm">Suppliers</th>
+    <thead><tr><th>Brand</th><th class="num">In stock</th><th class="num" title="Cheapest listing in stock, any size">From</th><th class="num" title="Dearest listing in stock, any size">To</th><th class="hide-sm">Suppliers</th><th title="Product changes today, as on the Changes page">Today</th>
       {% if status == "new" %}<th class="hide-sm">First seen</th><th class="hide-sm" data-nosort>Looks like</th>{% endif %}<th></th></tr></thead>
     <tbody>
     {% for b in rows %}
@@ -50,6 +52,10 @@
       <td class="num nowrap" data-sort="{{ price if price is not none }}">{% if price is not none %}€{{ "%.0f"|format(price) }}{% else %}<span class="muted">—</span>{% endif %}</td>
       {% endfor %}
       <td class="muted hide-sm">{{ (b.suppliers or "").split(",")|sort|join(", ") }}</td>
+      {% set t = today.get(b.id, {}) %}
+      <td class="nowrap" data-sort="{{ t.values()|sum }}">
+        {% for k, label, tip in today_kinds %}{% if t[k] %}<span class="pill {{ k }}" title="{{ tip }}">{{ label }} {{ t[k] }}</span> {% endif %}{% endfor %}
+      </td>
       {% if status == "new" %}
       <td class="nowrap muted hide-sm" data-sort="{{ b.created_at }}">{{ b.created_at|local }}</td>
       <td class="hide-sm">
