@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import fragrance_switch, owned_switch, badges, picture %}
+{% from "_macros.html" import fragrance_switch, owned_switch, badges, picture, product_tabs %}
 {% block title %}Products{% endblock %}
 {% block content %}
 {% set back = request.url.path ~ ("?" ~ request.url.query if request.url.query else "") %}
@@ -28,11 +28,7 @@
 
 <div class="panel">
   <div class="panel-head">
-    <nav class="segmented">
-      {% for k, label in tabs.items() %}
-      <a href="/products?tab={{ k }}" class="{{ 'active' if tab == k }}">{{ label }} <span class="muted">{{ counts.get(k, 0) }}</span></a>
-      {% endfor %}
-    </nav>
+    {{ product_tabs(tabs, counts, tab) }}
     <span class="panel-note">{% if tab == "wishlist" %}Alerts you when new, back in stock or cheaper{% elif tab == "filler" %}No alerts: candidates to reach a minimum order{% elif tab == "owned" %}Your collection; doesn't change alerts{% else %}Hidden everywhere{% endif %}</span>
   </div>
   {% if rows %}

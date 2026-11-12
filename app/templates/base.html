@@ -15,17 +15,16 @@
     <div class="wrap">
       <a class="logo" href="/"><span class="logo-mark">✦</span><span>Grasse</span></a>
       <nav class="tabs">
-        <a href="/" class="{{ 'active' if path == '/' }}">Changes</a>
+        <a href="/" class="{{ 'active' if path == '/' }}">Feed</a>
         <a href="/stock" class="{{ 'active' if path.startswith('/stock') }}">Stock</a>
-        <a href="/orders" class="{{ 'active' if path.startswith('/orders') }}">Orders</a>
         <a href="/brands" class="{{ 'active' if path.startswith('/brands') }}">Brands</a>
-        <a href="/products" class="{{ 'active' if path.startswith('/products') }}">Products</a>
-        <a href="/merges" class="{{ 'active' if path.startswith('/merges') }}">Merges</a>
+        <a href="/products" class="{{ 'active' if path.startswith(('/products', '/merges')) }}">Products</a>
         <a href="/suppliers" class="{{ 'active' if path.startswith('/suppliers') }}">Suppliers</a>
       </nav>
       <form class="quick-search" method="get" action="/search">
         <input type="search" name="q" value="{{ request.query_params.get('q', '') if path == '/search' }}" placeholder="Brand, fragrance or EAN" aria-label="Search">
       </form>
+      <nav class="tabs"><a href="/orders" class="{{ 'active' if path.startswith('/orders') }}">Orders</a></nav>
     </div>
   </header>
   <main class="wrap">

@@ -37,7 +37,7 @@
   {% if rows %}
   <div class="scroll">
   <table class="sortable">
-    <thead><tr><th>Brand</th><th class="num">In stock</th><th class="num" title="Cheapest listing in stock, any size">From</th><th class="num" title="Dearest listing in stock, any size">To</th><th class="hide-sm">Suppliers</th><th title="Product changes today, as on the Changes page">Today</th>
+    <thead><tr><th>Brand</th><th class="num">In stock</th><th class="num" title="Cheapest listing in stock, any size">From</th><th class="num" title="Dearest listing in stock, any size">To</th><th class="hide-sm">Suppliers</th><th title="Product changes today, as on the Feed">Today</th>
       {% if status == "new" %}<th class="hide-sm">First seen</th><th class="hide-sm" data-nosort>Looks like</th>{% endif %}<th></th></tr></thead>
     <tbody>
     {% for b in rows %}

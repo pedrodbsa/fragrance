@@ -408,7 +408,7 @@ def new_brands():
 
 
 def changes_today(conn) -> dict:
-    """Each brand's product changes today (server's timezone), as on the Changes page:
+    """Each brand's product changes today (server's timezone), as on the Feed:
     brand id -> {kind: count}. Ignored fragrances are left out."""
     brand_of = dict(conn.execute("SELECT id, brand_id FROM fragrances WHERE status != 'ignore'").fetchall())
     today = local_day(datetime.now(timezone.utc).isoformat())
@@ -534,6 +534,14 @@ TABS = {"wishlist": "Wishlist", "filler": "Fillers", "owned": "Collection", "ign
 PRODUCT = "SELECT f.*, b.name AS brand_name, b.status AS brand_status FROM fragrances f JOIN brands b ON b.id = f.brand_id"
 
 
+def product_counts(conn) -> dict:
+    """How many fragrances each Products tab holds, Merges included (pairs to review)."""
+    counts = dict(conn.execute("SELECT status, count(*) FROM fragrances GROUP BY status").fetchall())
+    counts["owned"] = conn.execute("SELECT count(*) FROM fragrances WHERE owned = 1").fetchone()[0]
+    counts["merges"] = len(fragrances.suggestions(conn))
+    return counts
+
+
 @office.get("/products")
 def products(request: Request, tab: str = "wishlist"):
     conn = connect()
@@ -544,12 +552,10 @@ def products(request: Request, tab: str = "wishlist"):
             f"""SELECT * FROM catalog WHERE qty > 0 AND fragrance_id IN ({",".join("?" * len(rows))})
                 ORDER BY price""", [r["id"] for r in rows]):
         offers[r["fragrance_id"]].append(r)
-    counts = dict(conn.execute("SELECT status, count(*) FROM fragrances GROUP BY status").fetchall())
-    counts["owned"] = conn.execute("SELECT count(*) FROM fragrances WHERE owned = 1").fetchone()[0]
     brand_list = conn.execute("SELECT id, name FROM brands ORDER BY name").fetchall()
     return templates.TemplateResponse(request, "products.html", {
         "rows": [{**dict(r), "offers": offers[r["id"]]} for r in rows],
-        "pictures": fragrances.pictures(conn, [r["id"] for r in rows]), "tab": tab, "tabs": TABS, "counts": counts, "brands": brand_list, "concentrations": CONCENTRATIONS,
+        "pictures": fragrances.pictures(conn, [r["id"] for r in rows]), "tab": tab, "tabs": TABS, "counts": product_counts(conn), "brands": brand_list, "concentrations": CONCENTRATIONS,
     })
 
 
@@ -719,7 +725,8 @@ def product_rename(fragrance_id: int, name: str = Form(...), concentration: str 
 
 @office.get("/merges")
 def merges(request: Request):
-    """Fragrances that share an EAN and might be the same juice: merge them or say they differ."""
+    """The Products page's Merges tab: fragrances that share an EAN and might be the same
+    juice, to merge or say they differ."""
     conn = connect()
     pairs = fragrances.suggestions(conn)
     ids = {i for p in pairs for i in (p["a_id"], p["b_id"])}
@@ -732,7 +739,8 @@ def merges(request: Request):
     # For ticking several at once: the side more listings use keeps its name (the older one on a tie).
     keeps = {(p["a_id"], p["b_id"]): p["a_id"] if sides[p["a_id"]]["listings"] >= sides[p["b_id"]]["listings"] else p["b_id"]
              for p in pairs}
-    return templates.TemplateResponse(request, "merges.html", {"pairs": pairs, "sides": sides, "keeps": keeps})
+    return templates.TemplateResponse(request, "merges.html", {
+        "pairs": pairs, "sides": sides, "keeps": keeps, "tabs": TABS, "counts": product_counts(conn)})
 
 
 @office.post("/merges")

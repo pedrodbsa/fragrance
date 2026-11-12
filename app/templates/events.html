@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% from "_macros.html" import picture %}
-{% block title %}Changes{% endblock %}
+{% block title %}Feed{% endblock %}
 {% block content %}
 {% macro offer(o) %}{{ o.supplier }} · {{ o.size }}{% if o.tester %} tester{% endif %} · €{{ "%.2f"|format(o.price) }}{% endmacro %}
 {% set labels = {"new": "New", "restock": "Back in stock", "price_drop": "Price drop", "price_up": "Price up", "soldout": "Sold out"} %}
 <div class="page-head">
   <div>
-    <h1>Changes</h1>
+    <h1>Feed</h1>
     <p class="subtitle">What changed for each fragrance across all your suppliers, newest first: new (no supplier had it before), back in stock or sold out everywhere, and moves of more than 5% in its 👑 best price per ml (every size and supplier, testers included, as on Stock). One supplier selling out while others still have it isn't listed here; open a change to see every supplier, or the fragrance's page for its full history. Brands you don't follow and ignored fragrances are left out, except wishlist fragrances of those brands.</p>
   </div>
   {% if new_brands %}<a class="btn" href="/brands?status=new">{{ new_brands }} new brand{{ "s" if new_brands != 1 }} to review →</a>{% endif %}

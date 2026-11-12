@@ -23,18 +23,18 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   spellings of a brand are merged through aliases, with suggestions in the Brands page's New tab.
   Products a supplier lists without a brand all go to one brand, (Unknown); move them to
   their real brand from the product page's Manage tab.
-- **Changes** (the backoffice's first page) is about fragrances, not listings: new (no
+- **Feed** (the backoffice's first page) is about fragrances, not listings: new (no
   supplier had it before), back in stock or sold out across all suppliers, and moves of more
   than 5% in its best price per ml (the 👑: every size and supplier, testers included). It's rebuilt from the events each time it opens
   (`app/changes.py`), so nothing extra is stored. Each change opens to show every supplier
   at that moment; a fragrance's page has its full per-supplier history.
 - **notify** sends one digest after all suppliers ran, only if something changed: failed
-  suppliers, basket items that sold out, came back or changed price, and, one entry per fragrance as on the Changes page, favourite brands'
+  suppliers, basket items that sold out, came back or changed price, and, one entry per fragrance as on the Feed, favourite brands'
   new fragrances and restocks and wishlist fragrances (new, back in stock, cheaper), and new brands with a Favourite button. Order suggestions stay on the
   Orders page.
 - **Products** lists the wishlist, fillers, ignored fragrances and your collection (owned, which
   doesn't change alerts).
-- **Merges** suggests fragrances that might be the same juice (same brand, an EAN in common)
+- **Merges** (a tab of Products) suggests fragrances that might be the same juice (same brand, an EAN in common)
   for you to merge or mark as different; nothing merges without you.
 - **Catalogue**: every listing points to a fragrance (brand + name + concentration), worked
   out once when the listing first appears, from the name read out of the supplier's product
@@ -50,7 +50,7 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
 | --- | --- |
 | `app/suppliers/<name>.py` | One per supplier: `fetch()` returns its in-stock items |
 | `app/collect.py` | Compares a fetch with the database, records events |
-| `app/changes.py` | Product-level changes for the Changes page, rebuilt from the events |
+| `app/changes.py` | Product-level changes for the Feed, rebuilt from the events |
 | `app/notify.py` | Builds and sends the digest |
 | `app/orders.py` | Order suggestions: wishlist plus fillers up to each supplier's minimum |
 | `app/baskets.py` | Your open basket per supplier, kept until you place the order |

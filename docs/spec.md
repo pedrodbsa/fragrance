@@ -142,7 +142,7 @@ added EAN stops that; listings already attached stay. When an EAN on the page be
 product ("Not this fragrance?"), move it to another of the brand's fragrances or to a new one
 you name: its listings go there, and later ones with that EAN land there too.
 
-**Merges page.** Every pair of fragrances of the same brand that shares an EAN, for triage:
+**Merges (a tab of Products).** Every pair of fragrances of the same brand that shares an EAN, for triage:
 same name with a different concentration first (usually suppliers disagreeing about the
 label), then different names (spelling variants, but also flankers such as Phantom and
 Phantom Night). Per pair: merge, keeping either name, or **Not the same**, which is
@@ -236,7 +236,7 @@ price (or the price when first seen). Small daily moves add up: five €1.10 dro
 
 ## Backoffice pages
 
-- **Changes**: what moved, without hidden brands and fragrances (wishlist fragrances of
+- **Feed**: what moved, without hidden brands and fragrances (wishlist fragrances of
   brands you don't follow are shown). Filters: type of change (including "New or back in stock"), supplier, and all brands or
   favourite brands only. The Suppliers page links to each supplier's changes, price drops and arrivals.
 - **Stock**: one row per fragrance (brand + name + concentration) with its sizes and testers
@@ -244,11 +244,11 @@ price (or the price when first seen). Small daily moves add up: five €1.10 dro
   fragrance name read from listings, not EANs, so different EANs per size don't matter.
 - **Product page**: every listing of one fragrance by size, and a price history chart (one
   line per size and supplier, rebuilt from recorded price changes).
-- **Brands**: every brand with its status, Favourite / Follow, and a New tab for
+- **Brands** (opens on Favourites): every brand with its status, Favourite / Follow, its product changes today, and a New tab for
   brands you haven't chosen for yet (with merge suggestions). A brand's page: rename, merge,
   spellings, and the fragrance decisions made for it.
 - **Products**: your fragrance lists: Wishlist, Fillers, Collection, Ignored.
-- **Merges**: fragrances that might be the same juice, to merge or mark as different.
+- **Merges** (a tab of Products): fragrances that might be the same juice, to merge or mark as different.
 - **Search** (box in the header, on every page): brands and fragrances whose names contain
   every word typed ("ysl libre", any spelling of the brand), or the fragrance with an EAN or SKU.
   Accents, capitals, punctuation and spaces are ignored ("lancome", "lhomme", "no5"), in the

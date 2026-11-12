@@ -3,7 +3,7 @@
 Sections:
   ⚠️ suppliers whose collection failed this window
   🧺 Baskets: items in one of your baskets that sold out, came back, or changed price
-  ⭐ Wishlist and favourites: product changes as on the Changes page, one entry per fragrance
+  ⭐ Wishlist and favourites: product changes as on the Feed, one entry per fragrance
      across all suppliers. Wishlist fragrances: new, back in stock, or a lower 👑 best price per
      ml; favourite brands' fragrances: new or back in stock (except ones you ignored or marked
      as filler). One supplier restocking a fragrance others already had isn't a change.
@@ -117,7 +117,7 @@ def describe(e) -> str:
 
 
 def product(group) -> str:
-    """One fragrance and what happened to it, like a row of the Changes page:
+    """One fragrance and what happened to it, like a row of the Feed:
     • Creed Aventus EDP
        Back in stock · 👑 €2.10/ml · nunu 100 ml €210.00"""
     p = group["product"]

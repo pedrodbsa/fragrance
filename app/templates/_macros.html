@@ -1,3 +1,13 @@
+{# The Products page's tabs: its lists, then Merges (its own page, /merges). #}
+{% macro product_tabs(tabs, counts, active) %}
+<nav class="segmented">
+  {% for k, label in tabs.items() %}
+  <a href="/products?tab={{ k }}" class="{{ 'active' if active == k }}">{{ label }} <span class="muted">{{ counts.get(k, 0) }}</span></a>
+  {% endfor %}
+  <a href="/merges" class="{{ 'active' if active == 'merges' }}" title="Fragrances that might be the same juice">Merges <span class="muted">{{ counts.get('merges', 0) }}</span></a>
+</nav>
+{% endmacro %}
+
 {# A brand's tier: Favourite / Follow. The current one is highlighted; clicking it again takes
    the brand one step down: a favourite back to Follow, a followed brand to not followed (hidden). #}
 {% set brand_choices = [("favourite", "⭐ Favourite", "Show in Stock and alert me about new products and restocks"),
