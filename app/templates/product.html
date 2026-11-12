@@ -7,12 +7,18 @@
   <div>
     <p class="subtitle"><a href="/brands/{{ product.brand_id }}">← {{ product.brand_name }}</a></p>
     <h1>{{ product.name|pretty('') }}{% if product.concentration %} <span class="muted">{{ product.concentration }}</span>{% endif %}</h1>
-    <p class="subtitle">{{ badges(product.status, product.owned, product.audience) }}{% if product.status == "default" %} On no list: the brand's status applies ({{ "following" if product.brand_status == "follow" else "ignored" if product.brand_status == "ignore" else "no alerts" }}).{% endif %}</p>
+    {# The list it's on shows on the right, by the switch. #}
+    <p class="subtitle">{{ badges(None, product.owned, product.audience) }}</p>
     {% if product.note %}<p class="subtitle">{{ product.note }}</p>{% endif %}
   </div>
-  <div class="toolbar">
-    {{ fragrance_switch(product.id, product.status, back) }}
-    {{ owned_switch(product.id, product.owned, back) }}
+  <div>
+    <div class="toolbar">
+      {{ fragrance_switch(product.id, product.status, back) }}
+      {{ owned_switch(product.id, product.owned, back) }}
+    </div>
+    {# The brand's status, and whether it applies: a list here wins over it. #}
+    {% set brand_label = "following" if product.brand_status == "follow" else "ignored" if product.brand_status == "ignore" else "no alerts" %}
+    <p class="subtitle small">Brand <a href="/brands/{{ product.brand_id }}">{{ brand_label }}</a>{% if product.status == "default" %}: applies, no list picked here{% else %}: this list wins{% endif %}</p>
   </div>
 </div>
 
