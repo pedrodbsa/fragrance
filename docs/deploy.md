@@ -19,7 +19,7 @@ supplier, the other sends one Telegram digest with everything found since the la
 
 | Command | Cron | |
 | --- | --- | --- |
-| `fragrance run` | `0 0,6-22/2 * * *` | collect every 2 hours from 06:00 to midnight |
+| `fragrance run` | `0 */2 * * *` | collect every 2 hours |
 | `fragrance notify` | `0 12 * * *` | the digest, once a day at noon |
 
 A supplier that fails shows as a failed collection run (details in that schedule's log), and
