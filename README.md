@@ -28,7 +28,9 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   changes that move its best price per ml (the 👑: every size and supplier, testers included) by
   more than 5%; a bottle selling out or appearing doesn't count as a price change. It's rebuilt from the events each time it opens
   (`app/changes.py`), so nothing extra is stored. Each change opens to show every supplier
-  at that moment; a fragrance's page has its full per-supplier history.
+  at that moment; a fragrance's page has its full per-supplier history. The Summary tab shows
+  the same day grouped instead: new or back in stock, sold out, price up, price down, each
+  fragrance once per group.
 - **notify** sends one digest a day with everything since the last one, only if something changed: failed
   suppliers, basket items that sold out, came back or changed price, and, one entry per fragrance as on the Feed, favourite brands'
   new fragrances and restocks and wishlist fragrances (new, back in stock, cheaper), and new brands with a Favourite button. Order suggestions stay on the

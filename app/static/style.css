@@ -206,6 +206,12 @@ tr:hover .row-actions, .row-actions:focus-within { opacity: 1; }
 .help { color: var(--muted); font-size: 13px; margin: 0 0 16px; max-width: 760px; }
 .help b { color: var(--text-2); font-weight: 600; }
 
+/* Feed's Summary tab: one column per kind of change, stacking on narrow screens */
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 20px; padding: 4px 16px 16px; }
+.summary-group h3 { font-size: 13px; margin: 12px 0 4px; }
+.summary-item { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.summary-item:last-child { border-bottom: 0; }
+
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
 .grid-2 .panel + .panel { margin-top: 0; }
 @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }

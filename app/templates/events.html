@@ -21,7 +21,7 @@
 <div class="panel">
   <div class="panel-head">
     <nav class="segmented">
-      {% for k, label in [("", "All"), ("arrivals", "New or back in stock")] + labels.items()|list %}
+      {% for k, label in [("", "All"), ("summary", "Summary"), ("arrivals", "New or back in stock")] + labels.items()|list %}
       <a href="/?{{ {'kind': k, 'brands': brands, 'supplier': supplier, 'day': day}|urlencode }}" class="{{ 'active' if kind == k }}">{{ label }}</a>
       {% endfor %}
     </nav>
@@ -46,7 +46,30 @@
   </div>
   {% endmacro %}
   {{ day_nav() }}
-  {% if rows %}
+  {% if rows and kind == "summary" %}
+  {# The day at a glance: each fragrance once per kind of change, by brand. #}
+  <div class="summary">
+    {% for g in summary %}
+    <section class="summary-group">
+      <h3><span class="pill {{ g.kind }}">{{ g.title }}</span> <span class="muted small">{{ g.changes|length }}</span></h3>
+      {% for r in g.changes %}{% set p = r.product %}
+      <div class="summary-item with-picture">{{ picture(pictures.get(r.fragrance_id)) }}<div>
+        <div class="product-name"><a class="quiet" href="/products/{{ r.fragrance_id }}">{{ p.name|pretty('') }}</a>{% if p.concentration %} <span class="muted">{{ p.concentration }}</span>{% endif %}</div>
+        <div class="product-brand">{{ p.brand_name }}{% if r.kind == "restock" %} · back{% endif %}</div>
+        <div class="small muted">
+          {% if r.kind in ("price_drop", "price_up") %}{% set change = r.offer.per_ml / r.was.per_ml - 1 %}
+          👑 €{{ "%.2f"|format(r.offer.per_ml) }}/ml <s>€{{ "%.2f"|format(r.was.per_ml) }}</s> <span class="was {{ 'down' if change < 0 else 'up' }}">{{ "−" if change < 0 else "+" }}{{ "%.0f"|format((change * 100)|abs) }}%</span> · {{ offer(r.offer) }}
+          {% elif r.offer %}👑 €{{ "%.2f"|format(r.offer.per_ml) }}/ml · {{ offer(r.offer) }}
+          {% elif r.was %}was 👑 €{{ "%.2f"|format(r.was.per_ml) }}/ml · {{ offer(r.was) }}
+          {% endif %}
+        </div>
+      </div></div>
+      {% else %}<div class="muted small">None</div>
+      {% endfor %}
+    </section>
+    {% endfor %}
+  </div>
+  {% elif rows %}
   <div class="scroll">
   <table class="changes">
     <thead><tr><th class="hide-sm">When</th><th>Change</th><th>Product</th><th class="num">Price</th><th></th></tr></thead>

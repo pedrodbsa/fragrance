@@ -96,8 +96,12 @@ def back_to(back: str, fallback: str) -> RedirectResponse:
 # --- Changes and stock ---------------------------------------------------------------------
 
 # The Changes page's tabs: which kinds of change each shows ("" = all).
-CHANGE_TABS = {"": "", "arrivals": "new,restock", "new": "new", "restock": "restock",
+CHANGE_TABS = {"": "", "summary": "", "arrivals": "new,restock", "new": "new", "restock": "restock",
                "price_drop": "price_drop", "price_up": "price_up", "soldout": "soldout"}
+
+# The Summary tab's groups: a title and the kinds of change it gathers.
+SUMMARY_GROUPS = [("New or back in stock", ("new", "restock")), ("Sold out", ("soldout",)),
+                  ("Price up", ("price_up",)), ("Price down", ("price_drop",))]
 
 
 @office.get("/")
@@ -122,8 +126,8 @@ def events(request: Request, kind: str = "", brands: str = "", supplier: str = "
     for c in shown:
         if c["created_at"] >= since:
             last_day[c["kind"]] += 1
-    kinds = CHANGE_TABS.get(kind, kind).split(",")
-    rows = [{**c, "day": local_day(c["created_at"])} for c in shown if not kind or c["kind"] in kinds]
+    kinds = CHANGE_TABS.get(kind, kind)
+    rows = [{**c, "day": local_day(c["created_at"])} for c in shown if not kinds or c["kind"] in kinds.split(",")]
     days = sorted({c["day"] for c in rows}, reverse=True)  # the days that have changes, newest first
     day = day or (days[0] if days else local_day(datetime.now(timezone.utc).isoformat()))
     day_link = lambda d: "/?" + urlencode({"kind": kind, "brands": brands, "supplier": supplier, "day": d})
@@ -132,12 +136,26 @@ def events(request: Request, kind: str = "", brands: str = "", supplier: str = "
     new_brands = conn.execute("SELECT count(*) FROM brands WHERE reviewed_at IS NULL").fetchone()[0]
     rows = [c for c in rows if c["day"] == day]
     return templates.TemplateResponse(request, "events.html", {
-        "rows": rows, "pictures": fragrances.pictures(conn, {c["fragrance_id"] for c in rows}), "day": day, "day_label": datetime.fromisoformat(day).strftime("%A %d %b %Y"),
+        "rows": rows, "summary": summary(rows), "pictures": fragrances.pictures(conn, {c["fragrance_id"] for c in rows}), "day": day, "day_label": datetime.fromisoformat(day).strftime("%A %d %b %Y"),
         "newer": min((d for d in days if d > day), default=None), "older": max((d for d in days if d < day), default=None),
         "day_link": day_link,
         "kind": kind, "brands": brands, "supplier": supplier, "last_day": last_day,
         "in_stock": in_stock, "suppliers": suppliers, "new_brands": new_brands, "supplier_names": sorted(SUPPLIERS),
     })
+
+
+def summary(rows: list[dict]) -> list[dict]:
+    """The Summary tab: the day's changes in SUMMARY_GROUPS, each fragrance once per group
+    with its latest change of that kind (rows are newest first), by brand and name."""
+    groups = []
+    for title, kinds in SUMMARY_GROUPS:
+        latest = {}
+        for c in rows:
+            if c["kind"] in kinds:
+                latest.setdefault(c["fragrance_id"], c)
+        items = sorted(latest.values(), key=lambda c: (c["product"]["brand_name"].lower(), c["product"]["name"].lower()))
+        groups.append({"title": title, "kind": kinds[0], "changes": items})
+    return groups
 
 
 def annotate(listings) -> list[dict]:
