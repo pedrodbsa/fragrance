@@ -24,8 +24,9 @@ Litestream ─▶ R2 (continuous backup; restored automatically on a fresh serve
   Products a supplier lists without a brand all go to one brand, (Unknown); move them to
   their real brand from the product page's Manage tab.
 - **Feed** (the backoffice's first page) is about fragrances, not listings: new (no
-  supplier had it before), back in stock or sold out across all suppliers, and moves of more
-  than 5% in its best price per ml (the 👑: every size and supplier, testers included). It's rebuilt from the events each time it opens
+  supplier had it before), back in stock or sold out across all suppliers, and supplier price
+  changes that move its best price per ml (the 👑: every size and supplier, testers included) by
+  more than 5%; a bottle selling out or appearing doesn't count as a price change. It's rebuilt from the events each time it opens
   (`app/changes.py`), so nothing extra is stored. Each change opens to show every supplier
   at that moment; a fragrance's page has its full per-supplier history.
 - **notify** sends one digest a day with everything since the last one, only if something changed: failed

@@ -6,9 +6,12 @@ run we look at every listing of the fragrances it touched, at every supplier, an
   new         no supplier had listed this fragrance before
   restock     it was out of stock everywhere and now a supplier has it
   soldout     a supplier had it and now none does
-  price_drop  its best price per ml (the 👑 of the Stock page: every size and supplier, testers
-              included) fell by more than MIN_BEST_MOVE
-  price_up    ... or rose by more than that (also when the best offer sells out)
+  price_drop  a supplier lowered a price and that made its best price per ml (the 👑 of the Stock
+              page: every size and supplier, testers included) fall by more than MIN_BEST_MOVE
+  price_up    ... or a supplier raised a price and that made it rise by more than that
+Only real price changes count: the best price per ml also moves when a bottle sells out, is
+newly listed or comes back (e.g. the big bottle, cheapest per ml, sells out), but that's
+availability, not a price change, so it isn't one here.
 Gift sets and sizes in grams have no price per ml, so they never make a price change.
 One supplier losing a fragrance that others still have is not a product change; it shows in
 the supplier breakdown and on the product page's history.
@@ -62,6 +65,8 @@ def replay(conn) -> list[dict]:
         touched = {listings[(e["supplier"], e["sku"])]["fragrance_id"] for e in run["events"]
                    if (e["supplier"], e["sku"]) in listings}
         before = {f: snapshot(state, by_fragrance[f], listings) for f in touched}
+        # The listings in stock before the run, to tell price changes from stock changes below.
+        stocked = {k for f in touched for k in by_fragrance[f] if state[k]["in_stock"]}
         for e in run["events"]:
             key = (e["supplier"], e["sku"])
             if key not in listings:  # a listing deleted since (its brand was removed)
@@ -76,7 +81,11 @@ def replay(conn) -> list[dict]:
                 state[key]["price"] = e["new_value"]
         for f in touched:
             after = snapshot(state, by_fragrance[f], listings)
-            found = compare(before[f], after)
+            # What the run's price changes alone did: today's prices, but only on the bottles
+            # that were in stock before it, so nothing selling out or appearing moves the price.
+            priced = snapshot({k: {**state[k], "in_stock": k in stocked} for k in by_fragrance[f]},
+                              by_fragrance[f], listings)
+            found = compare(before[f], after, priced)
             if found:
                 where = breakdown(state, by_fragrance[f], listings, happened)
                 changes += [{**c, "fragrance_id": f, "supplier": supplier, "created_at": when, "listings": where}
@@ -105,14 +114,14 @@ def snapshot(state, keys, listings) -> dict:
     return {"listed": bool(keys), "in_stock": any(state[k]["in_stock"] for k in keys), "best": best}
 
 
-def compare(before: dict, after: dict) -> list[dict]:
-    """The product changes between two snapshots of a fragrance. `offer` is the best offer
-    after the run, `was` the one before."""
+def compare(before: dict, after: dict, priced: dict) -> list[dict]:
+    """The product changes between two snapshots of a fragrance; `priced` is the one with only
+    the run's price changes applied. `offer` is the best offer after the run, `was` the one before."""
     if not before["in_stock"] and after["in_stock"]:
         return [{"kind": "restock" if before["listed"] else "new", "offer": after["best"], "was": None}]
     if before["in_stock"] and not after["in_stock"]:
         return [{"kind": "soldout", "offer": None, "was": before["best"]}]
-    old, new = before["best"], after["best"]
+    old, new = before["best"], priced["best"]
     if old and new and abs(new["per_ml"] - old["per_ml"]) > old["per_ml"] * MIN_BEST_MOVE:
         return [{"kind": "price_drop" if new["per_ml"] < old["per_ml"] else "price_up", "offer": new, "was": old}]
     return []
